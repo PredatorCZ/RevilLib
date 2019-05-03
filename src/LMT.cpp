@@ -333,12 +333,12 @@ ES_INLINE Vector4 lerp(const Vector4 &v0, const Vector4 &v1, T t)
 	return v0 + (v1 - v0) * t;
 }
 
-ES_INLINE Vector4 blerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t)
+ES_INLINE Vector4 blerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t) // FIX ME
 {
 	return lerp(lerp(minMax->min, minMax->max, v0), lerp(minMax->min, minMax->max, v1), t);
 }
 
-ES_INLINE Vector4 bslerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t)
+ES_INLINE Vector4 bslerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t) // FIX ME
 {
 	return slerp(lerp(minMax->min, minMax->max, v0), lerp(minMax->min, minMax->max, v1), t);
 }

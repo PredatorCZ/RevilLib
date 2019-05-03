@@ -22,16 +22,18 @@
 
 class BinReader;
 class REAsset;
+struct RETrackCurve;
 
 template<class C>
 union REPointer
 {
 	uint64 varPtr;
 	C *ptr;
+	char *cPtr;
 
 	void Fixup(char *masterBuffer) 
 	{
-		if (!varPtr)
+		if (!varPtr || cPtr > masterBuffer)
 			return;
 
 		ptr = reinterpret_cast<C *>(masterBuffer + varPtr); 
@@ -60,7 +62,7 @@ public:
 };
 
 
-class REMotlist : REAssetBase
+class REMotlist : public REAssetBase
 {
 	int Fixup(char *masterBuffer);
 public:
@@ -74,17 +76,16 @@ public:
 
 struct REMotionBone
 {
-	int boneID,
-		boneHash;
-	int64 numChildrenFromRootBone;
 	REPointer<char16_t> boneName;
-	REPointer<REPointer<char16_t>>
+	REPointer<char16_t*>
 		parentBoneNamePtr,
 		firstChildBoneNamePtr,
 		lastChildBoneNamePtr;
 	Vector4 position;
 	Vector4 rotation;
-
+	int boneID,
+		boneHash;
+	uint64 null;
 	int Fixup(char *masterBuffer);
 };
 
@@ -94,17 +95,25 @@ struct REMimMaxBounds
 	Vector4 max;
 };
 
+struct RETrackController 
+{
+	virtual void Assign(RETrackCurve *iCurve) = 0;
+	virtual ushort GetFrame(int id) const = 0;
+	virtual void Evaluate(int id, Vector4 &out) const = 0;
+	virtual ~RETrackController() {}
+};
+
 struct RETrackCurve
 {
-	short unk01,
-		compression;
+	int flags;
 	int numFrames,
 		framesPerSecond;
 	float duration;
-	REPointer<short> frames;
+	REPointer<uchar> frames;
 	REPointer<char> controlPoints;
 	REPointer<REMimMaxBounds> minMaxBounds;
 
+	RETrackController *GetController();
 	int Fixup(char *masterBuffer);
 };
 
@@ -126,13 +135,20 @@ struct REMotionTrack
 	int Fixup(char *masterBuffer);
 };
 
-class REMotion : REAssetBase
+template<class C>
+struct REArray
+{
+	REPointer<C> ptr;
+	int numItems;
+};
+
+class REMotion : public REAssetBase
 {
 	int Fixup(char *masterBuffer);
 public:
 	static const uint ID = CompileFourCC("mot ");
 
-	REPointer<REMotionBone> bones;
+	REPointer<REArray<REMotionBone>> bones;
 	REPointer<REMotionTrack> tracks;
 
 	REPointer<void> null[5];
@@ -167,4 +183,6 @@ public:
 	int Load(BinReader *rd);
 	int Assign(char *ptr);
 	REAssetBase *Object() { return object; }
+	template<class C> C *Object() { return static_cast<C *>(object); }
+	template<class C> bool IsObject() const { return assetFourCC == C::ID; }
 };

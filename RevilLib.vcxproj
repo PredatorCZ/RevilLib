@@ -20,10 +20,10 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{75E5F6A7-203E-469A-B035-5393BCF91B3C}</ProjectGuid>
+    <ProjectGuid>{FFCA4C01-B4D8-46B2-8224-8D210C11B3CD}</ProjectGuid>
     <RootNamespace>RevilkLib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <TargetName>RevilLib</TargetName>
@@ -52,7 +52,11 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>include;R:\GitHub\PreCore;R:\GitHub\Avalache\ApexLib\3rd_party\pugixml\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;3rd_party/PreCore;3rd_party\pugixml\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ToolsetPreprocessorDefinitions Condition="'$(PlatformToolsetVersion)'=='140'">FIX_C2970</ToolsetPreprocessorDefinitions>
+      <ToolsetPreprocessorDefinitions Condition="'$(PlatformToolsetVersion)'!='140'">
+      </ToolsetPreprocessorDefinitions>
+      <PreprocessorDefinitions>%(ToolsetPreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
