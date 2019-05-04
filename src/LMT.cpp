@@ -110,6 +110,8 @@ union PointerX86
 
 	static const uint mask = ~1U;
 
+	PointerX86() : varPtr(0) {}
+
 	template<bool enbabled = ES_X64>
 	ES_FORCEINLINE typename std::enable_if<enbabled, C*>::type GetData(char *masterBuffer)
 	{
@@ -186,6 +188,54 @@ struct AnimEvent
 		return currentNode.internal_object();
 	}
 
+	int FromXML(pugi::xml_node &node)
+	{
+		pugi::xml_attribute addFrames = node.attribute("additiveFrames");
+
+		if (addFrames.empty())
+		{
+			printerror("[LMT] Missing <event additiveFrames=/>");
+			return 1;
+		}
+
+		numFrames = addFrames.as_int();
+
+		if (node.text().empty())
+			return 0;
+
+		pugi::xml_attribute numItemsAttr = node.attribute("numItems");
+
+		int currentID = 0;
+		int currentChar = 0;
+		int numItems = 0;
+		std::string nodeText = node.text().get();
+		nodeText.push_back('\0');
+
+		for (auto &c : nodeText)
+		{
+			if (c >= '0' && c <= '9')
+			{
+				currentID |= static_cast<int>(c) << ((3 - currentChar) * 8);
+				currentChar++;
+			}
+			else if (c == ',' || c == '\0')
+			{
+				FByteswapper(currentID);
+				runEventBit |= 1 << atoi(reinterpret_cast<char *>(&currentID));
+				currentID = 0;
+				currentChar = 0;
+				numItems++;
+			}
+		}
+
+		if (!numItemsAttr.empty() && numItemsAttr.as_int() != numItems)
+		{
+			printwarning("[LMT] Animation <event numItems=/> differs from actual count.");
+		}
+
+		return 0;
+	}
+
 	void SwapEndian()
 	{
 		FByteswapper(runEventBit);
@@ -225,7 +275,7 @@ REFLECTOR_START_WNAMES(EventTablePointerX64, eventRemaps);
 /****************************** ENUMS ***********************************/
 /************************************************************************/
 
-REFLECTOR_ENUM(TrackType,
+REFLECTOR_ENUM(TrackType_e,
 	LocalRotation,
 	LocalPosition,
 	LocalScale,
@@ -249,14 +299,14 @@ REFLECTOR_ENUM(TrackV1BufferTypes,
 REFLECTOR_ENUM(TrackV1_5BufferTypes,
 	Unknown,
 	SingleVector3,
-	LinearVector3,
+	SinglePositionVector3,	
 	Unused00,
 	SingleRotationQuat3,
 	HermiteVector3,
 	LinearRotationQuat4_14bit,
 	Unused01,
 	Unused02,
-	SinglePositionVector3
+	LinearVector3
 )
 
 REFLECTOR_ENUM(TrackV2BufferTypes,
@@ -333,14 +383,19 @@ ES_INLINE Vector4 lerp(const Vector4 &v0, const Vector4 &v1, T t)
 	return v0 + (v1 - v0) * t;
 }
 
-ES_INLINE Vector4 blerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t) // FIX ME
+ES_INLINE Vector4 additiveLerp(const TrackMinMax *minMax, const Vector4 &value)
 {
-	return lerp(lerp(minMax->min, minMax->max, v0), lerp(minMax->min, minMax->max, v1), t);
+	return minMax->max + minMax->min * value;
 }
 
-ES_INLINE Vector4 bslerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t) // FIX ME
+ES_INLINE Vector4 blerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t)
 {
-	return slerp(lerp(minMax->min, minMax->max, v0), lerp(minMax->min, minMax->max, v1), t);
+	return lerp(additiveLerp(minMax, v0), additiveLerp(minMax, v1), t);
+}
+
+ES_INLINE Vector4 bslerp(const Vector4 &v0, const Vector4 &v1, const TrackMinMax *minMax, float t)
+{
+	return slerp(additiveLerp(minMax, v0), additiveLerp(minMax, v1), t);
 }
 
 template<class C> void AppendToStringRaw(const C *clPtr, std::stringstream &buffer)
@@ -454,12 +509,24 @@ struct Buf_SingleVector3
 		out.W = 1.0f;
 	}
 
+	void Devaluate(Vector4 in)
+	{
+		data = reinterpret_cast<Vector &>(in);
+	}
+
 	void GetFrame(int &currentFrame) const
 	{
 		currentFrame++;
 	}
 
-	void Iterpolate(Vector4 &out, const Buf_SingleVector3 &leftFrame, const Buf_SingleVector3 &rightFrame, float delta, const TrackMinMax *minMax) const
+	int GetFrame() const
+	{
+		return 1;
+	}
+
+	void SetFrame(uint64) {}
+
+	void Iterpolate(Vector4 &out, const Buf_SingleVector3 &leftFrame, const Buf_SingleVector3 &rightFrame, float delta, const TrackMinMax *) const
 	{
 		Vector4 startPoint,
 			endPoint;
@@ -488,7 +555,7 @@ struct Buf_StepRotationQuat3 : Buf_SingleVector3
 		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 
-	void Iterpolate(Vector4 &out, const Buf_StepRotationQuat3 &leftFrame, const Buf_StepRotationQuat3 &rightFrame, float delta, const TrackMinMax *minMax) const
+	void Iterpolate(Vector4 &out, const Buf_StepRotationQuat3 &leftFrame, const Buf_StepRotationQuat3 &rightFrame, float delta, const TrackMinMax *) const
 	{
 		Vector4 startPoint,
 			endPoint;
@@ -534,6 +601,11 @@ struct Buf_LinearVector3
 		SeekTo(buffer, bufferIter);
 	}
 
+	void Devaluate(Vector4 in)
+	{
+		data = reinterpret_cast<Vector &>(in);
+	}
+
 	void Evaluate(Vector4 &out) const
 	{
 		out.X = data.X;
@@ -547,7 +619,17 @@ struct Buf_LinearVector3
 		currentFrame += additiveFrames;
 	}
 
-	void Iterpolate(Vector4 &out, const Buf_LinearVector3 &leftFrame, const Buf_LinearVector3 &rightFrame, float delta, const TrackMinMax *minMax) const
+	int GetFrame() const
+	{
+		return additiveFrames;
+	}
+
+	void SetFrame(uint64 frame)
+	{
+		additiveFrames = static_cast<int>(frame);
+	}
+
+	void Iterpolate(Vector4 &out, const Buf_LinearVector3 &leftFrame, const Buf_LinearVector3 &rightFrame, float delta, const TrackMinMax *) const
 	{
 		Vector4 startPoint,
 			endPoint;
@@ -659,12 +741,27 @@ struct Buf_HermiteVector3
 		outTangs.Z = flags[Buf_HermiteVector3_Flags::OutTangentZ] ? tangents[currentTangIndex++] : 0.0f;
 	}
 
+	void Devaluate(Vector4)
+	{
+		// Not Supported
+	}
+
 	void GetFrame(int &currentFrame) const
 	{
 		currentFrame += additiveFrames;
 	}
 
-	void Iterpolate(Vector4 &out, const Buf_HermiteVector3 &leftFrame, const Buf_HermiteVector3 &rightFrame, float delta, const TrackMinMax *minMax) const
+	int GetFrame() const
+	{
+		return additiveFrames;
+	}
+
+	void SetFrame(uint64 frame)
+	{
+		additiveFrames = static_cast<short>(frame);
+	}
+
+	void Iterpolate(Vector4 &out, const Buf_HermiteVector3 &leftFrame, const Buf_HermiteVector3 &rightFrame, float delta, const TrackMinMax *) const
 	{
 		Vector4 startPoint,
 			endPoint,
@@ -772,7 +869,7 @@ struct Buf_SphericalRotation
 
 	}
 
-	void Evaluate(Vector4 &out, bool pass = true) const
+	void Evaluate(Vector4 &out) const
 	{
 		out.X = data & componentMask;
 		out.Y = (data >> 17) & componentMask;
@@ -869,19 +966,31 @@ struct Buf_BiLinearVector3_16bit
 
 	static const uint64 componentMask = 0xffff;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
 
 	void Evaluate(Vector4 &out) const
 	{
-		out.X = data.X;
-		out.Y = data.Y;
-		out.Z = data.Z;
+		reinterpret_cast<Vector &>(out) = data.Convert<float>() * componentMultiplier;
+	}
 
-		out *= componentMultiplier;
+	void Devaluate(Vector4 in)
+	{
+		data = (reinterpret_cast<Vector &>(in) * componentMultiplierInv).Convert<ushort>();
 	}
 
 	void GetFrame(int &currentFrame) const
 	{
 		currentFrame += additiveFrames;
+	}
+
+	int GetFrame() const
+	{
+		return additiveFrames;
+	}
+
+	void SetFrame(uint64 frame)
+	{
+		additiveFrames = static_cast<ushort>(frame);
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearVector3_16bit &leftFrame, const Buf_BiLinearVector3_16bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -902,7 +1011,8 @@ struct Buf_BiLinearVector3_16bit
 	}
 };
 
-const float Buf_BiLinearVector3_16bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearVector3_16bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearVector3_16bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
 struct Buf_BiLinearVector3_8bit
 {
@@ -925,19 +1035,31 @@ struct Buf_BiLinearVector3_8bit
 
 	static const uint64 componentMask = 0xff;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
 
-	void Evaluate(Vector4 & out) const
+	void Evaluate(Vector4 &out) const
 	{
-		out.X = data.X;
-		out.Y = data.Y;
-		out.Z = data.Z;
+		reinterpret_cast<Vector &>(out) = data.Convert<float>() * componentMultiplier;
+	}
 
-		out *= componentMultiplier;
+	void Devaluate(Vector4 in)
+	{
+		data = (reinterpret_cast<Vector &>(in) * componentMultiplierInv).Convert<uchar>();
 	}
 
 	void GetFrame(int &currentFrame) const
 	{
 		currentFrame += additiveFrames;
+	}
+
+	int GetFrame() const
+	{
+		return additiveFrames;
+	}
+
+	void SetFrame(uint64 frame)
+	{
+		additiveFrames = static_cast<ushort>(frame);
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearVector3_8bit &leftFrame, const Buf_BiLinearVector3_8bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -954,34 +1076,62 @@ struct Buf_BiLinearVector3_8bit
 	void SwapEndian() {}
 };
 
-const float Buf_BiLinearVector3_8bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearVector3_8bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearVector3_8bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
 struct Buf_LinearRotationQuat4_14bit : Buf_SphericalRotation
 {
 	static const uint64 componentMask = (1 << 14) - 1;
 	static const float componentMultiplier;
 	static const float componentSignMax;
+	static const float componentMultiplierInv;
 
 	void Evaluate(Vector4 & out) const
 	{
-		out.X = data & componentMask;
-		out.Y = (data >> 14) & componentMask;
-		out.Z = (data >> 28) & componentMask;
-		out.W = (data >> 42) & componentMask;
+		out.W = data & componentMask;
+		out.Z = (data >> 14) & componentMask;
+		out.Y = (data >> 28) & componentMask;
+		out.X = (data >> 42) & componentMask;
 
 		if (out.X > componentSignMax)
-			out.X = componentMask - out.X;
+			out.X = (componentMask - out.X) * -1.0f;
 
 		if (out.Y > componentSignMax)
-			out.Y = componentMask - out.Y;
+			out.Y = (componentMask - out.Y) * -1.0f;
 
 		if (out.Z > componentSignMax)
-			out.Z = componentMask - out.Z;
+			out.Z = (componentMask - out.Z) * -1.0f;
 
 		if (out.W > componentSignMax)
-			out.W = componentMask - out.W;
+			out.W = (componentMask - out.W) * -1.0f;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		data ^= data & dataField;
+
+		if (in.W < 0.0f)
+			data |= componentMask - static_cast<uint64>(in.W * componentMultiplierInv * -1.0f);
+		else
+			data |= static_cast<uint64>(in.W * componentMultiplierInv);
+
+		if (in.Z < 0.0f)
+			data |= (componentMask - static_cast<uint64>(in.Z * componentMultiplierInv * -1.0f)) << 14;
+		else
+			data |= static_cast<uint64>(in.Z * componentMultiplierInv) << 14;
+
+		if (in.Y < 0.0f)
+			data |= (componentMask - static_cast<uint64>(in.Y * componentMultiplierInv * -1.0f)) << 28;
+		else
+			data |= static_cast<uint64>(in.Y * componentMultiplierInv) << 28;
+
+		if (in.X < 0.0f)
+			data |= (componentMask - static_cast<uint64>(in.X * componentMultiplierInv * -1.0f)) << 42;
+		else
+			data |= static_cast<uint64>(in.X * componentMultiplierInv) << 42;
+
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_LinearRotationQuat4_14bit &leftFrame, const Buf_LinearRotationQuat4_14bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -996,7 +1146,8 @@ struct Buf_LinearRotationQuat4_14bit : Buf_SphericalRotation
 	}
 };
 
-const float Buf_LinearRotationQuat4_14bit::componentMultiplier = 1.0f / (static_cast<float>(componentMask) / 4.0f);
+const float Buf_LinearRotationQuat4_14bit::componentMultiplierInv = static_cast<float>(componentMask) / 4.0f;
+const float Buf_LinearRotationQuat4_14bit::componentMultiplier = 1.0f / componentMultiplierInv;
 const float Buf_LinearRotationQuat4_14bit::componentSignMax = static_cast<float>(componentMask) * 0.5;
 
 struct Buf_BiLinearRotationQuat4_7bit
@@ -1019,6 +1170,9 @@ struct Buf_BiLinearRotationQuat4_7bit
 
 	static const uint componentMask = (1 << 7) - 1;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
+	static const uint dataField = (1 << 28) - 1;
+	static const uint frameField = ~dataField;
 
 	void Evaluate(Vector4 & out) const
 	{
@@ -1028,6 +1182,34 @@ struct Buf_BiLinearRotationQuat4_7bit
 		out.W = (data >> 21) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		data ^= data & dataField;
+
+		UIVector4 store = (in * componentMultiplierInv).Convert<uint>();
+
+		data |= store.X;
+		data |= store.Y << 7;
+		data |= store.Z << 14;
+		data |= store.W << 21;
+	}
+
+	void GetFrame(int &currentFrame) const
+	{
+		currentFrame += data >> 28;
+	}
+
+	int GetFrame() const
+	{
+		return data >> 28;
+	}
+
+	void SetFrame(uint64 frame)
+	{
+		data ^= data & frameField;
+		data |= frame << 28;
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearRotationQuat4_7bit &leftFrame, const Buf_BiLinearRotationQuat4_7bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -1047,12 +1229,14 @@ struct Buf_BiLinearRotationQuat4_7bit
 	}
 };
 
-const float Buf_BiLinearRotationQuat4_7bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_7bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_7bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
 struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit 
 {
 	static const uint componentMask = (1 << 14) - 1;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
 
 	void Evaluate(Vector4 & out) const
 	{
@@ -1060,6 +1244,16 @@ struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit
 		out.W = (data >> 14) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		data ^= data & dataField;
+
+		UIVector4 store = (in * componentMultiplierInv).Convert<uint>();
+
+		data |= store.X;
+		data |= store.W << 14;
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearRotationQuatXW_14bit &leftFrame, const Buf_BiLinearRotationQuatXW_14bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -1074,19 +1268,27 @@ struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit
 	}
 };
 
-const float Buf_BiLinearRotationQuatXW_14bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuatXW_14bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuatXW_14bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
-struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuat4_7bit
+struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuatXW_14bit
 {
-	static const uint componentMask = (1 << 14) - 1;
-	static const float componentMultiplier;
-
 	void Evaluate(Vector4 & out) const
 	{
 		out.Y = data & componentMask;
 		out.W = (data >> 14) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		data ^= data & dataField;
+
+		UIVector4 store = (in * componentMultiplierInv).Convert<uint>();
+
+		data |= store.Y;
+		data |= store.W << 14;
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearRotationQuatYW_14bit &leftFrame, const Buf_BiLinearRotationQuatYW_14bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -1101,19 +1303,24 @@ struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuat4_7bit
 	}
 };
 
-const float Buf_BiLinearRotationQuatYW_14bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
-
-struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuat4_7bit
+struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuatXW_14bit
 {
-	static const uint componentMask = (1 << 14) - 1;
-	static const float componentMultiplier;
-
 	void Evaluate(Vector4 & out) const
 	{
 		out.Z = data & componentMask;
 		out.W = (data >> 14) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		data ^= data & dataField;
+
+		UIVector4 store = (in * componentMultiplierInv).Convert<uint>();
+
+		data |= store.Z;
+		data |= store.W << 14;
 	}
 
 	void Iterpolate(Vector4 &out, const Buf_BiLinearRotationQuatZW_14bit &leftFrame, const Buf_BiLinearRotationQuatZW_14bit &rightFrame, float delta, const TrackMinMax *minMax) const
@@ -1127,8 +1334,6 @@ struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuat4_7bit
 		out = bslerp(startPoint, endPoint, minMax, delta);
 	}
 };
-
-const float Buf_BiLinearRotationQuatZW_14bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
 
 struct Buf_BiLinearRotationQuat4_11bit
 {
@@ -1150,6 +1355,7 @@ struct Buf_BiLinearRotationQuat4_11bit
 
 	static const uint64 componentMask = (1 << 11) - 1;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
 
 	void Evaluate(Vector4 & out) const
 	{
@@ -1161,6 +1367,20 @@ struct Buf_BiLinearRotationQuat4_11bit
 		out.W = (rVal >> 33) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		uint64 &rVal = reinterpret_cast<uint64 &> (data);
+
+		rVal ^= rVal & 0xFFFFFFFFFFF;
+
+		t_Vector4<uint64> store = (in * componentMultiplierInv).Convert<uint64>();
+
+		rVal |= store.X;
+		rVal |= store.Y << 11;
+		rVal |= store.Z << 22;
+		rVal |= store.W << 33;
 	}
 
 	void GetFrame(int &currentFrame) const
@@ -1185,7 +1405,8 @@ struct Buf_BiLinearRotationQuat4_11bit
 	}
 };
 
-const float Buf_BiLinearRotationQuat4_11bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_11bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_11bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
 struct Buf_BiLinearRotationQuat4_9bit
 {
@@ -1207,6 +1428,7 @@ struct Buf_BiLinearRotationQuat4_9bit
 
 	static const uint64 componentMask = (1 << 9) - 1;
 	static const float componentMultiplier;
+	static const float componentMultiplierInv;
 
 	void Evaluate(Vector4 &out) const
 	{
@@ -1218,6 +1440,20 @@ struct Buf_BiLinearRotationQuat4_9bit
 		out.W = (rVal >> 27) & componentMask;
 
 		out *= componentMultiplier;
+	}
+
+	void Devaluate(Vector4 in)
+	{
+		uint64 &rVal = reinterpret_cast<uint64 &> (data);
+
+		rVal ^= rVal & 0xFFFFFFFFF;
+
+		t_Vector4<uint64> store = (in * componentMultiplierInv).Convert<uint64>();
+
+		rVal |= store.X;
+		rVal |= store.Y << 9;
+		rVal |= store.Z << 18;
+		rVal |= store.W << 27;
 	}
 
 	void GetFrame(int &currentFrame) const
@@ -1239,26 +1475,64 @@ struct Buf_BiLinearRotationQuat4_9bit
 	void SwapEndian() {}
 };
 
-const float Buf_BiLinearRotationQuat4_9bit::componentMultiplier = 1.0f / static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_9bit::componentMultiplierInv = static_cast<float>(componentMask);
+const float Buf_BiLinearRotationQuat4_9bit::componentMultiplier = 1.0f / componentMultiplierInv;
 
-struct BuffEval
+struct LMTTrackController
 {
-	virtual int NumItems() const = 0;
-	virtual void NumItems(int numItems) = 0;
+	std::vector<short> frames;
+	virtual int NumFrames() const = 0;
+	virtual bool IsCubic() const = 0;
+	virtual void GetTangents(Vector4 &inTangs, Vector4 &outTangs, int frame) const = 0;
+	virtual void Evaluate(Vector4 &out, int frame) const = 0;
+
+	short GetFrame(int frame) const
+	{
+		return frames[frame];
+	}
+
+	virtual void NumFrames(int numItems) = 0;
 	virtual void ToString(std::string &strBuf, int numIdents) const = 0;
 	virtual void FromString(std::string &input) = 0;
 	virtual void Assign(char *ptr, int size) = 0;
 	virtual void SwapEndian() = 0;
-	virtual ~BuffEval(){}
+	virtual void Devaluate(Vector4 in, int frame) = 0;
+
+	virtual ~LMTTrackController() {}
 };
 
 template<class C>
-struct Buff_EvalShared : BuffEval
+struct Buff_EvalShared : LMTTrackController
 {
 	typedef std::vector<C, std::allocator_hybrid<C>> Store_Type;
 	Store_Type data;
-	int NumItems() const { return data.size(); }
-	void NumItems(int numItems) { data.resize(numItems); }
+	int NumFrames() const { return data.size(); }
+	void NumFrames(int numItems) { data.resize(numItems); }
+	bool IsCubic() const { return C::VARIABLE_SIZE; }
+
+	template <class _C = C>
+	typename std::enable_if<_C::VARIABLE_SIZE>::type _GetTangents(Vector4 &inTangs, Vector4 &outTangs, int frame) const
+	{
+		data[frame].GetTangents(inTangs, outTangs);
+	}
+
+	template <class _C = C>
+	typename std::enable_if<!_C::VARIABLE_SIZE>::type _GetTangents(Vector4 &inTangs, Vector4 &outTangs, int frame) const {}
+
+	void GetTangents(Vector4 &inTangs, Vector4 &outTangs, int frame) const
+	{
+		_GetTangents(inTangs, outTangs, frame);
+	}
+
+	void Evaluate(Vector4 &out, int frame) const
+	{
+		data[frame].Evaluate(out);
+	}
+
+	void Devaluate(Vector4 in, int frame)
+	{
+		data[frame].Devaluate(in);
+	}
 
 	void ToString(std::string &strBuff, int numIdents) const
 	{
@@ -1306,18 +1580,35 @@ struct Buff_EvalShared : BuffEval
 		if (!C::VARIABLE_SIZE)
 		{
 			data = Store_Type(reinterpret_cast<C *>(ptr), reinterpret_cast<C *>(ptr + size), std::allocator_hybrid<C>(reinterpret_cast<C *>(ptr)));
-			return;
 		}
-
-		const char *bufferEnd = ptr + size;
-
-		while (ptr < bufferEnd)
+		else
 		{
-			C *block = reinterpret_cast<C *>(ptr);
-			data.push_back(*block);
-			ptr += block->Size();
+			const char *bufferEnd = ptr + size;
+
+			while (ptr < bufferEnd)
+			{
+				C *block = reinterpret_cast<C *>(ptr);
+				data.push_back(*block);
+				ptr += block->Size();
+			}
 		}
 
+		frames.resize(NumFrames());
+		int currentFrame = 0;
+		int curFrameID = 0;
+
+		for (auto &f : frames)
+		{
+			f = currentFrame;
+			data[curFrameID].GetFrame(currentFrame);
+			curFrameID++;
+		}
+
+		if (size)
+		{
+			Vector4 huh;
+			data[0].Evaluate(huh);
+		}
 	}
 	void SwapEndian()
 	{ 
@@ -1326,7 +1617,7 @@ struct Buff_EvalShared : BuffEval
 	}
 };
 
-template<class Derived> BuffEval *_creatorDummyBuffEval() { return new Buff_EvalShared<Derived>(); }
+template<class Derived> LMTTrackController *_creatorDummyBuffEval() { return new Buff_EvalShared<Derived>(); }
 
 #if FIX_C2970
 #define buffEvalRegShenanigans extern
@@ -1334,31 +1625,31 @@ template<class Derived> BuffEval *_creatorDummyBuffEval() { return new Buff_Eval
 #define buffEvalRegShenanigans static
 #endif
 
-buffEvalRegShenanigans const std::map<TrackV1BufferTypes, BuffEval *(*)()> buffEvalRegistryV1 =
+buffEvalRegShenanigans const std::map<TrackV1BufferTypes, LMTTrackController *(*)()> buffEvalRegistryV1 =
 {
 	{TrackV1BufferTypes::SingleVector3, _creatorDummyBuffEval<Buf_SingleVector3>},
 	{TrackV1BufferTypes::LinearVector3, _creatorDummyBuffEval<Buf_LinearVector3>},
 	{TrackV1BufferTypes::SinglePositionVector3, _creatorDummyBuffEval<Buf_SingleVector3>},
-	{TrackV1BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_SingleVector3>},
+	{TrackV1BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_StepRotationQuat3>},
 	{TrackV1BufferTypes::SphericalRotation, _creatorDummyBuffEval<Buf_SphericalRotation>},
 	{TrackV1BufferTypes::HermiteVector3, _creatorDummyBuffEval<Buf_HermiteVector3>},
 };
 
-buffEvalRegShenanigans const std::map<TrackV1_5BufferTypes, BuffEval *(*)()> buffEvalRegistryV1_5 =
+buffEvalRegShenanigans const std::map<TrackV1_5BufferTypes, LMTTrackController *(*)()> buffEvalRegistryV1_5 =
 {
 	{TrackV1_5BufferTypes::SingleVector3, _creatorDummyBuffEval<Buf_SingleVector3>},
 	{TrackV1_5BufferTypes::LinearVector3, _creatorDummyBuffEval<Buf_LinearVector3>},
 	{TrackV1_5BufferTypes::SinglePositionVector3, _creatorDummyBuffEval<Buf_SingleVector3>},
-	{TrackV1_5BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_SingleVector3>},
+	{TrackV1_5BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_StepRotationQuat3>},
 	{TrackV1_5BufferTypes::LinearRotationQuat4_14bit, _creatorDummyBuffEval<Buf_LinearRotationQuat4_14bit>},
 	{TrackV1_5BufferTypes::HermiteVector3, _creatorDummyBuffEval<Buf_HermiteVector3>},
 };
 
-buffEvalRegShenanigans const std::map<TrackV2BufferTypes, BuffEval *(*)()> buffEvalRegistryV2 =
+buffEvalRegShenanigans const std::map<TrackV2BufferTypes, LMTTrackController *(*)()> buffEvalRegistryV2 =
 {
 	{TrackV2BufferTypes::SingleVector3, _creatorDummyBuffEval<Buf_SingleVector3>},
 	{TrackV2BufferTypes::LinearVector3, _creatorDummyBuffEval<Buf_LinearVector3>},
-	{TrackV2BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_SingleVector3>},
+	{TrackV2BufferTypes::SingleRotationQuat3, _creatorDummyBuffEval<Buf_StepRotationQuat3>},
 	{TrackV2BufferTypes::LinearRotationQuat4_14bit, _creatorDummyBuffEval<Buf_LinearRotationQuat4_14bit>},
 	{TrackV2BufferTypes::BiLinearVector3_16bit, _creatorDummyBuffEval<Buf_BiLinearVector3_16bit>},
 	{TrackV2BufferTypes::BiLinearVector3_8bit, _creatorDummyBuffEval<Buf_BiLinearVector3_8bit>},
@@ -1380,7 +1671,7 @@ struct TrackV1
 	DECLARE_REFLECTOR;
 	void noExtremes();
 	esEnum<uchar, BufferType> compression;
-	esEnum<uchar, TrackType> trackType;
+	esEnum<uchar, TrackType_e> trackType;
 	uchar boneType;
 	uchar boneID;
 	float weight;
@@ -1434,7 +1725,7 @@ struct TrackV2
 {
 	DECLARE_REFLECTOR;
 	esEnum<uchar, TrackV2BufferTypes> compression;
-	esEnum<uchar, TrackType> trackType;
+	esEnum<uchar, TrackType_e> trackType;
 	uchar boneType;
 	uchar boneID;
 	float weight;
@@ -1487,7 +1778,7 @@ struct TrackV3
 {
 	DECLARE_REFLECTOR;
 	esEnum<uchar, TrackV2BufferTypes> compression;
-	esEnum<uchar, TrackType> trackType;
+	esEnum<uchar, TrackType_e> trackType;
 	uchar boneType;
 	uchar boneID;
 	int mirroredBoneID;
@@ -1720,7 +2011,7 @@ struct AnimV2
 		loopFrame;
 	Vector4 endFrameAdditiveScenePosition;
 	Vector4 endFrameAdditiveSceneRotation;
-	int unk;
+	int unk; // 800000 = use events, 1000000 = unknown, 40000 = float events
 	typename Traits::EventClass_Pointer eventTable;
 
 	typename Traits::EventClass *Events(char *masterBuffer) { return eventTable.GetData(masterBuffer); }
@@ -1746,7 +2037,7 @@ struct AnimV2
 		tracks.Fixup(masterBuffer, swapEndian);
 		eventTable.Fixup(masterBuffer, swapEndian);
 
-		printer << unk >> 0;
+		printer << unk << ' ' >> 0;
 
 		typename Traits::EventClass *dEvents = Events(masterBuffer);
 
@@ -1899,21 +2190,50 @@ public:
 	}
 };
 
-template<class C, class EvalMap>
-class TrackShared : LMTTrack
+class LMTTrack_internal : public LMTTrack
 {
 public:
 	bool locked,
 		mastered;
-	mutable int numIdents = 5;
 	char *masterBuffer;
-	C *data;
-	BuffEval *controller;
 	TrackMinMax *minMax;
-	const EvalMap *evalMap;
-	TrackShared() : masterBuffer(nullptr), data(nullptr), controller(nullptr), locked(false), mastered(false), minMax(nullptr) {}
-	TrackShared(C *_data, const EvalMap &_evalMap, char *_buff, bool swapEndian) : data(_data), masterBuffer(_buff), evalMap(&_evalMap), mastered(false)
+	LMTTrackController *controller;
+
+	int NumFrames() const { return controller->NumFrames(); }
+	bool IsCubic() const { return controller->IsCubic(); }
+	void GetTangents(Vector4 &inTangs, Vector4 &outTangs, int frame) const { controller->GetTangents(inTangs, outTangs, frame); }
+	void Evaluate(Vector4 &out, int frame) const
 	{
+		controller->Evaluate(out, frame);
+
+		if (minMax)
+			additiveLerp(minMax, out);
+	}
+
+	short GetFrame(int frame) const { return controller->GetFrame(frame); }
+
+	LMTTrack_internal() : controller(nullptr), minMax(nullptr), masterBuffer(nullptr), locked(false), mastered(false) {}
+	~LMTTrack_internal()
+	{
+		if (controller && !locked)
+			delete controller;
+
+		if (mastered && minMax)
+			delete minMax;
+	}
+};
+
+template<class C, class EvalMap>
+class TrackShared : public LMTTrack_internal
+{
+public:
+	mutable int numIdents = 5;
+	C *data;
+	const EvalMap *evalMap;
+	TrackShared() : data(nullptr) {}
+	TrackShared(C *_data, const EvalMap &_evalMap, char *_buff, bool swapEndian) : data(_data), evalMap(&_evalMap)
+	{
+		masterBuffer = _buff;
 		data->Fixup(masterBuffer, swapEndian);
 		controller = evalMap->at(data->compression)();
 		controller->Assign(data->bufferOffset.GetData(masterBuffer), data->bufferSize);
@@ -1926,15 +2246,12 @@ public:
 
 	~TrackShared()
 	{
-		if (controller && !locked)
-			delete controller;
-
-		if (mastered && minMax)
-			delete minMax;
-
 		if (mastered && data)
 			delete data;
 	}
+
+	TrackType GetTrackType() const { return static_cast<TrackType>(static_cast<TrackType_e>(data->trackType)); }
+	int AnimatedBoneID() const { return data->boneID; }
 
 	ADD_DISABLERS(C, noExtremes);
 	enabledFunction(TrackMinMax *) GetTrackExtremes()
@@ -1970,7 +2287,7 @@ public:
 		std::string strBuff;
 		controller->ToString(strBuff, numIdents);
 		dataNode.append_buffer(strBuff.c_str(), strBuff.size());
-		dataNode.append_attribute("numItems").set_value(controller->NumItems());
+		dataNode.append_attribute("numItems").set_value(controller->NumFrames());
 
 		return 0;
 	}
@@ -2010,7 +2327,7 @@ public:
 		if (dataNode.empty() || numDataItems.empty() || !numDataItems.as_int())
 			return 0;
 
-		controller->NumItems(numDataItems.as_int());
+		controller->NumFrames(numDataItems.as_int());
 		std::string strBuff = dataNode.text().get();
 		controller->FromString(strBuff);
 
@@ -2059,18 +2376,32 @@ public:
 	std::vector<SharedTrack_Type> tracks;
 	Events_Type events[Animation_Type::Traits::NUMEVENTGROUPS];
 	Animation_Type *data;
+	EventClass *customEventHeader = nullptr;
+
+	EventClass *EventHeader() const
+	{
+		EventClass *dEvents = data->Events(masterBuffer);
+
+		if (!dEvents)
+			return customEventHeader;
+
+		return dEvents;
+	}
 
 	~AnimShared()
 	{
 		if (masteredData && data)
 			delete data;
+
+		if (customEventHeader)
+			delete customEventHeader;
 	}
 
 	int ToXML(pugi::xml_node &node, bool standAlone) const
 	{
 		ReflectorWrap<Animation_Type> refl(data);
 		refl.ToXML(node, false);
-		EventClass *dEvents = data->Events(masterBuffer);
+		EventClass *dEvents = EventHeader();
 
 		if (dEvents)
 		{
@@ -2112,6 +2443,7 @@ public:
 
 	int NumEventBlocks() const { return Animation_Type::Traits::NUMEVENTGROUPS; }
 	const int NumTracks() const { return data->numTracks; };
+	const LMTTrack *Track(int id) const { return &tracks[id]; }
 
 	void Assign(char *ptr, bool swapEndian) 
 	{ 
@@ -2180,11 +2512,11 @@ public:
 			t.SaveBuffers(wr, localStorage);
 		}
 
-		EventClass *dEvents = data->Events(masterBuffer);
+		EventClass *dEvents = EventHeader();
 
 		if (dEvents)
 		{
-			if (data->VERSION == 2)
+			if (Animation_Type::VERSION == 2)
 			{
 				const int numFixupRequests = Animation_Type::Traits::NUMEVENTGROUPS;
 
@@ -2266,10 +2598,85 @@ public:
 			curTrack++;
 		}
 
+		pugi::xml_node eventGroupsNode = node.child("eventGroups");
 
+		if (eventGroupsNode.empty())
+		{
+			printerror("[LMT] Couldn't find <eventGroups/> for animation.");
+			return 1;
+		}
+
+		auto eventGroupIter = eventGroupsNode.children("eventGroup");
+		std::vector<pugi::xml_node> eventGroupNodes(eventGroupIter.begin(), eventGroupIter.end());
+		numItemsAttr = eventGroupsNode.attribute("numItems");
+
+		if (!numItemsAttr.empty() && numItemsAttr.as_int() != eventGroupNodes.size())
+		{
+			printwarning("[LMT] Animation <eventGroups numItems=/> differs from actual <eventGroup/> count.");
+		}
+
+		if (eventGroupNodes.size() != NumEventBlocks())
+		{
+			printwarning("[LMT] Animation <eventGroup/> count is different than built-in count. Expected: " << NumEventBlocks() << ", got: " << eventGroupNodes.size());
+		}
+
+		EventClass *dEvents = nullptr;
+
+		if (Animation_Type::VERSION == 1)
+		{
+			dEvents = data->Events(nullptr);
+		}	
+		else
+		{
+			dEvents = new EventClass[NumEventBlocks()]();
+			customEventHeader = dEvents;
+		}
+
+		for (int e = 0; e < NumEventBlocks(); e++)
+		{
+			pugi::xml_node evGroupNode = eventGroupNodes[e];
+
+			ReflectorWrap<EventClass> reflEvent(&dEvents[e]);
+			reflEvent.FromXML(evGroupNode, false);
+
+			pugi::xml_node rangesNode = evGroupNode.child("events");
+
+			if (rangesNode.empty())
+			{
+				printerror("[LMT] Couldn't find any <events/> nodes for eventGroup.");
+				return 1;
+			}
+
+			numItemsAttr = rangesNode.attribute("numItems");
+
+			auto rangeIter = rangesNode.children("event");
+			std::vector<pugi::xml_node> rangeNodes(rangeIter.begin(), rangeIter.end());
+
+			if (!rangeNodes.size())
+			{
+				printerror("[LMT] Couldn't find any <event/> nodes for events.");
+				return 1;
+			}
+
+			if (!numItemsAttr.empty() && numItemsAttr.as_int() != rangeNodes.size())
+			{
+				printwarning("[LMT] Animation <events numItems=/> differs from actual <event/> count.");
+			}
+
+			dEvents[e].numEvents = rangeNodes.size();
+			events[e].resize(rangeNodes.size());
+
+			int curEventTrigger = 0;
+
+			for (auto &r : events[e])
+			{
+				r.FromXML(rangeNodes[curEventTrigger]);
+				curEventTrigger++;
+			}
+		}
+		
 		return 0;
 	}
-
 };
 
 template<class Derived> LMTAnimation_internal *_creatorDummy() { return new AnimShared<Derived>(); }
@@ -2398,6 +2805,75 @@ int LMT::Load(BinReader *rd)
 	return 0;
 }
 
+int LMT::Save(BinWritter *wr)
+{
+	wr->Write(ID);
+	wr->Write<ushort>(Version());
+	wr->Write<ushort>(animations.size());
+
+	V eVersion = static_cast<V>(Version());
+	bool isX64 = GetArchitecture() == X64;
+	LMTFixupStorage fixups;
+
+	if (eVersion == V_92)
+		wr->Skip(isX64 ? 8 : 4);
+
+	for (auto &a : animations)
+	{
+		fixups.SaveFrom(wr->Tell());
+		wr->Skip(isX64 ? 8 : 4);
+	}
+
+	LMTFixupStorage internalFixups;
+
+	for (auto &a : animations)
+	{
+		if (!a)
+		{
+			fixups.SkipTo();
+			continue;
+		}
+
+		LMTAnimation_internal *cAni = static_cast<LMTAnimation_internal*>(a);
+
+		wr->ApplyPadding();
+		fixups.SaveTo(wr);
+		cAni->SaveBase(wr, internalFixups);
+	}
+
+	size_t savepos = wr->Tell();
+
+	for (auto &f : fixups.fixupStorage)
+	{
+		wr->Seek(f.from);
+		wr->Write(f.to);
+	}
+
+	wr->Seek(savepos);
+
+	for (auto &a : animations)
+	{
+		if (!a)
+			continue;
+
+		LMTAnimation_internal *cAni = static_cast<LMTAnimation_internal *>(a);
+		wr->ApplyPadding();
+		cAni->SaveRest(wr, internalFixups);
+	}
+
+	savepos = wr->Tell();
+
+	for (auto &f : internalFixups.fixupStorage)
+	{
+		wr->Seek(f.from);
+		wr->Write(f.to);
+	}
+
+	wr->Seek(savepos);
+
+	return 0;
+}
+
 int LMT::ToXML(pugi::xml_node &node, const char *fileName, ExportSettings settings)
 {
 	pugi::xml_node master = node.append_child("LMT");
@@ -2423,7 +2899,7 @@ int LMT::ToXML(pugi::xml_node &node, const char *fileName, ExportSettings settin
 				pugi::xml_node subAni = linkAni.append_child("Animation");
 				subAni.append_attribute("version").set_value(Version());
 				a->ToXML(subAni, true);
-				std::string linkedName = fleInf.GetFileName() + "_m" + std::to_string(curAniID) + ".xml";
+				std::string linkedName = fleInf.GetFileName() + "_m" + std::to_string(curAniID) + ".mtx";
 				std::string linkedFullName = fleInf.GetPath() + linkedName;
 				cAni.append_buffer(linkedName.c_str(), linkedName.size());
 				linkAni.save_file(linkedFullName.c_str(), "\t", pugi::format_write_bom | pugi::format_indent);
@@ -2665,7 +3141,7 @@ LMT::LMT() : masterBuffer(nullptr), version(0)
 	REGISTER_ENUM(TrackV1BufferTypes);
 	REGISTER_ENUM(TrackV1_5BufferTypes);
 	REGISTER_ENUM(TrackV2BufferTypes);
-	REGISTER_ENUM(TrackType);
+	REGISTER_ENUM(TrackType_e);
 	REGISTER_ENUM(Buf_HermiteVector3_Flags);
 
 	lmtInitialized = true;
