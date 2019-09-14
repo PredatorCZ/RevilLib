@@ -36,3 +36,5 @@ ObjDump/*
 lib/*
 [Bb]in/*
 *.user
+build/*
+test/build/*

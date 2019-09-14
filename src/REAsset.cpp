@@ -224,7 +224,7 @@ struct LinearQuat3Controller : RETrackController_internal
 		out.X = retreived.X;
 		out.Y = retreived.Y;
 		out.Z = retreived.Z;
-		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
+		out.W = sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 };
 
@@ -251,7 +251,7 @@ struct BiLinearQuat3_10bitController : RETrackController_internal
 		out.Y = (retreived >> 10) & componentMask;
 		out.Z = (retreived >> 20) & componentMask;
 		out = curve->minMaxBounds->max + (curve->minMaxBounds->min * (out * componentMultiplier));
-		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
+		out.W = sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 };
 
@@ -280,7 +280,7 @@ struct BiLinearQuat3_21bitController : RETrackController_internal
 		out.Y = (retreived >> 21) & componentMask;
 		out.Z = (retreived >> 42) & componentMask;
 		out = curve->minMaxBounds->max + (curve->minMaxBounds->min * (out * componentMultiplier));
-		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
+		out.W = sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 };
 
@@ -308,7 +308,7 @@ struct BiLinearSingleComponentQuatController : RETrackController_internal
 	{
 		const ushort &retreived = dataStorage[id];
 		out[componentID] = curve->minMaxBounds->min[1] + (curve->minMaxBounds->min[0] * (static_cast<float>(retreived) * componentMultiplier));
-		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
+		out.W = sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 };
 
@@ -387,7 +387,7 @@ struct LinearSingleComponentQuatController : RETrackController_internal
 	{
 		const float &retreived = dataStorage[id];
 		out[componentID] = retreived;
-		out.W = std::sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
+		out.W = sqrtf(1.0f - out.X * out.X - out.Y * out.Y - out.Z * out.Z);
 	}
 };
 

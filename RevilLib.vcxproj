@@ -23,7 +23,7 @@
     <ProjectGuid>{FFCA4C01-B4D8-46B2-8224-8D210C11B3CD}</ProjectGuid>
     <RootNamespace>RevilkLib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <TargetName>RevilLib</TargetName>
@@ -81,6 +81,13 @@
   <ItemGroup>
     <ClInclude Include="include\LMT.h" />
     <ClInclude Include="include\REAsset.h" />
+    <ClInclude Include="src\LMTAnimation.h" />
+    <ClInclude Include="src\LMTBoneTrack.h" />
+    <ClInclude Include="src\LMTCodecs.h" />
+    <ClInclude Include="src\LMTEvent.h" />
+    <ClInclude Include="src\LMTFixupStorage.h" />
+    <ClInclude Include="src\LMTFloatTrack.h" />
+    <ClInclude Include="src\LMTInternal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="3rd_party\pugixml\src\pugixml.cpp" />
@@ -88,6 +95,13 @@
     <ClCompile Include="3rd_party\PreCore\datas\reflector.cpp" />
     <ClCompile Include="3rd_party\PreCore\datas\reflectorXML.cpp" />
     <ClCompile Include="src\LMT.cpp" />
+    <ClCompile Include="src\LMTBoneTrack.cpp" />
+    <ClCompile Include="src\LMTCodecs.cpp" />
+    <ClCompile Include="src\LMTEvent.cpp" />
+    <ClCompile Include="src\LMTAnimation.cpp" />
+    <ClCompile Include="src\LMTFLoatTrack.cpp" />
+    <ClCompile Include="src\LMTSerialize.cpp" />
+    <ClCompile Include="src\LMTXML.cpp" />
     <ClCompile Include="src\REAsset.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

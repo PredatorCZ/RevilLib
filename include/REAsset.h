@@ -40,16 +40,16 @@ union REPointer
 	}
 
 	template<class _C = C>
-	typename std::enable_if<!std::is_void_v<_C>, _C>::type &operator *() { return *ptr; }
+	typename std::enable_if<!std::is_void<_C>::value, _C>::type &operator *() { return *ptr; }
 
 	template<class _C = C>
-	typename std::enable_if<std::is_void_v<_C>, void>::type operator *() {}
+	typename std::enable_if<std::is_void<_C>::value, void>::type operator *() {}
 
 	template<class _C = C>
-	typename std::enable_if<!std::is_void_v<_C>, _C>::type &operator [](size_t index) { return ptr[index]; }
+	typename std::enable_if<!std::is_void<_C>::value, _C>::type &operator [](size_t index) { return ptr[index]; }
 
 	template<class _C = C>
-	typename std::enable_if<std::is_void_v<_C>, void>::type operator [](size_t index) {}
+	typename std::enable_if<std::is_void<_C>::value, void>::type operator [](size_t index) {}
 
 	C *operator->() { return ptr; }
 };
