@@ -328,7 +328,11 @@ public:
     return sizeof(typename C::Traits::Track_Pointer) == 8;
   }
 
-  //finish
+  const int NumFrames() const override { return data->numFrames; }
+
+  const int LoopFrame() const override { return data->loopFrame; }
+
+  // finish
   void Sanitize() const {
     data->numTracks = static_cast<int>(tracks.size());
 

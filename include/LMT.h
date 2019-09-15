@@ -131,6 +131,8 @@ public:
 
   virtual int GetVersion() const = 0;
   virtual const int NumTracks() const = 0;
+  virtual const int NumFrames() const = 0;
+  virtual const int LoopFrame() const = 0;
   virtual const LMTTrack *Track(int id) const = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone = false) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;

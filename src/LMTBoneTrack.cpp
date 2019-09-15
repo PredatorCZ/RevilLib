@@ -185,12 +185,20 @@ void LMTTrack_internal::SwapEndian() {
     controller->SwapEndian();
 }
 
-int LMTTrack_internal::NumFrames() const { return controller->NumFrames(); }
+int LMTTrack_internal::NumFrames() const {
+  return controller->NumFrames() + useRefFrame;
+}
 bool LMTTrack_internal::LMTTrack_internal::IsCubic() const {
   return controller->IsCubic();
 }
 void LMTTrack_internal::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                                     int frame) const {
+  if (useRefFrame && !frame) {
+    inTangs = Vector4A16(*GetRefData());
+    outTangs = inTangs;
+    return;
+  }
+
   controller->GetTangents(inTangs, outTangs, frame);
 }
 void LMTTrack_internal::Evaluate(Vector4A16 &out, int frame) const {
@@ -205,7 +213,11 @@ void LMTTrack_internal::Evaluate(Vector4A16 &out, int frame) const {
     out = minMax->max + minMax->min * out;
 }
 short LMTTrack_internal::GetFrame(int frame) const {
-  return controller->GetFrame(frame);
+  if (useRefFrame && !frame) {
+    return 0;
+  }
+
+  return controller->GetFrame(frame - useRefFrame) + useRefFrame;
 }
 
 template <class C> class LMTTrackShared : public LMTTrack_internal {
