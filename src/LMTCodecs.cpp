@@ -1027,15 +1027,28 @@ template <class Derived> LMTTrackController *_creatorDummyBuffEval() {
 
 #define TCON_REG(val) {TrackTypesShared::val, _creatorDummyBuffEval<Buf_##val>},
 
+#define TCONFRC_REG(val)                                                       \
+  {TrackTypesShared::val, Buf_##val::componentMultiplier},
+
 static const std::unordered_map<TrackTypesShared, LMTTrackController *(*)()>
     codecRegistry = {
+        {TrackTypesShared::None, nullptr},
         StaticFor(TCON_REG, SingleVector3, HermiteVector3, StepRotationQuat3,
                   SphericalRotation, LinearVector3, BiLinearVector3_16bit,
                   BiLinearVector3_8bit, LinearRotationQuat4_14bit,
                   BiLinearRotationQuat4_7bit, BiLinearRotationQuatXW_14bit,
                   BiLinearRotationQuatYW_14bit, BiLinearRotationQuatZW_14bit,
-                  BiLinearRotationQuat4_11bit,
-                  BiLinearRotationQuat4_9bit){TrackTypesShared::None, nullptr}};
+                  BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)};
+
+static const std::unordered_map<TrackTypesShared, float> fracRegistry = {
+    {TrackTypesShared::BiLinearVector3_16bit,
+     Buf_BiLinearVector3_16bit::componentMultiplier.X},
+    {TrackTypesShared::BiLinearVector3_8bit,
+     Buf_BiLinearVector3_8bit::componentMultiplier.X},
+    StaticFor(TCONFRC_REG, LinearRotationQuat4_14bit,
+              BiLinearRotationQuat4_7bit, BiLinearRotationQuatXW_14bit,
+              BiLinearRotationQuatYW_14bit, BiLinearRotationQuatZW_14bit,
+              BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)};
 
 static const TrackTypesShared buffRemapRegistry[][16] = {
     {TrackTypesShared::None, TrackTypesShared::SingleVector3,
@@ -1075,4 +1088,11 @@ LMTTrackController *LMTTrackController::CreateCodec(int type, int subVersion) {
     return codecRegistry.at(cType)();
 
   return nullptr;
+}
+
+float LMTTrackController::GetTrackMaxFrac(TrackTypesShared type) {
+  if (fracRegistry.count(type))
+    return fracRegistry.at(type);
+
+  return FLT_MAX;
 }

@@ -146,4 +146,5 @@ struct LMTTrackController {
 
   static LMTTrackController *CreateCodec(int type, int subVersion);
   static LMTTrackController *CreateCodec(TrackTypesShared type) { return CreateCodec(static_cast<int>(type), -1); }
+  static float GetTrackMaxFrac(TrackTypesShared type);
 };

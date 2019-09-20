@@ -21,6 +21,7 @@ set(CMAKE_CXX_STANDARD 11)
 add_library(RevilLib STATIC 
 3rd_party/pugixml/src/pugixml.cpp
 3rd_party/PreCore/datas/MasterPrinter.cpp
+3rd_party/PreCore/datas/Matrix44.cpp
 3rd_party/PreCore/datas/reflector.cpp
 3rd_party/PreCore/datas/reflectorXML.cpp
 src/LMT.cpp
@@ -31,7 +32,8 @@ src/LMTFloatTrack.cpp
 src/LMTAnimation.cpp
 src/LMTSerialize.cpp
 src/LMTXML.cpp
-#src/REAsset.cpp
+src/LMTDecoders.cpp
+src/REAsset.cpp
 )
 
 include_directories(include/ )
