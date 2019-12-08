@@ -702,7 +702,7 @@ void Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(
 }
 
 void Buf_BiLinearRotationQuat4_7bit::Evaluate(Vector4A16 &out) const {
-  out = IVector4A16(data, data >> 7, data >> 14, data >> 21) & componentMask;
+  out = IVector4A16(data >> 21, data >> 14, data >> 7, data) & componentMask;
   out *= componentMultiplier;
 }
 
@@ -711,10 +711,10 @@ void Buf_BiLinearRotationQuat4_7bit::Devaluate(Vector4A16 in) {
 
   UIVector4A16 store(in * componentMultiplierInv);
 
-  data |= store.X;
-  data |= store.Y << 7;
-  data |= store.Z << 14;
-  data |= store.W << 21;
+  data |= store.W;
+  data |= store.Z << 7;
+  data |= store.Y << 14;
+  data |= store.X << 21;
 }
 
 void Buf_BiLinearRotationQuat4_7bit::GetFrame(int &currentFrame) const {
@@ -845,7 +845,9 @@ void Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(
 void Buf_BiLinearRotationQuat4_11bit::Evaluate(Vector4A16 &out) const {
   const uint64 &rVal = reinterpret_cast<const uint64 &>(data);
 
-  out = IVector4A16(rVal, rVal >> 11, rVal >> 22, rVal >> 33) & componentMask;
+  out = IVector4A16(rVal, ((rVal >> 11) << 6) | data[1] & 0x3f,
+                    (rVal >> 22) << 1 | data[2] & 1, rVal >> 33) &
+        componentMask;
   out *= componentMultiplier;
 }
 
@@ -857,8 +859,8 @@ void Buf_BiLinearRotationQuat4_11bit::Devaluate(Vector4A16 in) {
   t_Vector4<uint64> store = (in * componentMultiplierInv).Convert<uint64>();
 
   rVal |= store.X;
-  rVal |= store.Y << 11;
-  rVal |= store.Z << 22;
+  rVal |= (store.Y >> 6 | (store.Y & 0x3f) << 5) << 11;
+  rVal |= (store.Z >> 1 | (store.Z & 1) << 10) << 22;
   rVal |= store.W << 33;
 }
 
@@ -900,7 +902,11 @@ void Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(
 void Buf_BiLinearRotationQuat4_9bit::Evaluate(Vector4A16 &out) const {
   const uint64 &rVal = reinterpret_cast<const uint64 &>(data);
 
-  out = IVector4A16(rVal, rVal >> 9, rVal >> 18, rVal >> 27) & componentMask;
+  out = IVector4A16((rVal << 1) | (data[1] & 1),
+                    ((rVal >> 9) << 2) | (data[2] & 3),
+                    ((rVal >> 18) << 3) | (data[3] & 7),
+                    ((rVal >> 27) << 4) | (data[4] & 0xf)) &
+        componentMask;
   out *= componentMultiplier;
 }
 
@@ -911,10 +917,10 @@ void Buf_BiLinearRotationQuat4_9bit::Devaluate(Vector4A16 in) {
 
   t_Vector4<uint64> store = (in * componentMultiplierInv).Convert<uint64>();
 
-  rVal |= store.X;
-  rVal |= store.Y << 9;
-  rVal |= store.Z << 18;
-  rVal |= store.W << 27;
+  rVal |= store.X >> 1 | (store.X & 1) << 8;
+  rVal |= (store.Y >> 2 | (store.Y & 3) << 7) << 9;
+  rVal |= (store.Z >> 3 | (store.Z & 7) << 6) << 18;
+  rVal |= (store.W >> 4 | (store.W & 0xf) << 5) << 27;
 }
 
 void Buf_BiLinearRotationQuat4_9bit::GetFrame(int &currentFrame) const {

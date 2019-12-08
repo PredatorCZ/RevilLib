@@ -1,5 +1,6 @@
 #include "LMTCodecs.h"
 #include "LMTDecode.h"
+#include <algorithm>
 
 typedef std::vector<Vector4A16> VectCollection;
 
@@ -216,4 +217,6 @@ LMTOutputTracks CreateTrackFromRaw(const LMTRawTrack &rawData) {
   ChooseRightVector3(positions);
 
   int res = 0;
+
+  return {};
 }
