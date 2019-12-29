@@ -34,3 +34,5 @@
 build/*
 project.h
 .vscode/*
+*.7z
+*.bat
