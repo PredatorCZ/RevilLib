@@ -39,11 +39,14 @@ build_target(
 	SOURCES
         SPACConvert.cpp
         ${TPD_PATH}/precore/datas/MasterPrinter.cpp
-        ${TPD_PATH}/precore/datas/reflector.cpp
+		${TPD_PATH}/precore/datas/reflector.cpp
+		${TPD_PATH}/precore/datas/reflectorXML.cpp
+		${TPD_PATH}/RevilLib/3rd_party/pugixml/src/pugixml.cpp
 	INCLUDES
 		${TPD_PATH}/precore
 		${TPD_PATH}/vgmstream/src
 		${TPD_PATH}/vgmstream/ext_includes
+		${TPD_PATH}/RevilLib/3rd_party/pugixml/src
 	LINK_DIRS
 		${CMAKE_BINARY_DIR}/3rd_party/vgmstream/ext_libs
 	LINKS
@@ -66,3 +69,4 @@ file(GLOB fndlib01 ${TPD_PATH}/vgmstream/ext_libs/avformat*.dll)
 file(GLOB fndlib02 ${TPD_PATH}/vgmstream/ext_libs/avcodec*.dll)
 
 file(COPY ${fndlib00} ${fndlib01} ${fndlib02} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+file(COPY ${fndlib00} ${fndlib01} ${fndlib02} DESTINATION ${PROJECT_BINARY_DIR}/Debug)

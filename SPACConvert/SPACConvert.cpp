@@ -15,8 +15,6 @@
         along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <thread>
-
 #include "datas/MultiThread.hpp"
 #include "datas/SettingsManager.hpp"
 #include "datas/binreader.hpp"
@@ -27,12 +25,32 @@
 #include "formats/FWSE.hpp"
 #include "formats/MSF.hpp"
 #include "formats/WAVE.hpp"
-
 #include "project.h"
+#include "pugixml.hpp"
 
 extern "C" {
 #include "vgmstream.h"
 }
+
+static struct SPACConvert : SettingsManager {
+  DECLARE_REFLECTOR;
+
+  bool Generate_Log = false;
+  bool Force_WAV_Conversion = false;
+  bool Convert_to_WAV = true;
+} settings;
+
+REFLECTOR_START_WNAMES(SPACConvert, Convert_to_WAV, Force_WAV_Conversion,
+                       Generate_Log);
+
+static const char help[] = "\nConverts SPAC sound archives.\n\
+Settings (.config file):\n\
+  Convert_to_WAV: \n\
+        Convert non WAV formats into a 16bit PCM WAV.\n\
+  Force_WAV_Conversion:\n\
+        Force conversion of all sounds to a 16bit PCM WAV.\n\
+  Generate_Log: \n\
+        Will generate text log of console output next to application location.\n\t";
 
 static const char pressKeyCont[] = "\nPress ENTER to close.";
 
@@ -265,10 +283,10 @@ void LoadSPAC(const TCHAR *fle) {
       throw std::runtime_error("Invalid entry format!");
     }
   }
-  bool doNotConvert = false;
 
   int currentFile = 0;
-  VGMMemoryFile *nmFile = doNotConvert ? nullptr : VGMMemoryFile::Create();
+  VGMMemoryFile *nmFile =
+      !settings.Convert_to_WAV ? nullptr : VGMMemoryFile::Create();
 
   for (auto &e : msBuffer.entries) {
     TFileInfo finf(fle);
@@ -278,7 +296,8 @@ void LoadSPAC(const TCHAR *fle) {
         std::to_string(currentFile) + '.' +
         _EnumWrap<FileType>{}._reflected[static_cast<int>(e.fileType)];
 
-    if (!doNotConvert) {
+    if (settings.Convert_to_WAV &&
+        (settings.Force_WAV_Conversion || e.fileType != FileType::WAV)) {
       nmFile->buffer = e.start;
       nmFile->bufferSize = e.size;
       nmFile->fileName = nakedName.c_str();
@@ -363,12 +382,34 @@ int _tmain(int argc, TCHAR *argv[]) {
                              "use as " SPACConvert_PRODUCT_NAME
                              " file1 file2 ...\n");
 
+  TFileInfo configInfo(*argv);
+  const TSTRING configName =
+      configInfo.GetPath() + configInfo.GetFileName() + _T(".config");
+
+  settings.FromXML(configName);
+
+  pugi::xml_document doc = {};
+  pugi::xml_node mainNode(settings.ToXML(doc));
+  mainNode.prepend_child(pugi::xml_node_type::node_comment).set_value(help);
+
+  doc.save_file(configName.c_str(), "\t",
+                pugi::format_write_bom | pugi::format_indent);
+
   if (argc < 2) {
-    printerror("Insufficient argument count, expected at aleast 1.");
-    printer << pressKeyCont >> 1;
+    printerror("Insufficient argument count, expected at least 1.");
+    printer << help << pressKeyCont >> 1;
     getchar();
     return 1;
   }
+
+  if (argv[1][1] == '?' || argv[1][1] == 'h') {
+    printer << help << pressKeyCont >> 1;
+    getchar();
+    return 0;
+  }
+
+  if (settings.Generate_Log)
+    settings.CreateLog(configInfo.GetPath() + configInfo.GetFileName());
 
   printer.PrintThreadID(true);
 

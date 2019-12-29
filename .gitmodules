@@ -4,3 +4,6 @@
 [submodule "3rd_party/vgmstream"]
 	path = 3rd_party/vgmstream
 	url = https://github.com/PredatorCZ/vgmstream.git
+[submodule "3rd_party/RevilLib"]
+	path = 3rd_party/RevilLib
+	url = https://github.com/PredatorCZ/RevilLib.git
