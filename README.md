@@ -20,6 +20,12 @@ Program must run at least once to generate .config file.***
 - ***Force_WAV_Conversion:***\
         Force conversion of all sounds to a 16bit PCM WAV.
 
+### Supported formats
+
+- FWSE, Modified IMA ADPCM, PC
+- MSF, Various formats (16bit PCM, AT3, ...), PS3
+- RIFF WAVE, Various formats (MS IMA ADPCM mostly), PC
+
 ## [Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)
 
 ## License
