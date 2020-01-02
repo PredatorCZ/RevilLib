@@ -132,6 +132,8 @@ struct LMTTrackController {
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                            int frame) const = 0;
   virtual void Evaluate(Vector4A16 &out, int frame) const = 0;
+  virtual void Interpolate(Vector4A16 &out, int frame, float delta,
+                           TrackMinMax *bounds = nullptr) const = 0;
   virtual short GetFrame(int frame) const = 0;
   virtual void NumFrames(int numItems) = 0;
   virtual void ToString(std::string &strBuf, int numIdents) const = 0;

@@ -23,6 +23,8 @@
 #include "datas/binreader.hpp"
 #include "datas/masterprinter.hpp"
 
+bool IsX64CompatibleAnimationClass(BinReader &rd, short version);
+
 int LMTAnimationEventV1_Internal::SaveBuffer(BinWritter *wr,
                                              LMTFixupStorage &fixups) const {
   const int numGroups = GetNumGroups();
@@ -61,10 +63,10 @@ int LMTAnimationEventV2_Internal::Save(BinWritter *wr) const {
     wr->ApplyPadding();
     localFixups.SaveTo(wr);
 
-     LMTFixupStorage semilocalFixups;
+    LMTFixupStorage semilocalFixups;
 
     for (auto &e : g->events)
-       e->_Save(wr, semilocalFixups);
+      e->_Save(wr, semilocalFixups);
 
     for (auto &e : g->events) {
       wr->ApplyPadding();
@@ -262,11 +264,17 @@ int LMT::Load(BinReader *rd) {
   if (version == V_92)
     rd->Skip(8); // 0x17011700
 
-  int calcutatedSize = numBlocks * 8 + static_cast<int>(rd->Tell());
-  const size_t padResult = calcutatedSize & (16 - 1);
+  int calcutatedSizeX64 = numBlocks * 8 + static_cast<int>(rd->Tell());
+  size_t padResult = calcutatedSizeX64 & 0xF;
 
   if (padResult)
-    calcutatedSize += 16 - padResult;
+    calcutatedSizeX64 += 16 - padResult;
+
+  int calcutatedSizeX86 = numBlocks * 8 + static_cast<int>(rd->Tell());
+  padResult = calcutatedSizeX86 & 0xF;
+
+  if (padResult)
+    calcutatedSizeX86 += 16 - padResult;
 
   magic = 0;
 
@@ -277,9 +285,14 @@ int LMT::Load(BinReader *rd) {
     rd->Read(magic);
   }
 
+  rd->Seek(magic);
+
+  const bool isX64 = calcutatedSizeX64 != calcutatedSizeX86
+              ? magic == calcutatedSizeX64
+              : IsX64CompatibleAnimationClass(*rd, version);
+
   rd->Seek(0);
 
-  const bool isX64 = magic == calcutatedSize;
   const size_t fleSize = rd->GetSize();
   const int multiplier = isX64 ? 2 : 1;
   const int lookupTableOffset = 8 + (version == V_92 ? (4 * multiplier) : 0);

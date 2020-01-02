@@ -220,6 +220,48 @@ short LMTTrack_internal::GetFrame(int frame) const {
   return controller->GetFrame(frame - useRefFrame) + useRefFrame;
 }
 
+void LMTTrack_internal::Interpolate(Vector4A16 &out, float time) const {
+  float frameDelta = time * 60.f;
+  const int frame = frameDelta;
+  const int numCtrFrames = controller->NumFrames();
+
+  if (!numCtrFrames && !useRefFrame)
+    return;
+
+  if ((!frame || !numCtrFrames) && useRefFrame) {
+    Vector4A16 refFrame(*GetRefData());
+
+    if (frameDelta < 0.0001f || !numCtrFrames) {
+      out = refFrame;
+    } else {
+      controller->Evaluate(out, 0);
+      frameDelta -= frame;
+      out = refFrame + (out - refFrame) * frameDelta;
+    }
+  } else {
+    const int ctrFrame = frame - useRefFrame;
+    const int maxFrame = controller->GetFrame(numCtrFrames - 1);
+
+    if (ctrFrame >= maxFrame) {
+      Evaluate(out, numCtrFrames - 1);
+    } else {
+      for (int f = 1; f < numCtrFrames; f++) {
+        short cFrame = controller->GetFrame(f);
+
+        if (cFrame > ctrFrame) {
+          const float boundFrame = cFrame;
+          const float prevFrame = controller->GetFrame(f - 1);
+
+          frameDelta = (prevFrame - frameDelta) / (prevFrame - boundFrame);
+
+          controller->Interpolate(out, f - 1, frameDelta, minMax.get());
+          break;
+        }
+      }
+    }
+  }
+}
+
 template <class C> class LMTTrackShared : public LMTTrack_internal {
   ADD_DISABLERS(C, noExtremes, noMHBone, noRefFrame);
 

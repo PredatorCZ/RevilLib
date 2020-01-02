@@ -112,6 +112,7 @@ struct LMTTrack {
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                            int frame) const = 0;
   virtual void Evaluate(Vector4A16 &out, int frame) const = 0;
+  virtual void Interpolate(Vector4A16 &out, float time) const = 0;
   virtual short GetFrame(int frame) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;

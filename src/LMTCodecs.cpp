@@ -178,13 +178,12 @@ void Buf_SingleVector3::GetFrame(int &currentFrame) const { currentFrame++; }
 
 int Buf_SingleVector3::GetFrame() const { return 1; }
 
-void Buf_SingleVector3::Iterpolate(Vector4A16 &out,
-                                   const Buf_SingleVector3 &leftFrame,
+void Buf_SingleVector3::Interpolate(Vector4A16 &out,
                                    const Buf_SingleVector3 &rightFrame,
                                    float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = lerp(startPoint, endPoint, delta);
@@ -197,13 +196,12 @@ void Buf_StepRotationQuat3::Evaluate(Vector4A16 &out) const {
   out.QComputeElement();
 }
 
-void Buf_StepRotationQuat3::Iterpolate(Vector4A16 &out,
-                                       const Buf_StepRotationQuat3 &leftFrame,
+void Buf_StepRotationQuat3::Interpolate(Vector4A16 &out,
                                        const Buf_StepRotationQuat3 &rightFrame,
                                        float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = slerp(startPoint, endPoint, delta);
@@ -251,13 +249,12 @@ void Buf_LinearVector3::SetFrame(uint64 frame) {
   additiveFrames = static_cast<int>(frame);
 }
 
-void Buf_LinearVector3::Iterpolate(Vector4A16 &out,
-                                   const Buf_LinearVector3 &leftFrame,
+void Buf_LinearVector3::Interpolate(Vector4A16 &out,
                                    const Buf_LinearVector3 &rightFrame,
                                    float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = lerp(startPoint, endPoint, delta);
@@ -364,16 +361,15 @@ void Buf_HermiteVector3::SetFrame(uint64 frame) {
   additiveFrames = static_cast<short>(frame);
 }
 
-void Buf_HermiteVector3::Iterpolate(Vector4A16 &out,
-                                    const Buf_HermiteVector3 &leftFrame,
+void Buf_HermiteVector3::Interpolate(Vector4A16 &out,
                                     const Buf_HermiteVector3 &rightFrame,
                                     float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint, startPointOutTangent, endPointInTangent,
       dummy;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
-  leftFrame.GetTangents(dummy, startPointOutTangent);
+  GetTangents(dummy, startPointOutTangent);
   rightFrame.GetTangents(endPointInTangent, dummy);
 
   const float deltaP2 = delta * delta;
@@ -498,14 +494,13 @@ void Buf_SphericalRotation::SetFrame(uint64 frame) {
   data |= frame << 56;
 }
 
-void Buf_SphericalRotation::Iterpolate(Vector4A16 &out,
-                                       const Buf_SphericalRotation &leftFrame,
+void Buf_SphericalRotation::Interpolate(Vector4A16 &out,
                                        const Buf_SphericalRotation &rightFrame,
                                        float delta,
                                        const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = slerp(startPoint, endPoint, delta);
@@ -550,13 +545,12 @@ void Buf_BiLinearVector3_16bit::SetFrame(uint64 frame) {
   additiveFrames = static_cast<ushort>(frame);
 }
 
-void Buf_BiLinearVector3_16bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearVector3_16bit &leftFrame,
-    const Buf_BiLinearVector3_16bit &rightFrame, float delta,
+void Buf_BiLinearVector3_16bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearVector3_16bit &rightFrame, float delta,
     const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = blerp(startPoint, endPoint, minMax, delta);
@@ -607,13 +601,12 @@ void Buf_BiLinearVector3_8bit::SetFrame(uint64 frame) {
   additiveFrames = static_cast<ushort>(frame);
 }
 
-void Buf_BiLinearVector3_8bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearVector3_8bit &leftFrame,
-    const Buf_BiLinearVector3_8bit &rightFrame, float delta,
+void Buf_BiLinearVector3_8bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearVector3_8bit &rightFrame, float delta,
     const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = blerp(startPoint, endPoint, minMax, delta);
@@ -670,13 +663,12 @@ void Buf_LinearRotationQuat4_14bit::Devaluate(Vector4A16 in) {
     data |= static_cast<uint64>(in.X) << 42;
 }
 
-void Buf_LinearRotationQuat4_14bit::Iterpolate(
-    Vector4A16 &out, const Buf_LinearRotationQuat4_14bit &leftFrame,
-    const Buf_LinearRotationQuat4_14bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_LinearRotationQuat4_14bit::Interpolate(
+    Vector4A16 &out, const Buf_LinearRotationQuat4_14bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = slerp(startPoint, endPoint, delta);
@@ -728,13 +720,12 @@ void Buf_BiLinearRotationQuat4_7bit::SetFrame(uint64 frame) {
   data |= frame << 28;
 }
 
-void Buf_BiLinearRotationQuat4_7bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuat4_7bit &leftFrame,
-    const Buf_BiLinearRotationQuat4_7bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuat4_7bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuat4_7bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);
@@ -761,13 +752,12 @@ void Buf_BiLinearRotationQuatXW_14bit::Devaluate(Vector4A16 in) {
   data |= store.W << 14;
 }
 
-void Buf_BiLinearRotationQuatXW_14bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuatXW_14bit &leftFrame,
-    const Buf_BiLinearRotationQuatXW_14bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuatXW_14bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuatXW_14bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);
@@ -792,13 +782,12 @@ void Buf_BiLinearRotationQuatYW_14bit::Devaluate(Vector4A16 in) {
   data |= store.W << 14;
 }
 
-void Buf_BiLinearRotationQuatYW_14bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuatYW_14bit &leftFrame,
-    const Buf_BiLinearRotationQuatYW_14bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuatYW_14bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuatYW_14bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);
@@ -818,13 +807,12 @@ void Buf_BiLinearRotationQuatZW_14bit::Devaluate(Vector4A16 in) {
   data |= store.W << 14;
 }
 
-void Buf_BiLinearRotationQuatZW_14bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuatZW_14bit &leftFrame,
-    const Buf_BiLinearRotationQuatZW_14bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuatZW_14bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuatZW_14bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);
@@ -868,13 +856,12 @@ void Buf_BiLinearRotationQuat4_11bit::GetFrame(int &currentFrame) const {
   currentFrame += data.Z >> 12;
 }
 
-void Buf_BiLinearRotationQuat4_11bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuat4_11bit &leftFrame,
-    const Buf_BiLinearRotationQuat4_11bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuat4_11bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuat4_11bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);
@@ -927,13 +914,12 @@ void Buf_BiLinearRotationQuat4_9bit::GetFrame(int &currentFrame) const {
   currentFrame += data[4] >> 4;
 }
 
-void Buf_BiLinearRotationQuat4_9bit::Iterpolate(
-    Vector4A16 &out, const Buf_BiLinearRotationQuat4_9bit &leftFrame,
-    const Buf_BiLinearRotationQuat4_9bit &rightFrame, float delta,
-    const TrackMinMax *minMax) const {
+void Buf_BiLinearRotationQuat4_9bit::Interpolate(
+    Vector4A16 &out, const Buf_BiLinearRotationQuat4_9bit &rightFrame,
+    float delta, const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
-  leftFrame.Evaluate(startPoint);
+  Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
 
   out = bslerp(startPoint, endPoint, minMax, delta);

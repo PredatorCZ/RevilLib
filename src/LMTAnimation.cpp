@@ -22,8 +22,9 @@
 #include "datas/VectorsSimd.hpp"
 #include "datas/flags.hpp"
 #include "datas/reflectorRegistry.hpp"
-#include <unordered_map>
 #include <list>
+#include <unordered_map>
+#include "datas/binreader.hpp"
 
 /************************************************************************/
 /*************************** ANIM_TRAITS ********************************/
@@ -237,6 +238,13 @@ public:
 
   AnimShared() : data(new C) {}
   AnimShared(C *ptr, char *buff, bool swapEndian) : data(ptr, false) {
+    if (!buff) {
+      if (swapEndian)
+        data->SwapEndian();
+
+      return;
+    }
+
     data->Fixup(buff, swapEndian);
     tracks.resize(data->numTracks);
 
@@ -285,6 +293,17 @@ public:
   void _FromXML(pugi::xml_node &node) override {
     ReflectorWrap<C> refl(data.get());
     refl.FromXML(node, false);
+  }
+
+  std::vector<uint64> GetPtrValues() const override {
+    std::vector<uint64> retVal;
+
+    for (auto &p : data->POINTERS) {
+      retVal.push_back(*reinterpret_cast<const uint64 *>(
+          reinterpret_cast<const char *>(data.get()) + p));
+    }
+
+    return retVal;
   }
 
   LMTTrackPtr CreateTrack() const override {
@@ -363,7 +382,8 @@ static constexpr int AnimV0X86TrackV0_PTR_00 =
     offsetof(AnimV0X86TrackV0, tracks);
 static constexpr int AnimV0X86TrackV0_PTR_01 =
     offsetof(AnimV0X86TrackV0, events[0].events);
-template<> const int AnimV0X86TrackV0::POINTERS[] = {
+template <>
+const int AnimV0X86TrackV0::POINTERS[] = {
     AnimV0X86TrackV0_PTR_00, AnimV0X86TrackV0_PTR_01,
     AnimV0X86TrackV0_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV0X86TrackV0, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
@@ -374,7 +394,8 @@ static constexpr int AnimV0X64TrackV0_PTR_00 =
     offsetof(AnimV0X64TrackV0, tracks);
 static constexpr int AnimV0X64TrackV0_PTR_01 =
     offsetof(AnimV0X64TrackV0, events[0].events);
-template<> const int AnimV0X64TrackV0::POINTERS[] = {
+template <>
+const int AnimV0X64TrackV0::POINTERS[] = {
     AnimV0X64TrackV0_PTR_00, AnimV0X64TrackV0_PTR_01,
     AnimV0X64TrackV0_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV0X64TrackV0, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
@@ -385,7 +406,8 @@ static constexpr int AnimV1X86TrackV1_PTR_00 =
     offsetof(AnimV1X86TrackV1, tracks);
 static constexpr int AnimV1X86TrackV1_PTR_01 =
     offsetof(AnimV1X86TrackV1, events[0].events);
-template<> const int AnimV1X86TrackV1::POINTERS[] = {
+template <>
+const int AnimV1X86TrackV1::POINTERS[] = {
     AnimV1X86TrackV1_PTR_00, AnimV1X86TrackV1_PTR_01,
     AnimV1X86TrackV1_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV1X86TrackV1, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
@@ -396,7 +418,8 @@ static constexpr int AnimV1X64TrackV1_PTR_00 =
     offsetof(AnimV1X64TrackV1, tracks);
 static constexpr int AnimV1X64TrackV1_PTR_01 =
     offsetof(AnimV1X64TrackV1, events[0].events);
-template<> const int AnimV1X64TrackV1::POINTERS[] = {
+template <>
+const int AnimV1X64TrackV1::POINTERS[] = {
     AnimV1X64TrackV1_PTR_00, AnimV1X64TrackV1_PTR_01,
     AnimV1X64TrackV1_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV1X64TrackV1, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
@@ -407,7 +430,8 @@ static constexpr int AnimV1X86TrackV1_5_PTR_00 =
     offsetof(AnimV1X86TrackV1_5, tracks);
 static constexpr int AnimV1X86TrackV1_5_PTR_01 =
     offsetof(AnimV1X86TrackV1_5, events[0].events);
-template<> const int AnimV1X86TrackV1_5::POINTERS[] = {
+template <>
+const int AnimV1X86TrackV1_5::POINTERS[] = {
     AnimV1X86TrackV1_5_PTR_00, AnimV1X86TrackV1_5_PTR_01,
     AnimV1X86TrackV1_5_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV1X86TrackV1_5, 2, VARNAMES, TEMPLATE, numFrames,
@@ -419,7 +443,8 @@ static constexpr int AnimV1X64TrackV1_5_PTR_00 =
     offsetof(AnimV1X64TrackV1_5, tracks);
 static constexpr int AnimV1X64TrackV1_5_PTR_01 =
     offsetof(AnimV1X64TrackV1_5, events[0].events);
-template<> const int AnimV1X64TrackV1_5::POINTERS[] = {
+template <>
+const int AnimV1X64TrackV1_5::POINTERS[] = {
     AnimV1X64TrackV1_5_PTR_00, AnimV1X64TrackV1_5_PTR_01,
     AnimV1X64TrackV1_5_PTR_01 + _EVENT_STRIDE};
 REFLECTOR_CREATE(AnimV1X64TrackV1_5, 2, VARNAMES, TEMPLATE, numFrames,
@@ -431,7 +456,8 @@ static constexpr int AnimV1X86TrackV2_PTR_00 =
     offsetof(AnimV1X86TrackV2, tracks);
 static constexpr int AnimV1X86TrackV2_PTR_01 =
     offsetof(AnimV1X86TrackV2, events[0].events);
-template<> const int AnimV1X86TrackV2::POINTERS[] = {
+template <>
+const int AnimV1X86TrackV2::POINTERS[] = {
     AnimV1X86TrackV2_PTR_00, AnimV1X86TrackV2_PTR_01,
     AnimV1X86TrackV2_PTR_01 + _EVENT_STRIDE,
     AnimV1X86TrackV2_PTR_01 + _EVENT_STRIDE * 2,
@@ -444,7 +470,8 @@ static constexpr int AnimV1X64TrackV2_PTR_00 =
     offsetof(AnimV1X64TrackV2, tracks);
 static constexpr int AnimV1X64TrackV2_PTR_01 =
     offsetof(AnimV1X64TrackV2, events[0].events);
-template<> const int AnimV1X64TrackV2::POINTERS[] = {
+template <>
+const int AnimV1X64TrackV2::POINTERS[] = {
     AnimV1X64TrackV2_PTR_00, AnimV1X64TrackV2_PTR_01,
     AnimV1X64TrackV2_PTR_01 + _EVENT_STRIDE,
     AnimV1X64TrackV2_PTR_01 + _EVENT_STRIDE * 2,
@@ -459,7 +486,8 @@ static constexpr int AnimV2X86TrackV2_PTR_01 =
     offsetof(AnimV2X86TrackV2, eventTable);
 static constexpr int AnimV2X86TrackV2_PTR_02 =
     offsetof(AnimV2X86TrackV2, floatTracks);
-template<> const int AnimV2X86TrackV2::POINTERS[] = {
+template <>
+const int AnimV2X86TrackV2::POINTERS[] = {
     AnimV2X86TrackV2_PTR_00, AnimV2X86TrackV2_PTR_01, AnimV2X86TrackV2_PTR_02};
 REFLECTOR_CREATE(AnimV2X86TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
@@ -471,7 +499,8 @@ static constexpr int AnimV2X64TrackV2_PTR_01 =
     offsetof(AnimV2X64TrackV2, eventTable);
 static constexpr int AnimV2X64TrackV2_PTR_02 =
     offsetof(AnimV2X64TrackV2, floatTracks);
-template<> const int AnimV2X64TrackV2::POINTERS[] = {
+template <>
+const int AnimV2X64TrackV2::POINTERS[] = {
     AnimV2X64TrackV2_PTR_00, AnimV2X64TrackV2_PTR_01, AnimV2X64TrackV2_PTR_02};
 REFLECTOR_CREATE(AnimV2X64TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
@@ -481,7 +510,8 @@ static constexpr int AnimV3X86TrackV3_PTR_00 =
     offsetof(AnimV3X86TrackV3, tracks);
 static constexpr int AnimV3X86TrackV3_PTR_01 =
     offsetof(AnimV3X86TrackV3, eventTable);
-template<> const int AnimV3X86TrackV3::POINTERS[] = {AnimV3X86TrackV3_PTR_00,
+template <>
+const int AnimV3X86TrackV3::POINTERS[] = {AnimV3X86TrackV3_PTR_00,
                                           AnimV3X86TrackV3_PTR_01};
 REFLECTOR_CREATE(AnimV3X86TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
@@ -491,7 +521,8 @@ static constexpr int AnimV3X64TrackV3_PTR_00 =
     offsetof(AnimV3X64TrackV3, tracks);
 static constexpr int AnimV3X64TrackV3_PTR_01 =
     offsetof(AnimV3X64TrackV3, eventTable);
-template<> const int AnimV3X64TrackV3::POINTERS[] = {AnimV3X64TrackV3_PTR_00,
+template <>
+const int AnimV3X64TrackV3::POINTERS[] = {AnimV3X64TrackV3_PTR_00,
                                           AnimV3X64TrackV3_PTR_01};
 REFLECTOR_CREATE(AnimV3X64TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
@@ -596,4 +627,29 @@ LMTAnimation *LMTAnimation::Create(const LMTConstructorProperties &props) {
   cAni->props = props;
 
   return cAni;
+}
+
+bool IsX64CompatibleAnimationClass(BinReader &rd, short version) {
+  short item = 0x8 | version << 8;
+
+  RegisterLocalEnums();
+
+   if (!animationRegistry.count(item))
+    return false;
+
+   char buffer[0x100];
+
+   rd.ReadBuffer(buffer, 0x100);
+
+   LMTAnimation_internal *cAni =
+       static_cast<LMTAnimation_internal *>(animationLinkRegistry.at(item)(
+           buffer, nullptr, rd.SwappedEndian()));
+
+   auto ptrVals = cAni->GetPtrValues();
+
+   for (auto v : ptrVals)
+     if (v & (0xffffffffULL << 32))
+       return false;
+
+   return true;
 }

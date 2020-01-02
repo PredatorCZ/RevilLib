@@ -43,6 +43,7 @@ public:
   virtual LMTTrackPtr CreateTrack() const = 0;
   virtual LMTEventsPtr CreateEvents() const = 0;
   virtual LMTFloatTrackPtr CreateFloatTracks() const = 0;
+  virtual std::vector<uint64> GetPtrValues() const = 0;
 
   int Save(BinWritter *wr, bool standAlone = true) const;
   static int Load(BinReader *rd, LMTConstructorPropertiesBase expected,
