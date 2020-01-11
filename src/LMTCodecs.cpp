@@ -369,8 +369,7 @@ void Buf_HermiteVector3::Interpolate(Vector4A16 &out,
 
   Evaluate(startPoint);
   rightFrame.Evaluate(endPoint);
-  GetTangents(dummy, startPointOutTangent);
-  rightFrame.GetTangents(endPointInTangent, dummy);
+  GetTangents(startPointOutTangent, endPointInTangent);
 
   const float deltaP2 = delta * delta;
   const float deltaP3 = delta * deltaP2;
