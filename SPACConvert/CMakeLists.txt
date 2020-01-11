@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(SPACConvert VERSION 1.0)
 
+set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR})
 set(TPD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party)
 set(TARGETEX_LOCATION ${TPD_PATH}/precore/cmake)
 include(${TARGETEX_LOCATION}/targetex.cmake)
@@ -44,29 +45,17 @@ build_target(
 		${TPD_PATH}/RevilLib/3rd_party/pugixml/src/pugixml.cpp
 	INCLUDES
 		${TPD_PATH}/precore
-		${TPD_PATH}/vgmstream/src
-		${TPD_PATH}/vgmstream/ext_includes
 		${TPD_PATH}/RevilLib/3rd_party/pugixml/src
-	LINK_DIRS
-		${CMAKE_BINARY_DIR}/3rd_party/vgmstream/ext_libs
 	LINKS
 		libvgmstream
-		avcodec
-		avformat
-		avutil
 	AUTHOR "Lukas Cone"
 	DESCR "MTF SPAC Converter"
 	NAME "SPACConvert"
 	START_YEAR 2019
-	PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin
 )
 
-add_dependencies(SPACConvert ffmpeg)
+setup_target(SPACConvert TRUE)
+install_dlls(${CMAKE_INSTALL_PREFIX}/bin)
 
-file(GLOB fndlib00 ${TPD_PATH}/vgmstream/ext_libs/avutil*.dll)
-file(GLOB fndlib01 ${TPD_PATH}/vgmstream/ext_libs/avformat*.dll)
-file(GLOB fndlib02 ${TPD_PATH}/vgmstream/ext_libs/avcodec*.dll)
-
-file(COPY ${fndlib00} ${fndlib01} ${fndlib02} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-file(COPY ${fndlib00} ${fndlib01} ${fndlib02} DESTINATION ${PROJECT_BINARY_DIR}/Debug)
+install(TARGETS SPACConvert
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
