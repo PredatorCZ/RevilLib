@@ -220,8 +220,8 @@ short LMTTrack_internal::GetFrame(int frame) const {
   return controller->GetFrame(frame - useRefFrame) + useRefFrame;
 }
 
-void LMTTrack_internal::Interpolate(Vector4A16 &out, float time) const {
-  float frameDelta = time * 60.f;
+void LMTTrack_internal::Interpolate(Vector4A16 &out, float time, float frameRate) const {
+  float frameDelta = time * frameRate;
   const int frame = frameDelta;
   const int numCtrFrames = controller->NumFrames();
 

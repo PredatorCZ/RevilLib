@@ -41,7 +41,7 @@ public:
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                    int frame) const override;
   void Evaluate(Vector4A16 &out, int frame) const override;
-  void Interpolate(Vector4A16 &out, float time) const override;
+  void Interpolate(Vector4A16 &out, float time, float frameRate) const override;
   short GetFrame(int frame) const override;
 
   int FromXML(pugi::xml_node &node) override;
