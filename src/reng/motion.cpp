@@ -81,36 +81,49 @@ void REMotionCurveWorker::GetValue(float &output, float time) const {
 }
 
 void REMotionCurveWorker::GetValue(Vector4A16 &output, float time) const {
-  if (time < 0.0f) {
-    time = 0.0f;
+  if (!controller)
+    return;
+
+  if (time <= 0.0f || numFrames == 1) {
+    controller->Evaluate(0, output);
+    return;
   }
 
-  float delta = time * 60.f;
-  uint frame = static_cast<uint>(delta);
-  delta -= frame;
+  float frameDelta = time * 60.f;
+  uint frame = static_cast<uint>(frameDelta);
   uint foundFrameID = 0;
+  uint frameBegin = 0;
+  uint frameEnd = 0;
 
   for (; foundFrameID < numFrames; foundFrameID++) {
-    uint cFrame = controller->GetFrame(foundFrameID);
+    frameBegin = frameEnd;
+    frameEnd = controller->GetFrame(foundFrameID);
 
-    if (cFrame == frame) {
+    if (frameEnd == frame) {
+      frameBegin = frameEnd;
       break;
-    } else if (cFrame > frame) {
+    } else if (frameEnd > frame) {
       foundFrameID--;
       break;
     }
   }
 
-  if (foundFrameID + 1 == numFrames) {
-    delta = 0.0f;
+  if (foundFrameID >= numFrames) {
+    controller->Evaluate(foundFrameID - 1, output);
+    return;
   }
+
+  const float fFrameBegin = frameBegin;
+  const float fFrameEnd = frameEnd;
+
+  frameDelta = (fFrameBegin - frameDelta) / (fFrameBegin - fFrameEnd);
 
   controller->Evaluate(foundFrameID, output);
 
-  if (delta > FLT_EPSILON) {
+  if (frameDelta > FLT_EPSILON) {
     Vector4A16 nextValue;
     controller->Evaluate(foundFrameID + 1, nextValue);
-    output = output + (nextValue - output) * delta;
+    output = output + (nextValue - output) * frameDelta;
   }
 }
 

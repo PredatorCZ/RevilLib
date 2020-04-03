@@ -220,7 +220,8 @@ short LMTTrack_internal::GetFrame(int frame) const {
   return controller->GetFrame(frame - useRefFrame) + useRefFrame;
 }
 
-void LMTTrack_internal::Interpolate(Vector4A16 &out, float time, float frameRate) const {
+void LMTTrack_internal::Interpolate(Vector4A16 &out, float time,
+                                    float frameRate) const {
   float frameDelta = time * frameRate;
   const int frame = frameDelta;
   const int numCtrFrames = controller->NumFrames();
@@ -318,6 +319,8 @@ public:
   int Stride() const override { return static_cast<int>(sizeof(C)); }
 
   int AnimatedBoneID() const noexcept override { return _BoneID(); }
+
+  int BoneType() const noexcept override { return data->boneType; }
 
   void BoneID(int boneID) noexcept override { _BoneID(boneID); }
 

@@ -7,7 +7,7 @@ namespace uni {
 class Bone {
 public:
   virtual esMatrix44 Transform() const = 0;
-  virtual const Bone &Parent() const = 0;
+  virtual const Bone *Parent() const = 0;
   // A special bone identicator, this is not a bone index within skeleton
   virtual size_t Index() const = 0;
   virtual std::string Name() const = 0;

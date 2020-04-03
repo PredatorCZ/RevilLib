@@ -42,7 +42,7 @@ public:
     retval.r4 = Vector4A16(bone->position, 1.0f);
     return retval;
   }
-  const Bone &Parent() const override { return *parent; }
+  const Bone *Parent() const override { return parent; }
   size_t Index() const override { return bone->boneHash; }
   std::string Name() const override { // FIX THIS
     return esStringConvert<char>(

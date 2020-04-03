@@ -118,6 +118,7 @@ struct LMTTrack {
   virtual int FromXML(pugi::xml_node &node) = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual int Stride() const = 0;
+  virtual int BoneType() const = 0;
 
   virtual ~LMTTrack() {}
 
