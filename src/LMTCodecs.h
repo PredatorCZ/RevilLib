@@ -40,7 +40,7 @@ struct Buf_SingleVector3 {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void SetFrame(uint64) {}
 
@@ -70,7 +70,7 @@ struct Buf_LinearVector3 {
 
   void RetreiveFromString(const std::string &buffer, int &bufferIter);
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -111,7 +111,7 @@ struct Buf_HermiteVector3 {
 
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs) const;
 
-  void Devaluate(Vector4A16) {
+  void Devaluate(const Vector4A16 &) {
     // Not Supported
   }
 
@@ -151,7 +151,7 @@ struct Buf_SphericalRotation {
   void Interpolate(Vector4A16 &out, const Buf_SphericalRotation &rightFrame,
                   float delta, const TrackMinMax *minMax) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -183,7 +183,7 @@ struct Buf_BiLinearVector3_16bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void GetFrame(int &currentFrame) const;
 
@@ -216,7 +216,7 @@ struct Buf_BiLinearVector3_8bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void GetFrame(int &currentFrame) const;
 
@@ -238,7 +238,7 @@ struct Buf_LinearRotationQuat4_14bit : Buf_SphericalRotation {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
                   const Buf_LinearRotationQuat4_14bit &rightFrame, float delta,
@@ -265,7 +265,7 @@ struct Buf_BiLinearRotationQuat4_7bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void GetFrame(int &currentFrame) const;
 
@@ -287,7 +287,7 @@ struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
                   const Buf_BiLinearRotationQuatXW_14bit &rightFrame,
@@ -297,7 +297,7 @@ struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit {
 struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuatXW_14bit {
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
                   const Buf_BiLinearRotationQuatYW_14bit &rightFrame,
@@ -307,7 +307,7 @@ struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuatXW_14bit {
 struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuatXW_14bit {
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
                   const Buf_BiLinearRotationQuatZW_14bit &rightFrame,
@@ -332,7 +332,7 @@ struct Buf_BiLinearRotationQuat4_11bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void GetFrame(int &currentFrame) const;
 
@@ -361,7 +361,7 @@ struct Buf_BiLinearRotationQuat4_9bit {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void Devaluate(Vector4A16 in);
+  void Devaluate(const Vector4A16 &in);
 
   void GetFrame(int &currentFrame) const;
 
@@ -407,7 +407,7 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
     data[frame].Interpolate(out, data[frame + 1], delta, bounds);
   }
 
-  void Devaluate(Vector4A16 in, int frame) override {
+  void Devaluate(const Vector4A16 &in, int frame) override {
     data[frame].Devaluate(in);
   }
 

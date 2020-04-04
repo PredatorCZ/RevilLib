@@ -32,7 +32,8 @@ static const float fPI = 3.14159265;
 static const float fPI2 = 0.5 * fPI;
 
 // https://en.wikipedia.org/wiki/Slerp
-ES_INLINE Vector4A16 slerp(const Vector4A16 &v0, Vector4A16 v1, float t) {
+ES_INLINE Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
+  Vector4A16 v1 = _v1;
   float dot = v0.Dot(v1);
 
   // If the dot product is negative, slerp won't take
@@ -172,7 +173,7 @@ void Buf_SingleVector3::Evaluate(Vector4A16 &out) const {
   out = Vector4A16(data, 1.0f);
 }
 
-void Buf_SingleVector3::Devaluate(Vector4A16 in) { data = in; }
+void Buf_SingleVector3::Devaluate(const Vector4A16 &in) { data = in; }
 
 void Buf_SingleVector3::GetFrame(int &currentFrame) const { currentFrame++; }
 
@@ -233,7 +234,7 @@ void Buf_LinearVector3::RetreiveFromString(const std::string &buffer,
   SeekTo(buffer, bufferIter);
 }
 
-void Buf_LinearVector3::Devaluate(Vector4A16 in) { data = in; }
+void Buf_LinearVector3::Devaluate(const Vector4A16 &in) { data = in; }
 
 void Buf_LinearVector3::Evaluate(Vector4A16 &out) const {
   out = Vector4A16(data, 1.0f);
@@ -408,7 +409,8 @@ void Buf_SphericalRotation::RetreiveFromString(const std::string &buffer,
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
-void Buf_SphericalRotation::Devaluate(Vector4A16 in) {
+void Buf_SphericalRotation::Devaluate(const Vector4A16 &_in) {
+  Vector4A16 in = _in;
   data ^= data & dataField;
 
   if (in.W < 0.0f)
@@ -530,7 +532,7 @@ void Buf_BiLinearVector3_16bit::Evaluate(Vector4A16 &out) const {
   out = Vector4A16(data.Convert<float>(), 1.0f) * componentMultiplier;
 }
 
-void Buf_BiLinearVector3_16bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearVector3_16bit::Devaluate(const Vector4A16 &in) {
   data = USVector4((in * componentMultiplierInv).Convert<ushort>());
 }
 
@@ -586,7 +588,7 @@ void Buf_BiLinearVector3_8bit::Evaluate(Vector4A16 &out) const {
   out = Vector4A16(data.Convert<float>(), 1.0f) * componentMultiplier;
 }
 
-void Buf_BiLinearVector3_8bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearVector3_8bit::Devaluate(const Vector4A16 &in) {
   data = UCVector4((in * componentMultiplierInv).Convert<uchar>());
 }
 
@@ -636,7 +638,8 @@ void Buf_LinearRotationQuat4_14bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_LinearRotationQuat4_14bit::Devaluate(Vector4A16 in) {
+void Buf_LinearRotationQuat4_14bit::Devaluate(const Vector4A16 &_in) {
+  Vector4A16 in = _in;
   data ^= data & dataField;
 
   in *= componentMultiplierInv;
@@ -697,7 +700,7 @@ void Buf_BiLinearRotationQuat4_7bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuat4_7bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuat4_7bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
   UIVector4A16 store(in * componentMultiplierInv);
@@ -742,7 +745,7 @@ void Buf_BiLinearRotationQuatXW_14bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuatXW_14bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuatXW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
   UIVector4A16 store(in * componentMultiplierInv);
@@ -772,7 +775,7 @@ void Buf_BiLinearRotationQuatYW_14bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuatYW_14bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuatYW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
   UIVector4A16 store(in * componentMultiplierInv);
@@ -797,7 +800,7 @@ void Buf_BiLinearRotationQuatZW_14bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuatZW_14bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuatZW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
   UIVector4A16 store(in * componentMultiplierInv);
@@ -838,7 +841,7 @@ void Buf_BiLinearRotationQuat4_11bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuat4_11bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuat4_11bit::Devaluate(const Vector4A16 &in) {
   uint64 &rVal = reinterpret_cast<uint64 &>(data);
 
   rVal ^= rVal & 0xFFFFFFFFFFF;
@@ -896,7 +899,7 @@ void Buf_BiLinearRotationQuat4_9bit::Evaluate(Vector4A16 &out) const {
   out *= componentMultiplier;
 }
 
-void Buf_BiLinearRotationQuat4_9bit::Devaluate(Vector4A16 in) {
+void Buf_BiLinearRotationQuat4_9bit::Devaluate(const Vector4A16 &in) {
   uint64 &rVal = reinterpret_cast<uint64 &>(data);
 
   rVal ^= rVal & 0xFFFFFFFFF;

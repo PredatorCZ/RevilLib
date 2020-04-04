@@ -336,7 +336,7 @@ public:
   void _Save(BinWritter *wr, LMTFixupStorage &storage) const override {
     const size_t cOff = wr->Tell();
 
-    wr->Write(*data);
+    wr->Write<value_type&>(*data);
 
     for (auto &p : data->POINTERS)
       storage.SaveFrom(cOff + p);

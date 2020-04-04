@@ -141,7 +141,7 @@ struct LMTTrackController {
   virtual void FromString(std::string &input) = 0;
   virtual void Assign(char *ptr, int size) = 0;
   virtual void SwapEndian() = 0;
-  virtual void Devaluate(Vector4A16 in, int frame) = 0;
+  virtual void Devaluate(const Vector4A16 &in, int frame) = 0;
   virtual void Save(BinWritter *wr) const = 0;
 
   virtual ~LMTTrackController() {}
