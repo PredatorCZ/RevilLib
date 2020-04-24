@@ -53,7 +53,7 @@ template <class C> struct _REPointerX86 {
   typedef C value_type;
 
 private:
-  uint varPtr;
+  uint32 varPtr;
 
 public:
   operator C *() {
@@ -70,12 +70,13 @@ public:
   const C &operator*() const { return *static_cast<C *>(*this); }
   const C *operator->() const { return *this; }
 
-  void Fixup(char *masterBuffer) { // Fix me
-    if (!varPtr)
+  void Fixup(char *masterBuffer) {
+    if (!varPtr || reinterpret_cast<char *>(varPtr) > masterBuffer)
       return;
 
     uintptr_t rawAddr = reinterpret_cast<uintptr_t>(masterBuffer) + varPtr;
-    varPtr = static_cast<uint>(rawAddr - reinterpret_cast<uintptr_t>(&varPtr));
+    varPtr =
+        static_cast<uint32>(rawAddr - reinterpret_cast<uintptr_t>(&varPtr));
   }
 };
 
@@ -83,7 +84,7 @@ template <class C, bool x64> struct ___REPointerX86 {
   typedef _REPointerX86<C> value_type;
 };
 template <class C> struct ___REPointerX86<C, false> {
-  typedef _REPointer<C, uint> value_type;
+  typedef _REPointer<C, uint32> value_type;
 };
 
 template <class C>

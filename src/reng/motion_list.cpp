@@ -25,7 +25,7 @@ int REMotlist::Fixup() {
   fileName.Fixup(masterBuffer);
   null.Fixup(masterBuffer);
 
-  for (int m = 0; m < numMotions; m++) {
+  for (uint32 m = 0; m < numMotions; m++) {
     motions[m].Fixup(masterBuffer);
     motions[m]->Fixup();
   }
@@ -40,20 +40,25 @@ void REMotlistAsset::Build() {
   auto &motionListStorage = static_cast<MotionList &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
+    REAssetBase *cMot = data.motions[m];
+
+    if (cMot->assetID != REMotionAsset::VERSION ||
+        cMot->assetFourCC != REMotionAsset::ID) {
+      continue;
+    }
+
     motionListStorage.emplace_back(
-        std::unique_ptr<REMotionAsset>(new REMotionAsset()));
-    std::prev(motionListStorage.end())->get()->Assign(data.motions[m]);
+        uni::Element<REMotionAsset>(new REMotionAsset()));
+    std::prev(motionListStorage.end())->get()->Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
     auto &cMot = *data.motions[m];
-    skeletonStorage.emplace_back(
-        std::unique_ptr<RESkeletonWrap>(new RESkeletonWrap()));
-    std::prev(skeletonStorage.end())
-        ->get()
-        ->Assign(cMot.bones->ptr, cMot.numBones);
+    auto *ma = new RESkeletonWrap();
+    ma->Assign(cMot.bones->ptr, cMot.numBones);
+    skeletonStorage.emplace_back(uni::Element<RESkeletonWrap>(ma));
   }
 }
 
@@ -66,10 +71,9 @@ int REMotlistAsset::Fixup() {
 
 void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
   for (size_t b = 0; b < numBones; b++) {
-    bones.storage.emplace_back(
-        std::unique_ptr<REMotionBoneWrap>(new REMotionBoneWrap()));
-    auto &cBone = *std::prev(bones.storage.end());
-    cBone->bone = data + b;
+    auto *bn = new REMotionBoneWrap();
+    bn->bone = data + b;
+    bones.storage.emplace_back(uni::Element<REMotionBoneWrap>(bn));
   }
 
   for (size_t b = 0; b < numBones; b++) {

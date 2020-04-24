@@ -6,7 +6,7 @@ typedef std::vector<Vector4A16> VectCollection;
 
 static TrackTypesShared Choose2ComponentQuat(const VectCollection &input) {
   bool staticComponent[4] = {true, true, true, false};
-  int &staticComponentInt = reinterpret_cast<int &>(staticComponent);
+  uint32 &staticComponentInt = reinterpret_cast<uint32 &>(staticComponent);
   Vector4A16 firstItem = input[0];
   float componentEpsilon = 0.00001f;
 
@@ -14,7 +14,7 @@ static TrackTypesShared Choose2ComponentQuat(const VectCollection &input) {
     if (!staticComponentInt)
       return TrackTypesShared::None;
 
-    for (int c = 0; c < 3; c++)
+    for (uint32 c = 0; c < 3; c++)
       if (staticComponent[c] && ((i[c] >= firstItem[c] + componentEpsilon) ||
                                  (i[c] <= firstItem[c] - componentEpsilon))) {
         staticComponent[c] = false;
@@ -60,7 +60,7 @@ static TrackMinMax *EncodeWithinAABB(const VectCollection &input,
 
   output.resize(numValues);
 
-  for (int t = 0; t < 4; t++)
+  for (uint32 t = 0; t < 4; t++)
     if (!extremes->min[t])
       extremes->min[t] = 1.0f;
 
@@ -75,7 +75,7 @@ static TrackMinMax *Encode2ComponentQuat(const VectCollection &input,
                                          VectCollection &values) {
   TrackMinMax *extremes = GenerateMinMax(input);
   const size_t numValues = input.size();
-  int fakeComponent = 0;
+  uint32 fakeComponent = 0;
 
   values.resize(numValues);
 
@@ -84,10 +84,10 @@ static TrackMinMax *Encode2ComponentQuat(const VectCollection &input,
   else if (trackType == TrackTypesShared::BiLinearRotationQuatZW_14bit)
     fakeComponent = 2;
 
-  const int comps[2] = {fakeComponent, 3};
+  const uint32 comps[2] = {fakeComponent, 3};
 
   for (size_t i = 0; i < numValues; i++)
-    for (const int cComp : comps)
+    for (const uint32 cComp : comps)
       values[i][cComp] =
           (input[i][cComp] - extremes->max[cComp]) / extremes->min[cComp];
 
@@ -115,7 +115,7 @@ static TrackMinMax *Encode2ComponentQuat(const VectCollection &input,
 */
 
 static Vector4A16 floors(const Vector4A16 &input) {
-  return Vector4A16(IVector4A16(input.Convert<int>()));
+  return Vector4A16(IVector4A16(input.Convert<int32>()));
 }
 
 static VectCollection QuantizeVectors(float fractal,
@@ -150,7 +150,7 @@ static CompressionReport ReportCompression(const float fractal,
   const size_t numRawValues = input.size() * 4;
   CompressionReport result = {};
 
-  for (int i = 0; i < numRawValues; i++) {
+  for (size_t i = 0; i < numRawValues; i++) {
     const float &rawElement = rawData[i];
     const float fractalLess = std::floor(rawElement);
     float baseLess = rawElement - fractalLess;

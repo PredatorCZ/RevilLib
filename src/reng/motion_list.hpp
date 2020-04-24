@@ -18,8 +18,9 @@
 #pragma once
 #include "asset.hpp"
 #include "motion.hpp"
-#include "uni_list_vector.hpp"
-#include "uni_skeleton.hpp"
+#include "uni/list_vector.hpp"
+#include "uni/skeleton.hpp"
+#include "datas/unicode.hpp"
 
 struct REMotlist : public REAssetBase {
   uint64 pad;
@@ -27,7 +28,7 @@ struct REMotlist : public REAssetBase {
   REPointerX64<char> unkOffset00;
   REPointerX64<char16_t> fileName;
   REPointerX64<char> null;
-  int numMotions;
+  uint32 numMotions;
 
   int Fixup();
 };
@@ -44,9 +45,8 @@ public:
   }
   const Bone *Parent() const override { return parent; }
   size_t Index() const override { return bone->boneHash; }
-  std::string Name() const override { // FIX THIS
-    return esStringConvert<char>(
-        reinterpret_cast<const wchar_t *>(bone->boneName.operator->()));
+  std::string Name() const override {
+    return es::ToUTF8(bone->boneName.operator->());
   }
 };
 
@@ -56,7 +56,9 @@ class RESkeletonWrap : public uni::Skeleton {
 public:
   void Assign(REMotionBone *data, size_t numBones);
   std::string Name() const override { return ""; }
-  const uni::Bones &Bones() const override { return bones; }
+  uni::BonesConst Bones() const override {
+    return uni::BonesConst(&bones, false);
+  }
 };
 
 typedef uni::VectorList<uni::Motion, REMotionAsset> MotionList;

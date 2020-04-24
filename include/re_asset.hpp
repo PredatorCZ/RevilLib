@@ -16,11 +16,11 @@
 */
 
 #pragma once
-class BinReader;
+#include "datas/binreader_stream.hpp"
 
 class REAsset {
 public:
   static REAsset *Load(const char *fileName);
-  static REAsset *Load(BinReader *rd);
+  static REAsset *Load(BinReaderRef rd);
   virtual ~REAsset() {}
 };

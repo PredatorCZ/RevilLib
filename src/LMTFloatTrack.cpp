@@ -1,23 +1,24 @@
-/*      Revil Format Library
-        Copyright(C) 2017-2019 Lukas Cone
+/*  Revil Format Library
+    Copyright(C) 2017-2020 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "LMTFloatTrack.h"
 #include "LMTFixupStorage.h"
-#include "datas/reflectorRegistry.hpp"
+#include "datas/reflector_xml.hpp"
+
 #include <array>
 #include <unordered_map>
 
@@ -28,7 +29,7 @@ template <template <class C> class PtrType> struct FloatTrack {
   DECLARE_REFLECTOR;
 
   FloatTrackComponentRemap componentRemaps[4];
-  int numFloats;
+  uint32 numFloats;
   PtrType<FloatFrame> frames;
 
   void SwapEndian() { FByteswapper(numFloats); }
@@ -52,7 +53,7 @@ REFLECTOR_CREATE(FloatEventGroupPointerX64, 2, VARNAMES, TEMPLATE,
 template <class C> class FloatTracks_shared : public LMTFloatTrack_internal {
 public:
   typedef std::array<C, 4> GroupArray;
-  typedef std::unique_ptr<GroupArray, std::deleter_hybrid> GroupsPtr;
+  typedef std::unique_ptr<GroupArray, es::deleter_hybrid> GroupsPtr;
 
 private:
   GroupsPtr groups;
@@ -63,7 +64,7 @@ public:
     groups = GroupsPtr(reinterpret_cast<GroupArray *>(fromPtr), false);
 
     GroupArray &groupArray = *groups.get();
-    int currentGroup = 0;
+    uint32 currentGroup = 0;
 
     for (auto &g : groupArray) {
       g.Fixup(masterBuffer, swapEndian);
@@ -78,22 +79,22 @@ public:
     }
   }
 
-  void _ToXML(pugi::xml_node &node, int groupID) const override {
+  void _ToXML(pugi::xml_node &node, uint32 groupID) const override {
     ReflectorWrapConst<const C> reflEvent(&(*groups)[groupID]);
-    reflEvent.ToXML(node, false);
+    ReflectorXMLUtil::Save(reflEvent, node);
   }
 
-  void _FromXML(pugi::xml_node &node, int groupID) override {
+  void _FromXML(pugi::xml_node &node, uint32 groupID) override {
     ReflectorWrap<C> reflEvent(&(*groups)[groupID]);
-    reflEvent.FromXML(node, false);
+    ReflectorXMLUtil::Load(reflEvent, node);
   }
 
-  void _Save(BinWritter *wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr->Tell();
-    int curGroup = 0;
+  void _Save(BinWritterRef wr, LMTFixupStorage &storage) const override {
+    const size_t cOff = wr.Tell();
+    uint32 curGroup = 0;
 
     for (auto &g : *groups) {
-      wr->Write(g);
+      wr.Write(g);
       storage.SaveFrom(cOff + offsetof(C, frames) + sizeof(C) * curGroup++);
     }
   }
@@ -110,18 +111,18 @@ static LMTFloatTrack *_creator(void *ptr, char *buff, bool endi) {
   return new FloatTracks_shared<C>(static_cast<C *>(ptr), buff, endi);
 }
 
-static const std::unordered_map<short, LMTFloatTrack *(*)()> floatRegistry = {
+static const std::unordered_map<uint16, LMTFloatTrack *(*)()> floatRegistry = {
     {0x8, _creattorBase<FloatEventGroupPointerX64>},
     {0x4, _creattorBase<FloatEventGroupPointerX86>}};
 
-static const std::unordered_map<short, LMTFloatTrack *(*)(void *, char *, bool)>
+static const std::unordered_map<uint16, LMTFloatTrack *(*)(void *, char *, bool)>
     floatRegistryLink = {{0x8, _creator<FloatEventGroupPointerX64>},
                          {0x4, _creator<FloatEventGroupPointerX86>}};
 
 REGISTER_ENUMS(FloatTrackComponentRemap)
 
 LMTFloatTrack *LMTFloatTrack::Create(const LMTConstructorProperties &props) {
-  short item = reinterpret_cast<const short &>(props);
+  uint16 item = reinterpret_cast<const uint16 &>(props);
 
   RegisterLocalEnums();
 

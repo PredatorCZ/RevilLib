@@ -1,25 +1,25 @@
-/*      Revil Format Library
-        Copyright(C) 2017-2019 Lukas Cone
+/*  Revil Format Library
+    Copyright(C) 2017-2020 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "LMTCodecs.h"
-#include "datas/binwritter.hpp"
 #include "datas/macroLoop.hpp"
 #include "datas/masterprinter.hpp"
-#include "datas/reflectorRegistry.hpp"
+#include "datas/reflector_xml.hpp"
+
 #include <cmath>
 #include <sstream>
 #include <unordered_map>
@@ -28,11 +28,11 @@ REFLECTOR_CREATE(Buf_SingleVector3, 1, VARNAMES, data);
 REFLECTOR_CREATE(Buf_LinearVector3, 1, VARNAMES, data, additiveFrames);
 REFLECTOR_CREATE(Buf_HermiteVector3, 1, VARNAMES, flags, additiveFrames, data);
 
-static const float fPI = 3.14159265;
+static const float fPI = 3.14159265f;
 static const float fPI2 = 0.5 * fPI;
 
 // https://en.wikipedia.org/wiki/Slerp
-ES_INLINE Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
+static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
   Vector4A16 v1 = _v1;
   float dot = v0.Dot(v1);
 
@@ -63,32 +63,32 @@ ES_INLINE Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t)
 }
 
 template <typename T>
-ES_INLINE Vector4A16 lerp(const Vector4A16 &v0, const Vector4A16 &v1, T t) {
+Vector4A16 lerp(const Vector4A16 &v0, const Vector4A16 &v1, T t) {
   return v0 + (v1 - v0) * t;
 }
 
-ES_INLINE Vector4A16 additiveLerp(const TrackMinMax *minMax,
-                                  const Vector4A16 &value) {
+static Vector4A16 additiveLerp(const TrackMinMax *minMax,
+                               const Vector4A16 &value) {
   return minMax->max + minMax->min * value;
 }
 
-ES_INLINE Vector4A16 blerp(const Vector4A16 &v0, const Vector4A16 &v1,
-                           const TrackMinMax *minMax, float t) {
+static Vector4A16 blerp(const Vector4A16 &v0, const Vector4A16 &v1,
+                        const TrackMinMax *minMax, float t) {
   return lerp(additiveLerp(minMax, v0), additiveLerp(minMax, v1), t);
 }
 
-ES_INLINE Vector4A16 bslerp(const Vector4A16 &v0, const Vector4A16 &v1,
-                            const TrackMinMax *minMax, float t) {
+static Vector4A16 bslerp(const Vector4A16 &v0, const Vector4A16 &v1,
+                         const TrackMinMax *minMax, float t) {
   return slerp(additiveLerp(minMax, v0), additiveLerp(minMax, v1), t);
 }
 
 template <class C>
 void AppendToStringRaw(const C *clPtr, std::stringstream &buffer) {
-  const uchar *rawData = reinterpret_cast<const uchar *>(clPtr);
-  const int hexSize = clPtr->Size() * 2;
-  int cBuff = 0;
+  const uint8 *rawData = reinterpret_cast<const uint8 *>(clPtr);
+  const uint32 hexSize = clPtr->Size() * 2;
+  uint32 cBuff = 0;
 
-  for (int i = 0; i < hexSize; i++) {
+  for (uint32 i = 0; i < hexSize; i++) {
     bool idk = i & 1;
     char temp = 0x30 + (idk ? rawData[cBuff++] & 0xf : rawData[cBuff] >> 4);
 
@@ -101,12 +101,12 @@ void AppendToStringRaw(const C *clPtr, std::stringstream &buffer) {
 
 template <class C>
 void RetreiveFromRawString(C *clPtr, const std::string &buffer,
-                           int &bufferIter) {
-  uchar *rawData = reinterpret_cast<uchar *>(clPtr);
-  const int hexSize = clPtr->Size() * 2;
-  int cBuff = 0;
+                           uint32 &bufferIter) {
+  uint8 *rawData = reinterpret_cast<uint8 *>(clPtr);
+  const uint32 hexSize = clPtr->Size() * 2;
+  uint32 cBuff = 0;
 
-  for (int i = 0; i < hexSize; i++, bufferIter++) {
+  for (uint32 i = 0; i < hexSize; i++, bufferIter++) {
     if (bufferIter >= buffer.size()) {
       bufferIter = -1;
       return;
@@ -128,7 +128,7 @@ void RetreiveFromRawString(C *clPtr, const std::string &buffer,
   }
 }
 
-static void ltrim(const std::string &s, int &curIterPos) {
+static void ltrim(const std::string &s, uint32 &curIterPos) {
   for (auto it = s.begin() + curIterPos; it != s.end(); it++) {
     switch (*it) {
     case '\n':
@@ -142,8 +142,7 @@ static void ltrim(const std::string &s, int &curIterPos) {
   }
 }
 
-ES_INLINE void SeekTo(const std::string &s, int &curIterPos,
-                      const char T = '\n') {
+static void SeekTo(const std::string &s, uint32 &curIterPos, const char T = '\n') {
   for (auto it = s.begin() + curIterPos; it != s.end(); it++) {
     curIterPos++;
 
@@ -152,7 +151,7 @@ ES_INLINE void SeekTo(const std::string &s, int &curIterPos,
   }
 }
 
-int Buf_SingleVector3::Size() const { return 12; }
+uint32 Buf_SingleVector3::Size() const { return 12; }
 
 void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_SingleVector3> tRefl(this);
@@ -161,7 +160,7 @@ void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
 }
 
 void Buf_SingleVector3::RetreiveFromString(const std::string &buffer,
-                                           int &bufferIter) {
+                                           uint32 &bufferIter) {
   ltrim(buffer, bufferIter);
 
   ReflectorWrap<Buf_SingleVector3> tRefl(this);
@@ -175,13 +174,13 @@ void Buf_SingleVector3::Evaluate(Vector4A16 &out) const {
 
 void Buf_SingleVector3::Devaluate(const Vector4A16 &in) { data = in; }
 
-void Buf_SingleVector3::GetFrame(int &currentFrame) const { currentFrame++; }
+void Buf_SingleVector3::GetFrame(int32 &currentFrame) const { currentFrame++; }
 
-int Buf_SingleVector3::GetFrame() const { return 1; }
+int32 Buf_SingleVector3::GetFrame() const { return 1; }
 
 void Buf_SingleVector3::Interpolate(Vector4A16 &out,
-                                   const Buf_SingleVector3 &rightFrame,
-                                   float delta, const TrackMinMax *) const {
+                                    const Buf_SingleVector3 &rightFrame,
+                                    float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
   Evaluate(startPoint);
@@ -198,8 +197,9 @@ void Buf_StepRotationQuat3::Evaluate(Vector4A16 &out) const {
 }
 
 void Buf_StepRotationQuat3::Interpolate(Vector4A16 &out,
-                                       const Buf_StepRotationQuat3 &rightFrame,
-                                       float delta, const TrackMinMax *) const {
+                                        const Buf_StepRotationQuat3 &rightFrame,
+                                        float delta,
+                                        const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
   Evaluate(startPoint);
@@ -208,7 +208,7 @@ void Buf_StepRotationQuat3::Interpolate(Vector4A16 &out,
   out = slerp(startPoint, endPoint, delta);
 }
 
-int Buf_LinearVector3::Size() const { return 16; }
+uint32 Buf_LinearVector3::Size() const { return 16; }
 
 void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_LinearVector3> tRefl(this);
@@ -218,7 +218,7 @@ void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
 }
 
 void Buf_LinearVector3::RetreiveFromString(const std::string &buffer,
-                                           int &bufferIter) {
+                                           uint32 &bufferIter) {
   SeekTo(buffer, bufferIter, '{');
   ltrim(buffer, bufferIter);
 
@@ -240,19 +240,19 @@ void Buf_LinearVector3::Evaluate(Vector4A16 &out) const {
   out = Vector4A16(data, 1.0f);
 }
 
-void Buf_LinearVector3::GetFrame(int &currentFrame) const {
+void Buf_LinearVector3::GetFrame(int32 &currentFrame) const {
   currentFrame += additiveFrames;
 }
 
-int Buf_LinearVector3::GetFrame() const { return additiveFrames; }
+int32 Buf_LinearVector3::GetFrame() const { return additiveFrames; }
 
 void Buf_LinearVector3::SetFrame(uint64 frame) {
-  additiveFrames = static_cast<int>(frame);
+  additiveFrames = static_cast<int32>(frame);
 }
 
 void Buf_LinearVector3::Interpolate(Vector4A16 &out,
-                                   const Buf_LinearVector3 &rightFrame,
-                                   float delta, const TrackMinMax *) const {
+                                    const Buf_LinearVector3 &rightFrame,
+                                    float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint;
 
   Evaluate(startPoint);
@@ -266,7 +266,7 @@ void Buf_LinearVector3::SwapEndian() {
   FByteswapper(additiveFrames);
 }
 
-int Buf_HermiteVector3::Size() const { return size; }
+uint32 Buf_HermiteVector3::Size() const { return size; }
 
 void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_HermiteVector3> tRefl(this);
@@ -285,7 +285,7 @@ void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
 }
 
 void Buf_HermiteVector3::RetreiveFromString(const std::string &buffer,
-                                            int &bufferIter) {
+                                            uint32 &bufferIter) {
   SeekTo(buffer, bufferIter, '{');
   ltrim(buffer, bufferIter);
 
@@ -306,12 +306,13 @@ void Buf_HermiteVector3::RetreiveFromString(const std::string &buffer,
   SeekTo(buffer, bufferIter, ',');
   ltrim(buffer, bufferIter);
 
-  int curTang = 0;
-  int lastIter = bufferIter;
+  uint32 curTang = 0;
+  uint32 lastIter = bufferIter;
 
-  for (int f = 0; f < 6; f++)
+  for (uint32 f = 0; f < 6; f++)
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
-      tangents[curTang++] = std::atof(buffer.c_str() + bufferIter);
+      tangents[curTang++] =
+          static_cast<float>(std::atof(buffer.c_str() + bufferIter));
       lastIter = bufferIter;
       SeekTo(buffer, bufferIter, ',');
       ltrim(buffer, bufferIter);
@@ -319,7 +320,7 @@ void Buf_HermiteVector3::RetreiveFromString(const std::string &buffer,
 
   bufferIter = lastIter;
 
-  size = sizeof(Buf_HermiteVector3) - (6 - curTang) * 4;
+  size = static_cast<uint8>(sizeof(Buf_HermiteVector3) - (6 - curTang) * 4);
 
   SeekTo(buffer, bufferIter);
 }
@@ -330,7 +331,7 @@ void Buf_HermiteVector3::Evaluate(Vector4A16 &out) const {
 
 void Buf_HermiteVector3::GetTangents(Vector4A16 &inTangs,
                                      Vector4A16 &outTangs) const {
-  int currentTangIndex = 0;
+  uint32 currentTangIndex = 0;
 
   inTangs.X = flags[Buf_HermiteVector3_Flags::InTangentX]
                   ? tangents[currentTangIndex++]
@@ -352,19 +353,19 @@ void Buf_HermiteVector3::GetTangents(Vector4A16 &inTangs,
                    : 0.0f;
 }
 
-void Buf_HermiteVector3::GetFrame(int &currentFrame) const {
+void Buf_HermiteVector3::GetFrame(int32 &currentFrame) const {
   currentFrame += additiveFrames;
 }
 
-int Buf_HermiteVector3::GetFrame() const { return additiveFrames; }
+int32 Buf_HermiteVector3::GetFrame() const { return additiveFrames; }
 
 void Buf_HermiteVector3::SetFrame(uint64 frame) {
-  additiveFrames = static_cast<short>(frame);
+  additiveFrames = static_cast<uint16>(frame);
 }
 
 void Buf_HermiteVector3::Interpolate(Vector4A16 &out,
-                                    const Buf_HermiteVector3 &rightFrame,
-                                    float delta, const TrackMinMax *) const {
+                                     const Buf_HermiteVector3 &rightFrame,
+                                     float delta, const TrackMinMax *) const {
   Vector4A16 startPoint, endPoint, startPointOutTangent, endPointInTangent,
       dummy;
 
@@ -389,23 +390,23 @@ void Buf_HermiteVector3::SwapEndian() {
   FByteswapper(additiveFrames);
   FByteswapper(data);
 
-  int curTang = 0;
+  uint32 curTang = 0;
 
-  for (int f = 0; f < 6; f++)
+  for (uint32 f = 0; f < 6; f++)
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
       FByteswapper(tangents[curTang]);
       curTang++;
     }
 }
 
-int Buf_SphericalRotation::Size() const { return 8; }
+uint32 Buf_SphericalRotation::Size() const { return 8; }
 
 void Buf_SphericalRotation::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
 void Buf_SphericalRotation::RetreiveFromString(const std::string &buffer,
-                                               int &bufferIter) {
+                                               uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
@@ -445,8 +446,8 @@ void Buf_SphericalRotation::Devaluate(const Vector4A16 &_in) {
 }
 
 void Buf_SphericalRotation::Evaluate(Vector4A16 &out) const {
-  out.X = data & componentMask;
-  out.Y = (data >> 17) & componentMask;
+  out.X = static_cast<float>(data & componentMask);
+  out.Y = static_cast<float>((data >> 17) & componentMask);
   float wComp =
       static_cast<float>((data >> 34) & componentMaskW) * componentMultiplierW;
   out *= componentMultiplier;
@@ -484,11 +485,11 @@ void Buf_SphericalRotation::Evaluate(Vector4A16 &out) const {
     out.Z *= -1;
 }
 
-void Buf_SphericalRotation::GetFrame(int &currentFrame) const {
+void Buf_SphericalRotation::GetFrame(int32 &currentFrame) const {
   currentFrame += data >> 56;
 }
 
-int Buf_SphericalRotation::GetFrame() const { return data >> 56; }
+int32 Buf_SphericalRotation::GetFrame() const { return data >> 56; }
 
 void Buf_SphericalRotation::SetFrame(uint64 frame) {
   data ^= data & frameField;
@@ -496,9 +497,9 @@ void Buf_SphericalRotation::SetFrame(uint64 frame) {
 }
 
 void Buf_SphericalRotation::Interpolate(Vector4A16 &out,
-                                       const Buf_SphericalRotation &rightFrame,
-                                       float delta,
-                                       const TrackMinMax *minMax) const {
+                                        const Buf_SphericalRotation &rightFrame,
+                                        float delta,
+                                        const TrackMinMax *minMax) const {
   Vector4A16 startPoint, endPoint;
 
   Evaluate(startPoint);
@@ -516,7 +517,7 @@ const float Buf_SphericalRotation::componentMultiplier =
 const float Buf_SphericalRotation::componentMultiplierW =
     1.0f / static_cast<float>(componentMaskW);
 
-int Buf_BiLinearVector3_16bit::Size() const { return 8; }
+uint32 Buf_BiLinearVector3_16bit::Size() const { return 8; }
 
 void Buf_BiLinearVector3_16bit::AppendToString(
     std::stringstream &buffer) const {
@@ -524,7 +525,7 @@ void Buf_BiLinearVector3_16bit::AppendToString(
 }
 
 void Buf_BiLinearVector3_16bit::RetreiveFromString(const std::string &buffer,
-                                                   int &bufferIter) {
+                                                   uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
@@ -533,17 +534,17 @@ void Buf_BiLinearVector3_16bit::Evaluate(Vector4A16 &out) const {
 }
 
 void Buf_BiLinearVector3_16bit::Devaluate(const Vector4A16 &in) {
-  data = USVector4((in * componentMultiplierInv).Convert<ushort>());
+  data = USVector4((in * componentMultiplierInv).Convert<uint16>());
 }
 
-void Buf_BiLinearVector3_16bit::GetFrame(int &currentFrame) const {
+void Buf_BiLinearVector3_16bit::GetFrame(int32 &currentFrame) const {
   currentFrame += additiveFrames;
 }
 
-int Buf_BiLinearVector3_16bit::GetFrame() const { return additiveFrames; }
+int32 Buf_BiLinearVector3_16bit::GetFrame() const { return additiveFrames; }
 
 void Buf_BiLinearVector3_16bit::SetFrame(uint64 frame) {
-  additiveFrames = static_cast<ushort>(frame);
+  additiveFrames = static_cast<uint16>(frame);
 }
 
 void Buf_BiLinearVector3_16bit::Interpolate(
@@ -573,14 +574,14 @@ const Vector4A16 Buf_BiLinearVector3_16bit::componentMultiplierInv =
 const Vector4A16 Buf_BiLinearVector3_16bit::componentMultiplier =
     Vector4A16(1.0f) / componentMultiplierInv;
 
-int Buf_BiLinearVector3_8bit::Size() const { return 4; }
+uint32 Buf_BiLinearVector3_8bit::Size() const { return 4; }
 
 void Buf_BiLinearVector3_8bit::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
 void Buf_BiLinearVector3_8bit::RetreiveFromString(const std::string &buffer,
-                                                  int &bufferIter) {
+                                                  uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
@@ -589,17 +590,17 @@ void Buf_BiLinearVector3_8bit::Evaluate(Vector4A16 &out) const {
 }
 
 void Buf_BiLinearVector3_8bit::Devaluate(const Vector4A16 &in) {
-  data = UCVector4((in * componentMultiplierInv).Convert<uchar>());
+  data = UCVector4((in * componentMultiplierInv).Convert<uint8>());
 }
 
-void Buf_BiLinearVector3_8bit::GetFrame(int &currentFrame) const {
+void Buf_BiLinearVector3_8bit::GetFrame(int32 &currentFrame) const {
   currentFrame += additiveFrames;
 }
 
-int Buf_BiLinearVector3_8bit::GetFrame() const { return additiveFrames; }
+int32 Buf_BiLinearVector3_8bit::GetFrame() const { return additiveFrames; }
 
 void Buf_BiLinearVector3_8bit::SetFrame(uint64 frame) {
-  additiveFrames = static_cast<ushort>(frame);
+  additiveFrames = static_cast<uint8>(frame);
 }
 
 void Buf_BiLinearVector3_8bit::Interpolate(
@@ -625,7 +626,10 @@ const Vector4A16 Buf_BiLinearVector3_8bit::componentMultiplier =
     Vector4A16(1.0f) / componentMultiplierInv;
 
 void Buf_LinearRotationQuat4_14bit::Evaluate(Vector4A16 &out) const {
-  out = IVector4A16(data >> 42, data >> 28, data >> 14, data) & componentMask;
+  out = IVector4A16(static_cast<int32>(data >> 42),
+                    static_cast<int32>(data >> 28),
+                    static_cast<int32>(data >> 14), static_cast<int32>(data)) &
+        componentMask;
 
   const Vector4A16 signedHalf(Vector4A16(componentMask) - out);
   const Vector4A16 multSign(out.X > componentSignMax ? -1.0f : 0.0f,
@@ -683,7 +687,7 @@ const float Buf_LinearRotationQuat4_14bit::componentMultiplier =
 const float Buf_LinearRotationQuat4_14bit::componentSignMax =
     static_cast<float>(componentMask) * 0.5;
 
-int Buf_BiLinearRotationQuat4_7bit::Size() const { return 4; }
+uint32 Buf_BiLinearRotationQuat4_7bit::Size() const { return 4; }
 
 void Buf_BiLinearRotationQuat4_7bit::AppendToString(
     std::stringstream &buffer) const {
@@ -691,7 +695,7 @@ void Buf_BiLinearRotationQuat4_7bit::AppendToString(
 }
 
 void Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(
-    const std::string &buffer, int &bufferIter) {
+    const std::string &buffer, uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
@@ -711,11 +715,11 @@ void Buf_BiLinearRotationQuat4_7bit::Devaluate(const Vector4A16 &in) {
   data |= store.X << 21;
 }
 
-void Buf_BiLinearRotationQuat4_7bit::GetFrame(int &currentFrame) const {
+void Buf_BiLinearRotationQuat4_7bit::GetFrame(int32 &currentFrame) const {
   currentFrame += data >> 28;
 }
 
-int Buf_BiLinearRotationQuat4_7bit::GetFrame() const { return data >> 28; }
+int32 Buf_BiLinearRotationQuat4_7bit::GetFrame() const { return data >> 28; }
 
 void Buf_BiLinearRotationQuat4_7bit::SetFrame(uint64 frame) {
   data ^= data & frameField;
@@ -820,7 +824,7 @@ void Buf_BiLinearRotationQuatZW_14bit::Interpolate(
   out = bslerp(startPoint, endPoint, minMax, delta);
 }
 
-int Buf_BiLinearRotationQuat4_11bit::Size() const { return 6; }
+uint32 Buf_BiLinearRotationQuat4_11bit::Size() const { return 6; }
 
 void Buf_BiLinearRotationQuat4_11bit::AppendToString(
     std::stringstream &buffer) const {
@@ -828,15 +832,17 @@ void Buf_BiLinearRotationQuat4_11bit::AppendToString(
 }
 
 void Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(
-    const std::string &buffer, int &bufferIter) {
+    const std::string &buffer, uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
 void Buf_BiLinearRotationQuat4_11bit::Evaluate(Vector4A16 &out) const {
   const uint64 &rVal = reinterpret_cast<const uint64 &>(data);
 
-  out = IVector4A16(rVal, ((rVal >> 11) << 6) | data[1] & 0x3f,
-                    (rVal >> 22) << 1 | data[2] & 1, rVal >> 33) &
+  out = IVector4A16(static_cast<int32>(rVal),
+                    static_cast<int32>(((rVal >> 11) << 6) | data[1] & 0x3f),
+                    static_cast<int32>((rVal >> 22) << 1 | data[2] & 1),
+                    static_cast<int32>(rVal >> 33)) &
         componentMask;
   out *= componentMultiplier;
 }
@@ -854,7 +860,7 @@ void Buf_BiLinearRotationQuat4_11bit::Devaluate(const Vector4A16 &in) {
   rVal |= store.W << 33;
 }
 
-void Buf_BiLinearRotationQuat4_11bit::GetFrame(int &currentFrame) const {
+void Buf_BiLinearRotationQuat4_11bit::GetFrame(int32 &currentFrame) const {
   currentFrame += data.Z >> 12;
 }
 
@@ -876,7 +882,7 @@ const float Buf_BiLinearRotationQuat4_11bit::componentMultiplierInv =
 const float Buf_BiLinearRotationQuat4_11bit::componentMultiplier =
     1.0f / componentMultiplierInv;
 
-int Buf_BiLinearRotationQuat4_9bit::Size() const { return 5; }
+uint32 Buf_BiLinearRotationQuat4_9bit::Size() const { return 5; }
 
 void Buf_BiLinearRotationQuat4_9bit::AppendToString(
     std::stringstream &buffer) const {
@@ -884,17 +890,17 @@ void Buf_BiLinearRotationQuat4_9bit::AppendToString(
 }
 
 void Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(
-    const std::string &buffer, int &bufferIter) {
+    const std::string &buffer, uint32 &bufferIter) {
   RetreiveFromRawString(this, buffer, bufferIter);
 }
 
 void Buf_BiLinearRotationQuat4_9bit::Evaluate(Vector4A16 &out) const {
   const uint64 &rVal = reinterpret_cast<const uint64 &>(data);
 
-  out = IVector4A16((rVal << 1) | (data[1] & 1),
-                    ((rVal >> 9) << 2) | (data[2] & 3),
-                    ((rVal >> 18) << 3) | (data[3] & 7),
-                    ((rVal >> 27) << 4) | (data[4] & 0xf)) &
+  out = IVector4A16(static_cast<int32>((rVal << 1) | (data[1] & 1)),
+                    static_cast<int32>(((rVal >> 9) << 2) | (data[2] & 3)),
+                    static_cast<int32>(((rVal >> 18) << 3) | (data[3] & 7)),
+                    static_cast<int32>(((rVal >> 27) << 4) | (data[4] & 0xf))) &
         componentMask;
   out *= componentMultiplier;
 }
@@ -912,7 +918,7 @@ void Buf_BiLinearRotationQuat4_9bit::Devaluate(const Vector4A16 &in) {
   rVal |= (store.W >> 4 | (store.W & 0xf) << 5) << 27;
 }
 
-void Buf_BiLinearRotationQuat4_9bit::GetFrame(int &currentFrame) const {
+void Buf_BiLinearRotationQuat4_9bit::GetFrame(int32 &currentFrame) const {
   currentFrame += data[4] >> 4;
 }
 
@@ -933,11 +939,12 @@ const float Buf_BiLinearRotationQuat4_9bit::componentMultiplier =
     1.0f / componentMultiplierInv;
 
 template <class C>
-void Buff_EvalShared<C>::ToString(std::string &strBuff, int numIdents) const {
+void Buff_EvalShared<C>::ToString(std::string &strBuff,
+                                  uint32 numIdents) const {
   std::stringstream str;
   str << std::endl << idents[numIdents];
 
-  int curLine = 1;
+  uint32 curLine = 1;
 
   for (auto &d : data) {
     d.AppendToString(str);
@@ -957,7 +964,7 @@ void Buff_EvalShared<C>::ToString(std::string &strBuff, int numIdents) const {
 }
 
 template <class C> void Buff_EvalShared<C>::FromString(std::string &input) {
-  int iterPos = 0;
+  uint32 iterPos = 0;
 
   for (auto &d : data) {
     d.RetreiveFromString(input, iterPos);
@@ -968,11 +975,11 @@ template <class C> void Buff_EvalShared<C>::FromString(std::string &input) {
   }
 }
 
-template <class C> void Buff_EvalShared<C>::Assign(char *ptr, int size) {
+template <class C> void Buff_EvalShared<C>::Assign(char *ptr, uint32 size) {
   if (!C::VARIABLE_SIZE) {
     data = Store_Type(reinterpret_cast<C *>(ptr),
                       reinterpret_cast<C *>(ptr + size),
-                      std::allocator_hybrid<C>(reinterpret_cast<C *>(ptr)));
+                      es::allocator_hybrid<C>(reinterpret_cast<C *>(ptr)));
   } else {
     const char *bufferEnd = ptr + size;
 
@@ -984,28 +991,27 @@ template <class C> void Buff_EvalShared<C>::Assign(char *ptr, int size) {
   }
 
   frames.resize(NumFrames());
-  int currentFrame = 0;
-  int curFrameID = 0;
+  int32 currentFrame = 0;
+  uint32 curFrameID = 0;
 
   for (auto &f : frames) {
     f = currentFrame;
-    data[curFrameID].GetFrame(currentFrame);
-    curFrameID++;
+    data[curFrameID++].GetFrame(currentFrame);
   }
 }
 
-template <class C> void Buff_EvalShared<C>::Save(BinWritter *wr) const {
+template <class C> void Buff_EvalShared<C>::Save(BinWritterRef wr) const {
   if (!C::VARIABLE_SIZE) {
-    if (!wr->SwappedEndian())
-      wr->WriteBuffer(reinterpret_cast<const char *>(data.data()),
-                      data.size() * sizeof(typename Store_Type::value_type));
+    if (!wr.SwappedEndian())
+      wr.WriteBuffer(reinterpret_cast<const char *>(data.data()),
+                     data.size() * sizeof(typename Store_Type::value_type));
     else
-      wr->WriteContainer(data);
+      wr.WriteContainer(data);
   } else {
     for (auto &r : data) {
       C tmp = r;
       tmp.SwapEndian();
-      wr->WriteBuffer(reinterpret_cast<const char *>(&tmp), r.Size());
+      wr.WriteBuffer(reinterpret_cast<const char *>(&tmp), r.Size());
     }
   }
 }
@@ -1072,7 +1078,8 @@ static const TrackTypesShared buffRemapRegistry[][16] = {
 
 REGISTER_ENUMS(Buf_HermiteVector3_Flags)
 
-LMTTrackController *LMTTrackController::CreateCodec(int type, int subVersion) {
+LMTTrackController *LMTTrackController::CreateCodec(uint32 type,
+                                                    uint32 subVersion) {
   const TrackTypesShared cType = subVersion < 0
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];

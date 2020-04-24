@@ -19,9 +19,9 @@
 #include "motion.hpp"
 
 struct RETrackCurve78 {
-  int flags;
-  int numFrames;
-  REPointerX86<uchar> frames;
+  uint32 flags;
+  uint32 numFrames;
+  REPointerX86<uint8> frames;
   REPointerX86<char> controlPoints;
   REPointerX86<REMimMaxBounds> minMaxBounds;
 
@@ -30,9 +30,9 @@ struct RETrackCurve78 {
 };
 
 struct REMotionTrack78 {
-  short unk;
-  esFlags<short, REMotionTrack::TrackType> usedCurves;
-  int boneHash;
+  uint16 unk;
+  esFlags<uint16, REMotionTrack::TrackType> usedCurves;
+  uint32 boneHash;
   REPointerX86<RETrackCurve78> curves;
 
   int Fixup(char *masterBuffer);
@@ -46,11 +46,11 @@ struct REMotion78 : public REAssetBase {
   REPointerX64<char> unkOffset02;
   REPointerX64<char16_t> animationName;
   float intervals[4];
-  short numBones;
-  short numTracks;
-  short numUNK00;
-  short framesPerSecond;
-  short unks00[2];
+  uint16 numBones;
+  uint16 numTracks;
+  uint16 numUNK00;
+  uint16 framesPerSecond;
+  uint16 unks00[2];
 
   int Fixup();
 };
@@ -62,15 +62,15 @@ public:
     return REAssetBase::Get<const REMotion78>(this->buffer);
   }
 
-  std::string Name() const override { // FIX THIS!!!
-    return esStringConvert<char>(
-        reinterpret_cast<const wchar_t *>(Get().animationName.operator->()));
+  std::string Name() const override {
+    return es::ToUTF8(Get().animationName.operator->());
   }
-  uint FrameRate() const override { return Get().framesPerSecond; }
+  uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
 
   int Fixup() override;
   void Build() override;
+
 public:
   static const uint64 ID = CompileFourCC("mot ");
   static const uint64 VERSION = 78;

@@ -17,10 +17,10 @@
 
 #pragma once
 #include "asset.hpp"
-#include "datas/esstring.h"
 #include "datas/flags.hpp"
-#include "uni_list_vector.hpp"
-#include "uni_motion.hpp"
+#include "datas/unicode.hpp"
+#include "uni/list_vector.hpp"
+#include "uni/motion.hpp"
 
 struct REMotionTrack78;
 struct RETrackCurve;
@@ -32,7 +32,7 @@ struct REMotionBone {
       lastChildBoneNamePtr;
   Vector4A16 position;
   Vector4A16 rotation;
-  int boneID, boneHash;
+  uint32 boneID, boneHash;
   uint64 null;
 
   int Fixup(char *masterBuffer);
@@ -46,16 +46,16 @@ struct REMimMaxBounds {
 struct RETrackController {
   virtual void Assign(RETrackCurve *iCurve) = 0;
   virtual void Assign(RETrackCurve78 *iCurve) = 0;
-  virtual ushort GetFrame(int id) const = 0;
-  virtual void Evaluate(int id, Vector4A16 &out) const = 0;
+  virtual uint16 GetFrame(uint32 id) const = 0;
+  virtual void Evaluate(uint32 id, Vector4A16 &out) const = 0;
   virtual ~RETrackController() {}
 };
 
 struct RETrackCurve {
-  int flags;
-  int numFrames, framesPerSecond;
+  uint32 flags;
+  uint32 numFrames, framesPerSecond;
   float duration;
-  REPointerX64<uchar> frames;
+  REPointerX64<uint8> frames;
   REPointerX64<char> controlPoints;
   REPointerX64<REMimMaxBounds> minMaxBounds;
 
@@ -70,9 +70,9 @@ struct REMotionTrack {
     TrackType_Scale,
   };
 
-  short unk;
-  esFlags<short, TrackType> usedCurves;
-  uint boneHash;
+  int16 unk;
+  esFlags<uint16, TrackType> usedCurves;
+  uint32 boneHash;
   float weight;
   REPointerX64<RETrackCurve> curves;
 
@@ -87,18 +87,18 @@ struct REMotion : public REAssetBase {
   REPointerX64<char> unkOffset02;
   REPointerX64<char16_t> animationName;
   float intervals[4];
-  short numBones;
-  short numTracks;
-  short numUNK00;
-  short framesPerSecond;
-  short unks00[2];
+  uint16 numBones;
+  uint16 numTracks;
+  uint16 numUNK00;
+  uint16 framesPerSecond;
+  uint16 unks00[2];
 
   int Fixup();
 };
 
-class REMotionCurveWorker : public uni::MotionCurve {
-  CurveType_e CurveType() const override { return cType; }
-  void GetValue(uni::PRSCurve &output, float time) const override;
+class REMotionTrackWorker : public uni::MotionTrack {
+  TrackType_e TrackType() const override { return cType; }
+  void GetValue(uni::RTSValue &output, float time) const override;
   void GetValue(esMatrix44 &output, float time) const override;
   void GetValue(float &output, float time) const override;
   void GetValue(Vector4A16 &output, float time) const override;
@@ -106,41 +106,32 @@ class REMotionCurveWorker : public uni::MotionCurve {
 
 public:
   std::unique_ptr<RETrackController> controller;
-  CurveType_e cType;
-  uint boneHash;
-  uint numFrames;
+  TrackType_e cType;
+  uint32 boneHash;
+  uint32 numFrames;
 };
 
-class REMotionTrackWorker
-    : public uni::MotionTrack,
-      uni::VectorList<uni::MotionCurve, REMotionCurveWorker> {
-  const uni::MotionCurves &Curves() const override { return *this; }
-  size_t Index() const override { return boneHash; }
-
-public:
-  uint boneHash;
-
-  REMotionTrackWorker(REMotionTrack *tck);
-  REMotionTrackWorker(REMotionTrack78 *tck);
-};
-
-class REMotionAsset : public REAsset_internal,
-                      public uni::Motion,
-                      protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
+class REMotionAsset
+    : public REAsset_internal,
+      public uni::Motion,
+      protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
 public:
   REMotion &Get() { return REAssetBase::Get<REMotion>(this->buffer); }
   const REMotion &Get() const {
     return REAssetBase::Get<const REMotion>(this->buffer);
   }
 
-  std::string Name() const override { // FIX THIS!!!
-    return esStringConvert<char>(
-        reinterpret_cast<const wchar_t *>(Get().animationName.operator->()));
+  std::string Name() const override {
+    return es::ToUTF8(Get().animationName.operator->());
   }
-  void FrameRate(uint fps) override;
-  uint FrameRate() const override { return Get().framesPerSecond; }
+  void FrameRate(uint32 fps) override;
+  uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
-  const uni::MotionTracks &Tracks() const override { return *this; }
+  uni::MotionTracksConst Tracks() const override {
+    return uni::MotionTracksConst(this, false);
+  }
+  MotionType_e MotionType() const override { return MotionType_e::Relative; }
+
   int Fixup() override;
   void Build() override;
 

@@ -24,18 +24,18 @@ REAsset *REAsset::Load(const char *fileName) {
   BinReader rd(fileName);
 
   if (!rd.IsValid()) {
-    printerror("[REAsset] Couldn't open file: ", << fileName);
+    printerror("[REAsset] Couldn't open file: " << fileName);
     return nullptr;
   }
 
-  return Load(&rd);
+  return Load(rd);
 }
 
-REAsset *REAsset::Load(BinReader *rd) {
-  auto saved = rd->Tell();
+REAsset *REAsset::Load(BinReaderRef rd) {
+  rd.Push();
   REAssetBase base;
-  rd->Read(base);
-  rd->Seek(saved);
+  rd.Read(base);
+  rd.Pop();
 
   REAsset_internal *ass = REAsset_internal::Create(base);
 
@@ -46,9 +46,9 @@ REAsset *REAsset::Load(BinReader *rd) {
   return ass;
 }
 
-int REAsset_internal::Load(BinReader *rd) {
-  const size_t fleSize = rd->GetSize();
-  rd->ReadContainer(buffer, fleSize);
+int REAsset_internal::Load(BinReaderRef rd) {
+  const size_t fleSize = rd.GetSize();
+  rd.ReadContainer(buffer, fleSize);
   Fixup();
 
   return 0;

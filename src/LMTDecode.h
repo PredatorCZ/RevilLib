@@ -6,8 +6,8 @@ struct LMTRawTrack {
   typedef std::vector<esMatrix44> InputRaw;
   
   const InputRaw &data;
-  int boneID;
-  uchar boneType;
+  int32 boneID;
+  uint8 boneType;
   float weight;
 
   LMTRawTrack(const InputRaw &inputData, int boneIndex)

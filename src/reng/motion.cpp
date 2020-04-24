@@ -26,10 +26,10 @@ int REMotion::Fixup() {
   unkOffset02.Fixup(masterBuffer);
   animationName.Fixup(masterBuffer);
 
-  for (int b = 0; b < numBones; b++)
+  for (uint32 b = 0; b < numBones; b++)
     bones->ptr[b].Fixup(masterBuffer);
 
-  for (int b = 0; b < numTracks; b++)
+  for (uint32 b = 0; b < numTracks; b++)
     tracks[b].Fixup(masterBuffer);
 
   return 0;
@@ -38,9 +38,9 @@ int REMotion::Fixup() {
 int REMotionTrack::Fixup(char *masterBuffer) {
   curves.Fixup(masterBuffer);
 
-  int numUsedCurves = 0;
+  uint32 numUsedCurves = 0;
 
-  for (int t = 0; t < 3; t++)
+  for (uint32 t = 0; t < 3; t++)
     if (usedCurves[static_cast<TrackType>(t)])
       curves[numUsedCurves++].Fixup(masterBuffer);
 
@@ -64,23 +64,23 @@ int RETrackCurve::Fixup(char *masterBuffer) {
   return 0;
 }
 
-void REMotionAsset::FrameRate(uint fps) {
+void REMotionAsset::FrameRate(uint32 fps) {
   throw std::logic_error("Unsupported call!");
 }
 
-void REMotionCurveWorker::GetValue(uni::PRSCurve &output, float time) const {
+void REMotionTrackWorker::GetValue(uni::RTSValue &output, float time) const {
   throw std::logic_error("Unsupported call!");
 }
 
-void REMotionCurveWorker::GetValue(esMatrix44 &output, float time) const {
+void REMotionTrackWorker::GetValue(esMatrix44 &output, float time) const {
   throw std::logic_error("Unsupported call!");
 }
 
-void REMotionCurveWorker::GetValue(float &output, float time) const {
+void REMotionTrackWorker::GetValue(float &output, float time) const {
   throw std::logic_error("Unsupported call!");
 }
 
-void REMotionCurveWorker::GetValue(Vector4A16 &output, float time) const {
+void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
   if (!controller)
     return;
 
@@ -90,10 +90,10 @@ void REMotionCurveWorker::GetValue(Vector4A16 &output, float time) const {
   }
 
   float frameDelta = time * 60.f;
-  uint frame = static_cast<uint>(frameDelta);
-  uint foundFrameID = 0;
-  uint frameBegin = 0;
-  uint frameEnd = 0;
+  uint32 frame = static_cast<uint32>(frameDelta);
+  uint32 foundFrameID = 0;
+  uint32 frameBegin = 0;
+  uint32 frameEnd = 0;
 
   for (; foundFrameID < numFrames; foundFrameID++) {
     frameBegin = frameEnd;
@@ -113,8 +113,8 @@ void REMotionCurveWorker::GetValue(Vector4A16 &output, float time) const {
     return;
   }
 
-  const float fFrameBegin = frameBegin;
-  const float fFrameEnd = frameEnd;
+  const float fFrameBegin = static_cast<float>(frameBegin);
+  const float fFrameEnd = static_cast<float>(frameEnd);
 
   frameDelta = (fFrameBegin - frameDelta) / (fFrameBegin - fFrameEnd);
 
@@ -127,51 +127,45 @@ void REMotionCurveWorker::GetValue(Vector4A16 &output, float time) const {
   }
 }
 
-REMotionTrackWorker::REMotionTrackWorker(REMotionTrack *tck) {
-  size_t curCurve = 0;
-  boneHash = tck->boneHash;
-
-  if (tck->usedCurves[REMotionTrack::TrackType_Position]) {
-    storage.emplace_back(
-        std::unique_ptr<REMotionCurveWorker>(new REMotionCurveWorker()));
-    REMotionCurveWorker *wk = std::prev(storage.end())->get();
-    auto data = &tck->curves[curCurve++];
-    wk->controller = std::unique_ptr<RETrackController>(data->GetController());
-    wk->cType = REMotionCurveWorker::Position;
-    wk->boneHash = tck->boneHash;
-    wk->numFrames = data->numFrames;
-  }
-
-  if (tck->usedCurves[REMotionTrack::TrackType_Rotation]) {
-    storage.emplace_back(
-        std::unique_ptr<REMotionCurveWorker>(new REMotionCurveWorker()));
-    REMotionCurveWorker *wk = std::prev(storage.end())->get();
-    auto data = &tck->curves[curCurve++];
-    wk->controller = std::unique_ptr<RETrackController>(data->GetController());
-    wk->cType = REMotionCurveWorker::Rotation;
-    wk->boneHash = tck->boneHash;
-    wk->numFrames = data->numFrames;
-  }
-
-  if (tck->usedCurves[REMotionTrack::TrackType_Scale]) {
-    storage.emplace_back(
-        std::unique_ptr<REMotionCurveWorker>(new REMotionCurveWorker()));
-    REMotionCurveWorker *wk = std::prev(storage.end())->get();
-    auto data = &tck->curves[curCurve++];
-    wk->controller = std::unique_ptr<RETrackController>(data->GetController());
-    wk->cType = REMotionCurveWorker::Scale;
-    wk->boneHash = tck->boneHash;
-    wk->numFrames = data->numFrames;
-  }
-}
-
 void REMotionAsset::Build() {
-  auto &data = Get();
-  const int numTracks = Get().numTracks;
+  const uint32 numTracks = Get().numTracks;
 
-  for (int t = 0; t < numTracks; t++) {
-    storage.emplace_back(std::unique_ptr<REMotionTrackWorker>(
-        new REMotionTrackWorker(Get().tracks.operator->() + t)));
+  for (uint32 t = 0; t < numTracks; t++) {
+    auto tck = Get().tracks.operator->() + t;
+    size_t curCurve = 0;
+
+    if (tck->usedCurves[REMotionTrack::TrackType_Position]) {
+      auto *wk = new REMotionTrackWorker();
+      auto data = &tck->curves[curCurve++];
+      wk->controller =
+          std::unique_ptr<RETrackController>(data->GetController());
+      wk->cType = REMotionTrackWorker::Position;
+      wk->boneHash = tck->boneHash;
+      wk->numFrames = data->numFrames;
+      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+    }
+
+    if (tck->usedCurves[REMotionTrack::TrackType_Rotation]) {
+      auto *wk = new REMotionTrackWorker();
+      auto data = &tck->curves[curCurve++];
+      wk->controller =
+          std::unique_ptr<RETrackController>(data->GetController());
+      wk->cType = REMotionTrackWorker::Rotation;
+      wk->boneHash = tck->boneHash;
+      wk->numFrames = data->numFrames;
+      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+    }
+
+    if (tck->usedCurves[REMotionTrack::TrackType_Scale]) {
+      auto *wk = new REMotionTrackWorker();
+      auto data = &tck->curves[curCurve++];
+      wk->controller =
+          std::unique_ptr<RETrackController>(data->GetController());
+      wk->cType = REMotionTrackWorker::Scale;
+      wk->boneHash = tck->boneHash;
+      wk->numFrames = data->numFrames;
+      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+    }
   }
 }
 

@@ -21,15 +21,16 @@
 #include "re_asset.hpp"
 
 #include "datas/allocator_hybrid.hpp"
+#include "datas/binreader_stream.hpp"
 #include <vector>
 
 template <class C> struct REArray {
   REPointerX64<C> ptr;
-  int numItems;
+  int32 numItems;
 };
 
 struct REAssetBase {
-  uint assetID, assetFourCC;
+  uint32 assetID, assetFourCC;
 
   template <class C, class I> static C &Get(I &data) {
     return reinterpret_cast<C &>(data[0]);
@@ -38,9 +39,9 @@ struct REAssetBase {
 
 class REAsset_internal : public REAsset {
 public:
-  typedef std::vector<char, std::allocator_hybrid<char>> buffer_type;
+  typedef std::vector<char, es::allocator_hybrid<char>> buffer_type;
   buffer_type buffer;
-  int Load(BinReader *rd);
+  int Load(BinReaderRef rd);
   static REAsset_internal *Create(REAssetBase &base);
   void Assign(REAssetBase *data);
   virtual int Fixup() = 0;

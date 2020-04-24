@@ -1,32 +1,33 @@
-/*      Revil Format Library
-        Copyright(C) 2017-2019 Lukas Cone
+/*  Revil Format Library
+    Copyright(C) 2017-2020 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
+#include "datas/allocator_hybrid.hpp"
+#include "datas/deleter_hybrid.hpp"
 #include "datas/endian.hpp"
 #include "datas/reflector.hpp"
-#include <vector>
-#include <memory>
-#include "datas/deleter_hybrid.hpp"
-#include "datas/allocator_hybrid.hpp"
+
 #include "LMT.h"
+#include "datas/binwritter_stream.hpp"
 
-#include "datas/VectorsSimd.hpp"
+#include <memory>
+#include <vector>
 
-class LMTFixupStorage;
+struct LMTFixupStorage;
 
 static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
@@ -35,16 +36,14 @@ static const char *idents[] = {
 template <class C> union PointerX64 {
   uint64 fullPtr;
   C *ptr;
-  int offset;
+  int32 offset;
   esIntPtr varPtr;
 
   static const esIntPtr mask = ~static_cast<esIntPtr>(1);
 
   PointerX64() : fullPtr(0) {}
-  ES_FORCEINLINE C *GetData(char *) {
-    return reinterpret_cast<C *>(varPtr & mask);
-  }
-  ES_FORCEINLINE void Fixup(char *masterBuffer, bool &swapEndian) {
+  C *GetData(char *) { return reinterpret_cast<C *>(varPtr & mask); }
+  void Fixup(char *masterBuffer, bool &swapEndian) {
     if (swapEndian && !offset)
       FByteswapper(fullPtr);
 
@@ -61,16 +60,15 @@ template <class C> union PointerX64 {
 };
 
 template <class C> union PointerX86 {
-  uint varPtr;
+  uint32 varPtr;
 
-  static const uint mask = ~1U;
+  static const uint32 mask = ~1U;
 
   PointerX86() : varPtr(0) {}
 
   template <bool enbabled = ES_X64>
-  ES_FORCEINLINE typename std::enable_if<enbabled, C *>::type
-  GetData(char *masterBuffer) {
-    uint tempPtr = varPtr & mask;
+  typename std::enable_if<enbabled, C *>::type GetData(char *masterBuffer) {
+    uint32 tempPtr = varPtr & mask;
 
     if (!tempPtr)
       return nullptr;
@@ -79,11 +77,11 @@ template <class C> union PointerX86 {
   }
 
   template <bool enbabled = ES_X64>
-  ES_FORCEINLINE typename std::enable_if<!enbabled, C *>::type GetData(char *) {
+  typename std::enable_if<!enbabled, C *>::type GetData(char *) {
     return reinterpret_cast<C *>(varPtr & mask);
   }
 
-  ES_FORCEINLINE void Fixup(char *masterBuffer, bool &swapEndian) {
+  void Fixup(char *masterBuffer, bool &swapEndian) {
     if (swapEndian && !(varPtr & 0x01000001))
       FByteswapper(varPtr);
 
@@ -97,7 +95,7 @@ template <class C> union PointerX86 {
       return;
     }
 
-    varPtr += reinterpret_cast<uint &>(masterBuffer);
+    varPtr += reinterpret_cast<uint32 &>(masterBuffer);
     varPtr |= 1;
   }
 };
@@ -127,26 +125,28 @@ enum class TrackTypesShared {
 };
 
 struct LMTTrackController {
-  virtual int NumFrames() const = 0;
+  virtual uint32 NumFrames() const = 0;
   virtual bool IsCubic() const = 0;
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                           int frame) const = 0;
-  virtual void Evaluate(Vector4A16 &out, int frame) const = 0;
-  virtual void Interpolate(Vector4A16 &out, int frame, float delta,
+                           uint32 frame) const = 0;
+  virtual void Evaluate(Vector4A16 &out, uint32 frame) const = 0;
+  virtual void Interpolate(Vector4A16 &out, uint32 frame, float delta,
                            TrackMinMax *bounds = nullptr) const = 0;
-  virtual short GetFrame(int frame) const = 0;
-  virtual void NumFrames(int numItems) = 0;
-  virtual void ToString(std::string &strBuf, int numIdents) const = 0;
+  virtual int32 GetFrame(uint32 frameID) const = 0;
+  virtual void NumFrames(uint32 numItems) = 0;
+  virtual void ToString(std::string &strBuf, uint32 numIdents) const = 0;
 
   virtual void FromString(std::string &input) = 0;
-  virtual void Assign(char *ptr, int size) = 0;
+  virtual void Assign(char *ptr, uint32 size) = 0;
   virtual void SwapEndian() = 0;
-  virtual void Devaluate(const Vector4A16 &in, int frame) = 0;
-  virtual void Save(BinWritter *wr) const = 0;
+  virtual void Devaluate(const Vector4A16 &in, uint32 frame) = 0;
+  virtual void Save(BinWritterRef wr) const = 0;
 
   virtual ~LMTTrackController() {}
 
-  static LMTTrackController *CreateCodec(int type, int subVersion);
-  static LMTTrackController *CreateCodec(TrackTypesShared type) { return CreateCodec(static_cast<int>(type), -1); }
+  static LMTTrackController *CreateCodec(uint32 type, uint32 subVersion);
+  static LMTTrackController *CreateCodec(TrackTypesShared type) {
+    return CreateCodec(static_cast<uint32>(type), -1);
+  }
   static float GetTrackMaxFrac(TrackTypesShared type);
 };

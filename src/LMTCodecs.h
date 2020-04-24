@@ -1,18 +1,18 @@
-/*      Revil Format Library
-        Copyright(C) 2017-2019 Lukas Cone
+/*  Revil Format Library
+    Copyright(C) 2017-2020 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -25,18 +25,18 @@ struct Buf_SingleVector3 {
   DECLARE_REFLECTOR;
   Vector data;
 
-  static const int NEWLINEMOD = 1;
+  static const uint32 NEWLINEMOD = 1;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -59,24 +59,24 @@ struct Buf_StepRotationQuat3 : Buf_SingleVector3 {
 struct Buf_LinearVector3 {
   DECLARE_REFLECTOR;
   Vector data;
-  int additiveFrames;
+  uint32 additiveFrames;
 
-  static const int NEWLINEMOD = 1;
+  static const uint32 NEWLINEMOD = 1;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   void Devaluate(const Vector4A16 &in);
 
   void Evaluate(Vector4A16 &out) const;
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -92,20 +92,20 @@ REFLECTOR_CREATE(Buf_HermiteVector3_Flags, ENUM, 1, CLASS, InTangentX,
 struct Buf_HermiteVector3 {
   DECLARE_REFLECTOR;
 
-  uchar size;
-  esFlags<uchar, Buf_HermiteVector3_Flags> flags;
-  short additiveFrames;
+  uint8 size;
+  esFlags<uint8, Buf_HermiteVector3_Flags> flags;
+  uint16 additiveFrames;
   Vector data;
   float tangents[6];
 
-  static const int NEWLINEMOD = 1;
+  static const uint32 NEWLINEMOD = 1;
   static const bool VARIABLE_SIZE = true;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -115,9 +115,9 @@ struct Buf_HermiteVector3 {
     // Not Supported
   }
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -130,15 +130,15 @@ struct Buf_HermiteVector3 {
 struct Buf_SphericalRotation {
   uint64 data;
 
-  static const int NEWLINEMOD = 4;
+  static const uint32 NEWLINEMOD = 4;
   static const bool VARIABLE_SIZE = false;
-  static const int MAXFRAMES = 255;
+  static const uint32 MAXFRAMES = 255;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   static const uint64 componentMask = (1 << 17) - 1;
   static const uint64 componentMaskW = (1 << 19) - 1;
@@ -155,9 +155,9 @@ struct Buf_SphericalRotation {
 
   void Evaluate(Vector4A16 &out) const;
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -166,16 +166,16 @@ struct Buf_SphericalRotation {
 
 struct Buf_BiLinearVector3_16bit {
   USVector data;
-  ushort additiveFrames;
+  uint16 additiveFrames;
 
-  static const int NEWLINEMOD = 4;
+  static const uint32 NEWLINEMOD = 4;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   static const uint64 componentMask = 0xffff;
   static const Vector4A16 componentMultiplier;
@@ -185,9 +185,9 @@ struct Buf_BiLinearVector3_16bit {
 
   void Devaluate(const Vector4A16 &in);
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -199,16 +199,16 @@ struct Buf_BiLinearVector3_16bit {
 
 struct Buf_BiLinearVector3_8bit {
   UCVector data;
-  uchar additiveFrames;
+  uint8 additiveFrames;
 
-  static const int NEWLINEMOD = 7;
+  static const uint32 NEWLINEMOD = 7;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   static const uint64 componentMask = 0xff;
   static const Vector4A16 componentMultiplier;
@@ -218,9 +218,9 @@ struct Buf_BiLinearVector3_8bit {
 
   void Devaluate(const Vector4A16 &in);
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -246,30 +246,30 @@ struct Buf_LinearRotationQuat4_14bit : Buf_SphericalRotation {
 };
 
 struct Buf_BiLinearRotationQuat4_7bit {
-  uint data;
+  uint32 data;
 
-  static const int NEWLINEMOD = 8;
+  static const uint32 NEWLINEMOD = 8;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
-  static const uint componentMask = (1 << 7) - 1;
+  static const uint32 componentMask = (1 << 7) - 1;
   static const float componentMultiplier;
   static const float componentMultiplierInv;
-  static const uint dataField = (1 << 28) - 1;
-  static const uint frameField = ~dataField;
+  static const uint32 dataField = (1 << 28) - 1;
+  static const uint32 frameField = ~dataField;
 
   void Evaluate(Vector4A16 &out) const;
 
   void Devaluate(const Vector4A16 &in);
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
-  int GetFrame() const;
+  int32 GetFrame() const;
 
   void SetFrame(uint64 frame);
 
@@ -281,7 +281,7 @@ struct Buf_BiLinearRotationQuat4_7bit {
 };
 
 struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit {
-  static const uint componentMask = (1 << 14) - 1;
+  static const uint32 componentMask = (1 << 14) - 1;
   static const float componentMultiplier;
   static const float componentMultiplierInv;
 
@@ -317,14 +317,14 @@ struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuatXW_14bit {
 struct Buf_BiLinearRotationQuat4_11bit {
   USVector data;
 
-  static const int NEWLINEMOD = 6;
+  static const uint32 NEWLINEMOD = 6;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   static const uint64 componentMask = (1 << 11) - 1;
   static const float componentMultiplier;
@@ -334,7 +334,7 @@ struct Buf_BiLinearRotationQuat4_11bit {
 
   void Devaluate(const Vector4A16 &in);
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
   void Interpolate(Vector4A16 &out,
                   const Buf_BiLinearRotationQuat4_11bit &rightFrame,
@@ -344,16 +344,16 @@ struct Buf_BiLinearRotationQuat4_11bit {
 };
 
 struct Buf_BiLinearRotationQuat4_9bit {
-  uchar data[5];
+  uint8 data[5];
 
-  static const int NEWLINEMOD = 6;
+  static const uint32 NEWLINEMOD = 6;
   static const bool VARIABLE_SIZE = false;
 
-  int Size() const;
+  uint32 Size() const;
 
   void AppendToString(std::stringstream &buffer) const;
 
-  void RetreiveFromString(const std::string &buffer, int &bufferIter);
+  void RetreiveFromString(const std::string &buffer, uint32 &bufferIter);
 
   static const uint64 componentMask = (1 << 9) - 1;
   static const float componentMultiplier;
@@ -363,7 +363,7 @@ struct Buf_BiLinearRotationQuat4_9bit {
 
   void Devaluate(const Vector4A16 &in);
 
-  void GetFrame(int &currentFrame) const;
+  void GetFrame(int32 &currentFrame) const;
 
   void Interpolate(Vector4A16 &out,
                   const Buf_BiLinearRotationQuat4_9bit &rightFrame, float delta,
@@ -373,51 +373,51 @@ struct Buf_BiLinearRotationQuat4_9bit {
 };
 
 template <class C> struct Buff_EvalShared : LMTTrackController {
-  typedef std::vector<C, std::allocator_hybrid<C>> Store_Type;
+  typedef std::vector<C, es::allocator_hybrid<C>> Store_Type;
 
   Store_Type data;
-  std::vector<short> frames;
+  std::vector<int16> frames;
 
-  short GetFrame(int frame) const override { return frames[frame]; }
-  int NumFrames() const override { return data.size(); }
-  void NumFrames(int numItems) override { data.resize(numItems); }
+  int32 GetFrame(uint32 frame) const override { return frames[frame]; }
+  uint32 NumFrames() const override { return static_cast<uint32>(data.size()); }
+  void NumFrames(uint32 numItems) override { data.resize(numItems); }
   bool IsCubic() const override { return C::VARIABLE_SIZE; }
 
   template <class _C = C>
   typename std::enable_if<_C::VARIABLE_SIZE>::type
-  _GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs, int frame) const {
+  _GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs, uint32 frame) const {
     data[frame].GetTangents(inTangs, outTangs);
   }
 
   template <class _C = C>
   typename std::enable_if<!_C::VARIABLE_SIZE>::type
-  _GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs, int frame) const {}
+  _GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs, uint32 frame) const {}
 
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                   int frame) const override {
+                   uint32 frame) const override {
     _GetTangents(inTangs, outTangs, frame);
   }
 
-  void Evaluate(Vector4A16 &out, int frame) const override {
+  void Evaluate(Vector4A16 &out, uint32 frame) const override {
     data[frame].Evaluate(out);
   }
 
-  void Interpolate(Vector4A16 &out, int frame, float delta,
+  void Interpolate(Vector4A16 &out, uint32 frame, float delta,
                    TrackMinMax *bounds) const override {
     data[frame].Interpolate(out, data[frame + 1], delta, bounds);
   }
 
-  void Devaluate(const Vector4A16 &in, int frame) override {
+  void Devaluate(const Vector4A16 &in, uint32 frame) override {
     data[frame].Devaluate(in);
   }
 
-  void ToString(std::string &strBuff, int numIdents) const override;
+  void ToString(std::string &strBuff, uint32 numIdents) const override;
 
   void FromString(std::string &input) override;
 
-  void Assign(char *ptr, int size) override;
+  void Assign(char *ptr, uint32 size) override;
 
   void SwapEndian() override;
 
-  void Save(BinWritter *wr) const override;
+  void Save(BinWritterRef wr) const override;
 };

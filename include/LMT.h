@@ -1,38 +1,36 @@
-/*      Revil Format Library
-        Copyright(C) 2017-2019 Lukas Cone
+/*  Revil Format Library
+    Copyright(C) 2017-2020 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
-#include "datas/supercore.hpp"
-#include <vector>
+#include "datas/VectorsSimd.hpp"
+#include "datas/binreader_stream.hpp"
+#include "datas/binwritter_stream.hpp"
+#include "uni/motion.hpp"
+#include "uni/list_vector.hpp"
 
-class BinReader;
-class BinWritter;
 class AnimEvent;
-class V4SimdFltType;
-template <class C> class _t_Vector4;
-typedef _t_Vector4<V4SimdFltType> Vector4A16;
 
 namespace pugi {
 class xml_node;
 }
 
 struct LMTConstructorPropertiesBase {
-  char ptrSize; // 4, 8
-  char version;
+  uint8 ptrSize = 0; // 4, 8
+  uint8 version = 0;
 };
 
 struct LMTConstructorProperties : LMTConstructorPropertiesBase {
@@ -53,8 +51,8 @@ struct LMTConstructorProperties : LMTConstructorPropertiesBase {
 
 class LMTFloatTrack {
 public:
-  virtual int GetNumGroups() const = 0;
-  virtual int GetGroupTrackCount(int groupID) const = 0;
+  virtual uint32 GetNumGroups() const = 0;
+  virtual uint32 GetGroupTrackCount(uint32 groupID) const = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
 
@@ -65,11 +63,11 @@ public:
 
 class LMTAnimationEvent {
 public:
-  virtual int GetVersion() const = 0;
+  virtual uint32 GetVersion() const = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
-  virtual int GetNumGroups() const = 0;
-  virtual int GetGroupEventCount(int groupID) const = 0;
+  virtual uint32 GetNumGroups() const = 0;
+  virtual uint32 GetGroupEventCount(uint32 groupID) const = 0;
 
   virtual ~LMTAnimationEvent() {}
 
@@ -80,24 +78,24 @@ class LMTAnimationEventV1 : public LMTAnimationEvent {
 public:
   typedef std::vector<short> EventCollection;
 
-  int GetVersion() const override;
+  uint32 GetVersion() const override;
 
-  virtual EventCollection GetEvents(int groupID, int eventID) const = 0;
-  virtual int GetEventFrame(int groupID, int eventID) const = 0;
-  
+  virtual EventCollection GetEvents(uint32 groupID, uint32 eventID) const = 0;
+  virtual int32 GetEventFrame(uint32 groupID, uint32 eventID) const = 0;
 };
 
 class LMTAnimationEventV2 : public LMTAnimationEvent {
 public:
-  int GetVersion() const override;
+  uint32 GetVersion() const override;
 
-  virtual uint GetHash() const = 0;
-  virtual void SetHash(uint nHash) = 0;
-  virtual uint GetGroupHash(int groupID) const = 0;
+  virtual uint32 GetHash() const = 0;
+  virtual void SetHash(uint32 nHash) = 0;
+  virtual uint32 GetGroupHash(uint32 groupID) const = 0;
 };
 
-struct LMTTrack {
-  enum TrackType {
+class LMTTrack : public uni::MotionTrack {
+public:
+  enum TrackType_e {
     TrackType_LocalRotation,
     TrackType_LocalPosition,
     TrackType_LocalScale,
@@ -105,47 +103,50 @@ struct LMTTrack {
     TrackType_AbsolutePosition
   };
 
-  virtual TrackType GetTrackType() const = 0;
-  virtual int AnimatedBoneID() const = 0;
-  virtual int NumFrames() const = 0;
+  virtual TrackType_e GetTrackType() const = 0;
+  virtual uint32 NumFrames() const = 0;
   virtual bool IsCubic() const = 0;
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                           int frame) const = 0;
-  virtual void Evaluate(Vector4A16 &out, int frame) const = 0;
-  virtual void Interpolate(Vector4A16 &out, float time,
-                           float frameRate) const = 0;
-  virtual short GetFrame(int frame) const = 0;
+                           uint32 frame) const = 0;
+  virtual void Evaluate(Vector4A16 &out, uint32 frame) const = 0;
+  virtual int32 GetFrame(uint32 frame) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual int Stride() const = 0;
-  virtual int BoneType() const = 0;
+  virtual uint32 Stride() const = 0;
+  virtual uint32 BoneType() const = 0;
+  
+  MotionTrack::TrackType_e TrackType() const override;
+  void GetValue(uni::RTSValue &output, float time) const override;
+  void GetValue(esMatrix44 &output, float time) const override;
+  void GetValue(float &output, float time) const override;
 
   virtual ~LMTTrack() {}
 
   static LMTTrack *Create(const LMTConstructorProperties &props);
 };
 
-class LMTAnimation {
+class LMTAnimation : public uni::Motion {
 protected:
   LMTConstructorPropertiesBase props;
 
 public:
   LMTAnimation() : props{} {}
 
-  virtual int GetVersion() const = 0;
-  virtual const int NumTracks() const = 0;
-  virtual const int NumFrames() const = 0;
-  virtual const int LoopFrame() const = 0;
-  virtual const LMTTrack *Track(int id) const = 0;
+  virtual uint32 GetVersion() const = 0;
+  virtual uint32 NumFrames() const = 0;
+  virtual int32 LoopFrame() const = 0;
+
   virtual int ToXML(pugi::xml_node &node, bool standAlone = false) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
-  virtual int Save(BinWritter *wr, bool standAlone = true) const = 0;
-  virtual ~LMTAnimation() {}
-  virtual void Sanitize() const = 0;
+  virtual int Save(BinWritterRef wr, bool standAlone = true) const = 0;
 
+  virtual ~LMTAnimation() {}
+
+  virtual void Sanitize() const = 0;
   int Save(const char *fileName, bool supressErrors = false) const;
+
   static LMTAnimation *Create(const LMTConstructorProperties &props);
-  static bool SupportedVersion(short version);
+  static bool SupportedVersion(uint16 version);
 
   bool operator==(const LMTConstructorPropertiesBase &input) {
     return props.ptrSize == input.ptrSize && props.version == input.version;
@@ -156,13 +157,11 @@ public:
   }
 };
 
-class LMT {
-  static const int ID = CompileFourCC("LMT\0");
-  static const int ID_R = CompileFourCC("\0TML");
+class LMT : public uni::VectorList<uni::Motion, LMTAnimation> {
+  static constexpr uint32 ID = CompileFourCC("LMT\0");
+  static constexpr uint32 ID_R = CompileFourCC("\0TML");
 
 public:
-  typedef std::vector<LMTAnimation *> Storage_Type;
-  typedef Storage_Type::const_iterator Iter_Type;
 
   enum V {
     V_22 = 22, // DR
@@ -185,31 +184,24 @@ public:
     ExportSetting_BinaryMotions
   };
 
-  ES_FORCEINLINE uchar Version() const { return props.version; }
-  ES_FORCEINLINE Architecture GetArchitecture() const {
-    return (props.ptrSize == 8) ? X64 : X86;
-  }
-  int Version(V version, Architecture arch);
+  uint8 Version() const { return props.version; }
+  void Version(V version, Architecture arch);
 
-  ES_FORCEINLINE const Iter_Type begin() const { return animations.begin(); }
-  ES_FORCEINLINE const Iter_Type end() const { return animations.end(); }
-  ES_FORCEINLINE int NumAnimations() const {
-    return static_cast<int>(animations.size());
-  }
-  ES_FORCEINLINE const LMTAnimation *Animation(int id) const {
-    return animations[id];
+  Architecture GetArchitecture() const {
+    return (props.ptrSize == 8) ? X64 : X86;
   }
 
   LMTAnimation *AppendAnimation();
   void AppendAnimation(LMTAnimation *ani);
-  void InsertAnimation(LMTAnimation *ani, int at, bool replace = false);
+  void InsertAnimation(LMTAnimation *ani, uint32 at, bool replace = false);
 
   LMTAnimation *CreateAnimation() const;
 
-  int Load(BinReader *rd);
+  int Load(BinReaderRef rd);
   int Load(const char *fileName, bool supressErrors = false);
-  int Save(BinWritter *wr) const;
-  int Save(const char *fileName, bool swapEndian = false, bool supressErrors = false) const;
+  int Save(BinWritterRef wr) const;
+  int Save(const char *fileName, bool swapEndian = false,
+           bool supressErrors = false) const;
 
   int ToXML(pugi::xml_node &node, const char *fileName,
             ExportSettings settings);
@@ -220,13 +212,9 @@ public:
   int FromXML(const char *fileName,
               Architecture forceArchitecture = Xundefined);
 
-  LMT();
-  ~LMT();
-
 private:
-  char *masterBuffer;
+  std::string masterBuffer;
   LMTConstructorPropertiesBase props;
-  Storage_Type animations;
 };
 
 // TODO:
