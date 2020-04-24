@@ -15,7 +15,7 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTCodecs.h"
+#include "codecs.hpp"
 #include "datas/macroLoop.hpp"
 #include "datas/masterprinter.hpp"
 #include "datas/reflector_xml.hpp"
@@ -1080,7 +1080,7 @@ REGISTER_ENUMS(Buf_HermiteVector3_Flags)
 
 LMTTrackController *LMTTrackController::CreateCodec(uint32 type,
                                                     uint32 subVersion) {
-  const TrackTypesShared cType = subVersion < 0
+  const TrackTypesShared cType = subVersion == 0xffffffff
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];
   RegisterLocalEnums();

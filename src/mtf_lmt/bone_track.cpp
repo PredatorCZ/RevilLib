@@ -15,8 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTBoneTrack.h"
-#include "LMTFixupStorage.h"
+#include "bone_track.hpp"
+#include "fixup_storage.hpp"
 #include "datas/deleter_hybrid.hpp"
 #include "datas/disabler.hpp"
 #include "datas/reflector_xml.hpp"

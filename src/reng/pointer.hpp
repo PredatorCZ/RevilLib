@@ -71,7 +71,8 @@ public:
   const C *operator->() const { return *this; }
 
   void Fixup(char *masterBuffer) {
-    if (!varPtr || reinterpret_cast<char *>(varPtr) > masterBuffer)
+    if (!varPtr ||
+        reinterpret_cast<char *>(static_cast<uintptr_t>(varPtr)) > masterBuffer)
       return;
 
     uintptr_t rawAddr = reinterpret_cast<uintptr_t>(masterBuffer) + varPtr;

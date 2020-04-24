@@ -15,7 +15,7 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTInternal.h"
+#include "internal.hpp"
 #include "datas/masterprinter.hpp"
 
 REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);

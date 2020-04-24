@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "LMTInternal.h"
+#include "internal.hpp"
 
 class AnimEvent {
 public:

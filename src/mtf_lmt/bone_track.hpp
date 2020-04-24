@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "LMTInternal.h"
+#include "internal.hpp"
 
 class LMTTrack_internal : public LMTTrack {
   virtual void _FromXML(pugi::xml_node &node) = 0;

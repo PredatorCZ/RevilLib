@@ -15,13 +15,13 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTAnimation.h"
-#include "LMTBoneTrack.h"
-#include "LMTEvent.h"
-#include "LMTFixupStorage.h"
+#include "animation.hpp"
+#include "bone_track.hpp"
 #include "datas/binreader_stream.hpp"
 #include "datas/flags.hpp"
 #include "datas/reflector_xml.hpp"
+#include "event.hpp"
+#include "fixup_storage.hpp"
 
 #include <list>
 #include <unordered_map>
@@ -235,11 +235,13 @@ template <class AnimTraits> struct AnimV3 {
 
 void LMTAnimation_internal::FrameRate(uint32 fps) {
   for (auto &s : storage) {
-    static_cast<LMTTrack_internal *>(s.get())->frameRate = fps;
+    static_cast<LMTTrack_internal *>(s.get())->frameRate =
+        static_cast<float>(fps);
   }
 }
 uint32 LMTAnimation_internal::FrameRate() const {
-  return static_cast<const LMTTrack_internal *>(storage.at(0).get())->frameRate;
+  return static_cast<uint32>(
+      static_cast<const LMTTrack_internal *>(storage.at(0).get())->frameRate);
 }
 
 float LMTAnimation_internal::Duration() const {
@@ -529,7 +531,7 @@ static constexpr uint32 AnimV3X86TrackV3_PTR_01 =
     offsetof(AnimV3X86TrackV3, eventTable);
 template <>
 const uint32 AnimV3X86TrackV3::POINTERS[] = {AnimV3X86TrackV3_PTR_00,
-                                          AnimV3X86TrackV3_PTR_01};
+                                             AnimV3X86TrackV3_PTR_01};
 REFLECTOR_CREATE(AnimV3X86TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
@@ -540,7 +542,7 @@ static constexpr uint32 AnimV3X64TrackV3_PTR_01 =
     offsetof(AnimV3X64TrackV3, eventTable);
 template <>
 const uint32 AnimV3X64TrackV3::POINTERS[] = {AnimV3X64TrackV3_PTR_00,
-                                          AnimV3X64TrackV3_PTR_01};
+                                             AnimV3X64TrackV3_PTR_01};
 REFLECTOR_CREATE(AnimV3X64TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 

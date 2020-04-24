@@ -15,8 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTEvent.h"
-#include "LMTFixupStorage.h"
+#include "event.hpp"
+#include "fixup_storage.hpp"
 #include "datas/reflector_xml.hpp"
 
 #include <array>

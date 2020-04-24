@@ -1,5 +1,5 @@
-#include "LMTCodecs.h"
-#include "LMTDecode.h"
+#include "codecs.hpp"
+#include "decoders.hpp"
 #include <algorithm>
 
 typedef std::vector<Vector4A16> VectCollection;

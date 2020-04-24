@@ -15,10 +15,10 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTAnimation.h"
-#include "LMTBoneTrack.h"
-#include "LMTEvent.h"
-#include "LMTFloatTrack.h"
+#include "animation.hpp"
+#include "bone_track.hpp"
+#include "event.hpp"
+#include "float_track.hpp"
 #include "datas/binreader.hpp"
 #include "datas/fileinfo.hpp"
 #include "datas/masterprinter.hpp"

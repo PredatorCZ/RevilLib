@@ -1,13 +1,32 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(LMTCodecsTesting)
+project(RevilTesting)
 
-set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable ("${PROJECT_NAME}" "${PROJECT_NAME}")
-include_directories("../3rd_party/PreCore/" "../include/" "../src/")
-add_subdirectory(../ "${PROJECT_BINARY_DIR}/RevilLib")
-target_link_libraries("${PROJECT_NAME}" RevilLib)
+build_target(
+	TYPE APP
+	SOURCES 
+        test.cpp
+    LINKS
+        RevilLib
+    INCLUDES
+        ../src
+        ../include
+        ${PRECORE_SOURCE_DIR}
+	NO_PROJECT_H
+	NO_VERINFO
+)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3")
+if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -msse3")
+	message("Compiler is Clang")
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -msse3")
+	message("Compiler is GNU")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W4")
+	message("Compiler is MSVC")
+else()
+	message("Unknown compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif()

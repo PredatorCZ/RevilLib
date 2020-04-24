@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "LMTInternal.h"
+#include "internal.hpp"
 
 struct FloatFrame {
   uint32 data; // uint8 numComponents, uint16 frame, uint8 pad (0xcd)

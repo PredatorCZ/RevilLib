@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "LMTInternal.h"
+#include "internal.hpp"
 
 #include "datas/allocator_hybrid.hpp"
 #include "datas/flags.hpp"

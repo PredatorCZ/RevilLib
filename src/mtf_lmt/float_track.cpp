@@ -15,8 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "LMTFloatTrack.h"
-#include "LMTFixupStorage.h"
+#include "float_track.hpp"
+#include "fixup_storage.hpp"
 #include "datas/reflector_xml.hpp"
 
 #include <array>
