@@ -16,10 +16,10 @@
 */
 
 #include "bone_track.hpp"
-#include "fixup_storage.hpp"
 #include "datas/deleter_hybrid.hpp"
 #include "datas/disabler.hpp"
 #include "datas/reflector_xml.hpp"
+#include "fixup_storage.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -356,7 +356,9 @@ public:
     return data->boneID2;
   }
 
-  disabledFunction(noMHBone, int32) MirroredBoneID() const noexcept { return -1; }
+  disabledFunction(noMHBone, int32) MirroredBoneID() const noexcept {
+    return -1;
+  }
 
   enabledFunction(noMHBone, void) MirroredBoneID(int32 boneID) noexcept {
     data->boneID2 = boneID;
@@ -396,78 +398,106 @@ LMTTrack_internal::LMTTrack_internal() : controller(nullptr), minMax(nullptr) {
 }
 
 typedef TrackV0<PointerX86> TrackV0PointerX86;
+static const uint32 TrackV0PointerX86_PTR_00 =
+    offsetof(TrackV0PointerX86, bufferOffset);
 template <>
-const uint32 TrackV0PointerX86::POINTERS[] = {offsetof(TrackV0, bufferOffset)};
+const uint32 TrackV0PointerX86::POINTERS[] = {TrackV0PointerX86_PTR_00};
 REFLECTOR_CREATE(TrackV0PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight);
 
 typedef TrackV0<PointerX64> TrackV0PointerX64;
+static const uint32 TrackV0PointerX64_PTR_00 =
+    offsetof(TrackV0PointerX64, bufferOffset);
 template <>
-const uint32 TrackV0PointerX64::POINTERS[] = {offsetof(TrackV0, bufferOffset)};
+const uint32 TrackV0PointerX64::POINTERS[] = {TrackV0PointerX64_PTR_00};
 REFLECTOR_CREATE(TrackV0PointerX64, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight);
 
 typedef TrackV1<PointerX86, TrackV1BufferTypes>
     TrackV1TrackV1BufferTypesPointerX86;
+static const uint32 TrackV1TrackV1BufferTypesPointerX86_PTR_00 =
+    offsetof(TrackV1TrackV1BufferTypesPointerX86, bufferOffset);
 template <>
 const uint32 TrackV1TrackV1BufferTypesPointerX86::POINTERS[] = {
-    offsetof(TrackV1, bufferOffset)};
+    TrackV1TrackV1BufferTypesPointerX86_PTR_00};
 REFLECTOR_CREATE(TrackV1TrackV1BufferTypesPointerX86, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
 typedef TrackV1<PointerX64, TrackV1BufferTypes>
     TrackV1TrackV1BufferTypesPointerX64;
+static const uint32 TrackV1TrackV1BufferTypesPointerX64_PTR_00 =
+    offsetof(TrackV1TrackV1BufferTypesPointerX64, bufferOffset);
 template <>
 const uint32 TrackV1TrackV1BufferTypesPointerX64::POINTERS[] = {
-    offsetof(TrackV1, bufferOffset)};
+    TrackV1TrackV1BufferTypesPointerX64_PTR_00};
 REFLECTOR_CREATE(TrackV1TrackV1BufferTypesPointerX64, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
 typedef TrackV1<PointerX86, TrackV1_5BufferTypes>
     TrackV1TrackV1_5BufferTypesPointerX86;
+static const uint32 TrackV1TrackV1_5BufferTypesPointerX86_PTR_00 =
+    offsetof(TrackV1TrackV1_5BufferTypesPointerX86, bufferOffset);
 template <>
 const uint32 TrackV1TrackV1_5BufferTypesPointerX86::POINTERS[] = {
-    offsetof(TrackV1, bufferOffset)};
+    TrackV1TrackV1_5BufferTypesPointerX86_PTR_00};
 REFLECTOR_CREATE(TrackV1TrackV1_5BufferTypesPointerX86, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
 typedef TrackV1<PointerX64, TrackV1_5BufferTypes>
     TrackV1TrackV1_5BufferTypesPointerX64;
+static const uint32 TrackV1TrackV1_5BufferTypesPointerX64_PTR_00 =
+    offsetof(TrackV1TrackV1_5BufferTypesPointerX64, bufferOffset);
 template <>
 const uint32 TrackV1TrackV1_5BufferTypesPointerX64::POINTERS[] = {
-    offsetof(TrackV1, bufferOffset)};
+    TrackV1TrackV1_5BufferTypesPointerX64_PTR_00};
 REFLECTOR_CREATE(TrackV1TrackV1_5BufferTypesPointerX64, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
 typedef TrackV2<PointerX86> TrackV2PointerX86;
+static const uint32 TrackV2PointerX86_PTR_00 =
+    offsetof(TrackV2PointerX86, bufferOffset);
+static const uint32 TrackV2PointerX86_PTR_01 =
+    offsetof(TrackV2PointerX86, extremes);
 template <>
-const uint32 TrackV2PointerX86::POINTERS[] = {offsetof(TrackV2, bufferOffset),
-                                           offsetof(TrackV2, extremes)};
+const uint32 TrackV2PointerX86::POINTERS[] = {TrackV2PointerX86_PTR_00,
+                                              TrackV2PointerX86_PTR_01};
 REFLECTOR_CREATE(TrackV2PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight, referenceData);
 
 typedef TrackV2<PointerX64> TrackV2PointerX64;
+static const uint32 TrackV2PointerX64_PTR_00 =
+    offsetof(TrackV2PointerX64, bufferOffset);
+static const uint32 TrackV2PointerX64_PTR_01 =
+    offsetof(TrackV2PointerX64, extremes);
 template <>
-const uint32 TrackV2PointerX64::POINTERS[] = {offsetof(TrackV2, bufferOffset),
-                                           offsetof(TrackV2, extremes)};
+const uint32 TrackV2PointerX64::POINTERS[] = {TrackV2PointerX64_PTR_00,
+                                              TrackV2PointerX64_PTR_01};
 REFLECTOR_CREATE(TrackV2PointerX64, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight, referenceData);
 
 typedef TrackV3<PointerX86> TrackV3PointerX86;
+static const uint32 TrackV3PointerX86_PTR_00 =
+    offsetof(TrackV3PointerX86, bufferOffset);
+static const uint32 TrackV3PointerX86_PTR_01 =
+    offsetof(TrackV3PointerX86, extremes);
 template <>
-const uint32 TrackV3PointerX86::POINTERS[] = {offsetof(TrackV3, bufferOffset),
-                                           offsetof(TrackV3, extremes)};
+const uint32 TrackV3PointerX86::POINTERS[] = {TrackV3PointerX86_PTR_00,
+                                              TrackV3PointerX86_PTR_01};
 REFLECTOR_CREATE(TrackV3PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, boneID2, weight, referenceData);
 
 typedef TrackV3<PointerX64> TrackV3PointerX64;
+static const uint32 TrackV3PointerX64_PTR_00 =
+    offsetof(TrackV3PointerX64, bufferOffset);
+static const uint32 TrackV3PointerX64_PTR_01 =
+    offsetof(TrackV3PointerX64, extremes);
 template <>
-const uint32 TrackV3PointerX64::POINTERS[] = {offsetof(TrackV3, bufferOffset),
-                                           offsetof(TrackV3, extremes)};
+const uint32 TrackV3PointerX64::POINTERS[] = {TrackV3PointerX64_PTR_00,
+                                              TrackV3PointerX64_PTR_01};
 REFLECTOR_CREATE(TrackV3PointerX64, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, boneID2, weight, referenceData);
 

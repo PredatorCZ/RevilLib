@@ -205,7 +205,7 @@ struct BiLinearQuat3_8bitController : RETrackController_internal {
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const {
-    out = Vector4A16(dataStorage[id].Convert<float>());
+    out = Vector4A16(dataStorage[id].Convert<float>(), 1.0f);
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();

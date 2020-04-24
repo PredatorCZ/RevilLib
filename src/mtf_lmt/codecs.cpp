@@ -142,7 +142,8 @@ static void ltrim(const std::string &s, uint32 &curIterPos) {
   }
 }
 
-static void SeekTo(const std::string &s, uint32 &curIterPos, const char T = '\n') {
+static void SeekTo(const std::string &s, uint32 &curIterPos,
+                   const char T = '\n') {
   for (auto it = s.begin() + curIterPos; it != s.end(); it++) {
     curIterPos++;
 
@@ -1029,6 +1030,14 @@ template <class Derived> LMTTrackController *_creatorDummyBuffEval() {
 
 #define TCONFRC_REG(val)                                                       \
   {TrackTypesShared::val, Buf_##val::componentMultiplier},
+
+namespace std {
+template <> struct hash<TrackTypesShared> {
+  uint32 operator()(const TrackTypesShared &t) const {
+    return static_cast<uint32>(t);
+  }
+};
+} // namespace std
 
 static const std::unordered_map<TrackTypesShared, LMTTrackController *(*)()>
     codecRegistry = {

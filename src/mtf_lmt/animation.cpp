@@ -265,7 +265,6 @@ public:
     }
 
     data->Fixup(buff, swapEndian);
-    storage.resize(data->numTracks);
 
     if (data->numTracks) {
       LMTConstructorProperties props;
@@ -276,7 +275,7 @@ public:
       props.swappedEndian = swapEndian;
       props.dataStart = data->tracks.GetData(buff);
 
-      storage[0] = std::move(LMTTrackPtr(LMTTrack::Create(props)));
+      storage.emplace_back(LMTTrack::Create(props));
 
       const uint32 trackStride = storage[0]->Stride();
 
@@ -284,7 +283,7 @@ public:
       curData += trackStride;
 
       for (uint32 t = 1; t < data->numTracks; t++, curData += trackStride)
-        storage[t] = std::move(LMTTrackPtr(LMTTrack::Create(props)));
+        storage.emplace_back(LMTTrack::Create(props));
     }
 
     LMTConstructorProperties eventProps;
@@ -397,9 +396,9 @@ public:
 };
 
 typedef AnimV0<AnimTraitsV1<PointerX86, 0>> AnimV0X86TrackV0;
-static constexpr uint32 AnimV0X86TrackV0_PTR_00 =
+static const uint32 AnimV0X86TrackV0_PTR_00 =
     offsetof(AnimV0X86TrackV0, tracks);
-static constexpr uint32 AnimV0X86TrackV0_PTR_01 =
+static const uint32 AnimV0X86TrackV0_PTR_01 =
     offsetof(AnimV0X86TrackV0, events[0].events);
 template <>
 const uint32 AnimV0X86TrackV0::POINTERS[] = {
@@ -409,9 +408,9 @@ REFLECTOR_CREATE(AnimV0X86TrackV0, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition);
 
 typedef AnimV0<AnimTraitsV1<PointerX64, 0>> AnimV0X64TrackV0;
-static constexpr uint32 AnimV0X64TrackV0_PTR_00 =
+static const uint32 AnimV0X64TrackV0_PTR_00 =
     offsetof(AnimV0X64TrackV0, tracks);
-static constexpr uint32 AnimV0X64TrackV0_PTR_01 =
+static const uint32 AnimV0X64TrackV0_PTR_01 =
     offsetof(AnimV0X64TrackV0, events[0].events);
 template <>
 const uint32 AnimV0X64TrackV0::POINTERS[] = {
@@ -421,9 +420,9 @@ REFLECTOR_CREATE(AnimV0X64TrackV0, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition);
 
 typedef AnimV1<AnimTraitsV1<PointerX86, 1>> AnimV1X86TrackV1;
-static constexpr uint32 AnimV1X86TrackV1_PTR_00 =
+static const uint32 AnimV1X86TrackV1_PTR_00 =
     offsetof(AnimV1X86TrackV1, tracks);
-static constexpr uint32 AnimV1X86TrackV1_PTR_01 =
+static const uint32 AnimV1X86TrackV1_PTR_01 =
     offsetof(AnimV1X86TrackV1, events[0].events);
 template <>
 const uint32 AnimV1X86TrackV1::POINTERS[] = {
@@ -433,9 +432,9 @@ REFLECTOR_CREATE(AnimV1X86TrackV1, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV1<AnimTraitsV1<PointerX64, 1>> AnimV1X64TrackV1;
-static constexpr uint32 AnimV1X64TrackV1_PTR_00 =
+static const uint32 AnimV1X64TrackV1_PTR_00 =
     offsetof(AnimV1X64TrackV1, tracks);
-static constexpr uint32 AnimV1X64TrackV1_PTR_01 =
+static const uint32 AnimV1X64TrackV1_PTR_01 =
     offsetof(AnimV1X64TrackV1, events[0].events);
 template <>
 const uint32 AnimV1X64TrackV1::POINTERS[] = {
@@ -445,9 +444,9 @@ REFLECTOR_CREATE(AnimV1X64TrackV1, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV1<AnimTraitsV1<PointerX86, 2>> AnimV1X86TrackV1_5;
-static constexpr uint32 AnimV1X86TrackV1_5_PTR_00 =
+static const uint32 AnimV1X86TrackV1_5_PTR_00 =
     offsetof(AnimV1X86TrackV1_5, tracks);
-static constexpr uint32 AnimV1X86TrackV1_5_PTR_01 =
+static const uint32 AnimV1X86TrackV1_5_PTR_01 =
     offsetof(AnimV1X86TrackV1_5, events[0].events);
 template <>
 const uint32 AnimV1X86TrackV1_5::POINTERS[] = {
@@ -458,9 +457,9 @@ REFLECTOR_CREATE(AnimV1X86TrackV1_5, 2, VARNAMES, TEMPLATE, numFrames,
                  endFrameAdditiveSceneRotation);
 
 typedef AnimV1<AnimTraitsV1<PointerX64, 2>> AnimV1X64TrackV1_5;
-static constexpr uint32 AnimV1X64TrackV1_5_PTR_00 =
+static const uint32 AnimV1X64TrackV1_5_PTR_00 =
     offsetof(AnimV1X64TrackV1_5, tracks);
-static constexpr uint32 AnimV1X64TrackV1_5_PTR_01 =
+static const uint32 AnimV1X64TrackV1_5_PTR_01 =
     offsetof(AnimV1X64TrackV1_5, events[0].events);
 template <>
 const uint32 AnimV1X64TrackV1_5::POINTERS[] = {
@@ -471,9 +470,9 @@ REFLECTOR_CREATE(AnimV1X64TrackV1_5, 2, VARNAMES, TEMPLATE, numFrames,
                  endFrameAdditiveSceneRotation);
 
 typedef AnimV1<AnimTraitsV2<PointerX86, 3>> AnimV1X86TrackV2;
-static constexpr uint32 AnimV1X86TrackV2_PTR_00 =
+static const uint32 AnimV1X86TrackV2_PTR_00 =
     offsetof(AnimV1X86TrackV2, tracks);
-static constexpr uint32 AnimV1X86TrackV2_PTR_01 =
+static const uint32 AnimV1X86TrackV2_PTR_01 =
     offsetof(AnimV1X86TrackV2, events[0].events);
 template <>
 const uint32 AnimV1X86TrackV2::POINTERS[] = {
@@ -485,9 +484,9 @@ REFLECTOR_CREATE(AnimV1X86TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV1<AnimTraitsV2<PointerX64, 3>> AnimV1X64TrackV2;
-static constexpr uint32 AnimV1X64TrackV2_PTR_00 =
+static const uint32 AnimV1X64TrackV2_PTR_00 =
     offsetof(AnimV1X64TrackV2, tracks);
-static constexpr uint32 AnimV1X64TrackV2_PTR_01 =
+static const uint32 AnimV1X64TrackV2_PTR_01 =
     offsetof(AnimV1X64TrackV2, events[0].events);
 template <>
 const uint32 AnimV1X64TrackV2::POINTERS[] = {
@@ -499,11 +498,11 @@ REFLECTOR_CREATE(AnimV1X64TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV2<AnimTraitsV2<PointerX86, 3>> AnimV2X86TrackV2;
-static constexpr uint32 AnimV2X86TrackV2_PTR_00 =
+static const uint32 AnimV2X86TrackV2_PTR_00 =
     offsetof(AnimV2X86TrackV2, tracks);
-static constexpr uint32 AnimV2X86TrackV2_PTR_01 =
+static const uint32 AnimV2X86TrackV2_PTR_01 =
     offsetof(AnimV2X86TrackV2, eventTable);
-static constexpr uint32 AnimV2X86TrackV2_PTR_02 =
+static const uint32 AnimV2X86TrackV2_PTR_02 =
     offsetof(AnimV2X86TrackV2, floatTracks);
 template <>
 const uint32 AnimV2X86TrackV2::POINTERS[] = {
@@ -512,11 +511,11 @@ REFLECTOR_CREATE(AnimV2X86TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV2<AnimTraitsV2<PointerX64, 3>> AnimV2X64TrackV2;
-static constexpr uint32 AnimV2X64TrackV2_PTR_00 =
+static const uint32 AnimV2X64TrackV2_PTR_00 =
     offsetof(AnimV2X64TrackV2, tracks);
-static constexpr uint32 AnimV2X64TrackV2_PTR_01 =
+static const uint32 AnimV2X64TrackV2_PTR_01 =
     offsetof(AnimV2X64TrackV2, eventTable);
-static constexpr uint32 AnimV2X64TrackV2_PTR_02 =
+static const uint32 AnimV2X64TrackV2_PTR_02 =
     offsetof(AnimV2X64TrackV2, floatTracks);
 template <>
 const uint32 AnimV2X64TrackV2::POINTERS[] = {
@@ -525,9 +524,9 @@ REFLECTOR_CREATE(AnimV2X64TrackV2, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV3<AnimTraitsV2<PointerX86, 4>> AnimV3X86TrackV3;
-static constexpr uint32 AnimV3X86TrackV3_PTR_00 =
+static const uint32 AnimV3X86TrackV3_PTR_00 =
     offsetof(AnimV3X86TrackV3, tracks);
-static constexpr uint32 AnimV3X86TrackV3_PTR_01 =
+static const uint32 AnimV3X86TrackV3_PTR_01 =
     offsetof(AnimV3X86TrackV3, eventTable);
 template <>
 const uint32 AnimV3X86TrackV3::POINTERS[] = {AnimV3X86TrackV3_PTR_00,
@@ -536,9 +535,9 @@ REFLECTOR_CREATE(AnimV3X86TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
                  endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
 typedef AnimV3<AnimTraitsV2<PointerX64, 4>> AnimV3X64TrackV3;
-static constexpr uint32 AnimV3X64TrackV3_PTR_00 =
+static const uint32 AnimV3X64TrackV3_PTR_00 =
     offsetof(AnimV3X64TrackV3, tracks);
-static constexpr uint32 AnimV3X64TrackV3_PTR_01 =
+static const uint32 AnimV3X64TrackV3_PTR_01 =
     offsetof(AnimV3X64TrackV3, eventTable);
 template <>
 const uint32 AnimV3X64TrackV3::POINTERS[] = {AnimV3X64TrackV3_PTR_00,
@@ -549,7 +548,7 @@ REFLECTOR_CREATE(AnimV3X64TrackV3, 2, VARNAMES, TEMPLATE, numFrames, loopFrame,
 ES_STATIC_ASSERT(sizeof(AnimV1X86TrackV1) == 192);
 ES_STATIC_ASSERT(sizeof(AnimV3X64TrackV3) == 96);
 ES_STATIC_ASSERT(alignof(AnimV3X64TrackV3) == 16);
-ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
+//ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
 
 template <class Derived> static LMTAnimation *_creattorBase() {
   return new AnimShared<Derived>();

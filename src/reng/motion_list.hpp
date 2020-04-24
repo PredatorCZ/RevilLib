@@ -56,8 +56,8 @@ class RESkeletonWrap : public uni::Skeleton {
 public:
   void Assign(REMotionBone *data, size_t numBones);
   std::string Name() const override { return ""; }
-  uni::BonesConst Bones() const override {
-    return uni::BonesConst(&bones, false);
+  uni::SkeletonBonesConst Bones() const override {
+    return uni::SkeletonBonesConst(&bones, false);
   }
 };
 

@@ -744,7 +744,7 @@ int LMT::FromXML(pugi::xml_node &node, const char *fileName,
 
   storage.reserve(animationNodes.size());
 
-  AFileInfo fleInf = fileName;
+  AFileInfo fleInf(fileName);
 
   for (auto &a : animationNodes) {
     pugi::xml_text nodeBuffer = a.text();

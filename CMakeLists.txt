@@ -8,9 +8,10 @@ if(NOT TARGETEX_LOCATION)
 	include(${TARGETEX_LOCATION}/chartype.cmake)
 endif()
 
-add_subdirectory(3rd_party/precore)
+add_subdirectory(3rd_party/PreCore)
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3")
 file(GLOB_RECURSE CORE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 build_target(

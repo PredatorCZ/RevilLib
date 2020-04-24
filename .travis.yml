@@ -1,0 +1,110 @@
+﻿language: cpp
+dist: xenial
+
+matrix:
+  fast_finish: true
+  include:
+    - os: linux
+      name: "Compiler GCC 6"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+    - os: linux
+      name: "Compiler GCC 7"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - os: linux
+      name: "Compiler GCC 8"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      env:
+         - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+    - os: linux
+      name: "Compiler GCC 9"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+      env:
+         - MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
+
+    - os: linux
+      name: "Compiler Clang 4"
+      addons:
+        apt:
+          packages:
+            - clang-4.0
+      env:
+         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
+
+    - os: linux
+      name: "Compiler Clang 5"
+      addons:
+        apt:
+          packages:
+            - clang-5.0
+      env:
+         - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+
+    - os: linux
+      name: "Compiler Clang 6"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-xenial-6.0
+          packages:
+            - clang-6.0
+      env:
+         - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
+
+    - os: linux
+      name: "Compiler Clang 7"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-xenial-7
+          packages:
+            - clang-7
+      env:
+         - MATRIX_EVAL="CC=clang-7 && CXX=clang++-7"
+
+    - os: linux
+      name: "Compiler Clang 8"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-xenial-8
+          packages:
+            - clang-8
+      env:
+         - MATRIX_EVAL="CC=clang-8 && CXX=clang++-8"
+
+    - os: windows
+      name: "Compiler MSVC"
+         
+before_install:
+    - eval "${MATRIX_EVAL}"
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build . -j 4
+  - ctest --verbose
