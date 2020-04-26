@@ -27,7 +27,15 @@ int REMotlist99::Fixup() {
 
   for (uint32 m = 0; m < numMotions; m++) {
     motions[m].Fixup(masterBuffer);
-    REMotion78 *cMot = reinterpret_cast<REMotion78 *>(motions[m].operator->());
+
+    REAssetBase *cMotBase = motions[m];
+
+    if (!cMotBase || cMotBase->assetID != REMotion78Asset::VERSION ||
+        cMotBase->assetFourCC != REMotion78Asset::ID) {
+      continue;
+    }
+
+    REMotion78 *cMot = static_cast<REMotion78 *>(cMotBase);
     cMot->Fixup();
 
     if (!m) {
@@ -54,7 +62,7 @@ void REMotlist99Asset::Build() {
   for (size_t m = 0; m < numAnims; m++) {
     REAssetBase *cMot = data.motions[m];
 
-    if (cMot->assetID != REMotion78Asset::VERSION ||
+    if (!cMot || cMot->assetID != REMotion78Asset::VERSION ||
         cMot->assetFourCC != REMotion78Asset::ID) {
       continue;
     }
@@ -65,6 +73,10 @@ void REMotlist99Asset::Build() {
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
   auto &cMot = *data.motions[0];
+
+  if (!&cMot)
+    return;
+
   skeletonStorage.emplace_back(new RESkeletonWrap());
   std::prev(skeletonStorage.end())
       ->get()

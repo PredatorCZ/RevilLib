@@ -27,6 +27,14 @@ int REMotlist::Fixup() {
 
   for (uint32 m = 0; m < numMotions; m++) {
     motions[m].Fixup(masterBuffer);
+
+    REAssetBase *cMotBase = motions[m];
+
+    if (!cMotBase || cMotBase->assetID != REMotionAsset::VERSION ||
+        cMotBase->assetFourCC != REMotionAsset::ID) {
+      continue;
+    }
+
     motions[m]->Fixup();
   }
 
@@ -42,7 +50,7 @@ void REMotlistAsset::Build() {
   for (size_t m = 0; m < numAnims; m++) {
     REAssetBase *cMot = data.motions[m];
 
-    if (cMot->assetID != REMotionAsset::VERSION ||
+    if (!cMot || cMot->assetID != REMotionAsset::VERSION ||
         cMot->assetFourCC != REMotionAsset::ID) {
       continue;
     }
@@ -55,6 +63,10 @@ void REMotlistAsset::Build() {
 
   for (size_t m = 0; m < numAnims; m++) {
     auto &cMot = *data.motions[m];
+
+    if (!&cMot)
+      continue;
+
     auto *ma = new RESkeletonWrap();
     ma->Assign(cMot.bones->ptr, cMot.numBones);
     skeletonStorage.emplace_back(ma);
