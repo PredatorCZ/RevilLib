@@ -632,7 +632,8 @@ void Buf_LinearRotationQuat4_14bit::Evaluate(Vector4A16 &out) const {
                     static_cast<int32>(data >> 14), static_cast<int32>(data)) &
         componentMask;
 
-  const Vector4A16 signedHalf(Vector4A16(componentMask) - out);
+  const Vector4A16 signedHalf(
+      Vector4A16(static_cast<float>(componentMask)) - out);
   const Vector4A16 multSign(out.X > componentSignMax ? -1.0f : 0.0f,
                             out.Y > componentSignMax ? -1.0f : 0.0f,
                             out.Z > componentSignMax ? -1.0f : 0.0f,
@@ -686,7 +687,7 @@ const float Buf_LinearRotationQuat4_14bit::componentMultiplierInv =
 const float Buf_LinearRotationQuat4_14bit::componentMultiplier =
     1.0f / componentMultiplierInv;
 const float Buf_LinearRotationQuat4_14bit::componentSignMax =
-    static_cast<float>(componentMask) * 0.5;
+    static_cast<float>(componentMask) * 0.5f;
 
 uint32 Buf_BiLinearRotationQuat4_7bit::Size() const { return 4; }
 
@@ -976,7 +977,7 @@ template <class C> void Buff_EvalShared<C>::FromString(std::string &input) {
   }
 }
 
-template <class C> void Buff_EvalShared<C>::Assign(char *ptr, uint32 size) {
+template <class C> void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
   if (!C::VARIABLE_SIZE) {
     data = Store_Type(reinterpret_cast<C *>(ptr),
                       reinterpret_cast<C *>(ptr + size),
@@ -990,6 +991,9 @@ template <class C> void Buff_EvalShared<C>::Assign(char *ptr, uint32 size) {
       ptr += block->Size();
     }
   }
+
+  if (swapEndian)
+    SwapEndian();
 
   frames.resize(NumFrames());
   int32 currentFrame = 0;

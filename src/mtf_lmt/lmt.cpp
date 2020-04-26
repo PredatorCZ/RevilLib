@@ -76,7 +76,7 @@ uni::MotionTrack::TrackType_e LMTTrack::TrackType() const {
 
   case TrackType_AbsoluteRotation:
   case TrackType_LocalRotation:
-    return MotionTrack::TrackType_e::Position;
+    return MotionTrack::TrackType_e::Rotation;
 
   default:
     return MotionTrack::TrackType_e::Scale;

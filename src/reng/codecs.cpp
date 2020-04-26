@@ -84,6 +84,10 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
   void Assign(char *data) override {
     uint16 *start = reinterpret_cast<uint16 *>(data);
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+
+    minMaxBounds.max.Z = minMaxBounds.max.Y;
+    minMaxBounds.max.Y = minMaxBounds.max.X;
+    minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const {
@@ -110,6 +114,10 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
   void Assign(char *data) override {
     uint32 *start = reinterpret_cast<uint32 *>(data);
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+
+    minMaxBounds.max.Z = minMaxBounds.max.Y;
+    minMaxBounds.max.Y = minMaxBounds.max.X;
+    minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const {
@@ -137,6 +145,10 @@ struct BiLinearVector3_21bitController : RETrackController_internal {
   void Assign(char *data) override {
     uint64 *start = reinterpret_cast<uint64 *>(data);
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+
+    minMaxBounds.max.Z = minMaxBounds.max.Y;
+    minMaxBounds.max.Y = minMaxBounds.max.X;
+    minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const {
@@ -190,6 +202,71 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
 const float BiLinearQuat3_13bitController::componentMultiplier =
     1.0f / static_cast<float>(componentMask);
 
+struct BiLinearQuat3_16bitController : RETrackController_internal {
+  static const uint32 ID = 0x60112;
+  typedef es::allocator_hybrid<USVector> Alloc_Type;
+  typedef std::vector<USVector, Alloc_Type> Storage_Type;
+  Storage_Type dataStorage;
+
+  static const uint32 componentMask = (1 << 16) - 1;
+  static const float componentMultiplier;
+
+  void Assign(char *data) override {
+    USVector *start = reinterpret_cast<USVector *>(data);
+    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+  }
+
+  void Evaluate(uint32 id, Vector4A16 &out) const {
+    out = Vector4A16(dataStorage[id].Convert<float>(), 0.0f);
+    out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
+    out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
+    out.QComputeElement();
+  }
+};
+
+const float BiLinearQuat3_16bitController::componentMultiplier =
+    1.0f / static_cast<float>(componentMask);
+
+struct BiLinearQuat3_18bitController : RETrackController_internal {
+  static const uint32 ID = 0x70112;
+  struct SType {
+    uint8 data[7];
+  };
+  typedef es::allocator_hybrid<SType> Alloc_Type;
+  typedef std::vector<SType, Alloc_Type> Storage_Type;
+  Storage_Type dataStorage;
+
+  static const uint64 componentMask = (1 << 18) - 1;
+  static const float componentMultiplier;
+
+  void Assign(char *data) override {
+    SType *start = reinterpret_cast<SType *>(data);
+    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+  }
+
+  void Evaluate(uint32 id, Vector4A16 &out) const {
+    const uint64 retreived =
+        (static_cast<uint64>(dataStorage[id].data[0]) << 48) |
+        (static_cast<uint64>(dataStorage[id].data[1]) << 40) |
+        (static_cast<uint64>(dataStorage[id].data[2]) << 32) |
+        (static_cast<uint64>(dataStorage[id].data[3]) << 24) |
+        (static_cast<uint64>(dataStorage[id].data[4]) << 16) |
+        (static_cast<uint64>(dataStorage[id].data[5]) << 8) |
+        (static_cast<uint64>(dataStorage[id].data[6]) << 0);
+
+    out =
+        Vector4A16(static_cast<float>(retreived & componentMask),
+                   static_cast<float>((retreived >> 18) & componentMask),
+                   static_cast<float>((retreived >> 36) & componentMask), 0.0f);
+    out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
+    out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
+    out.QComputeElement();
+  }
+};
+
+const float BiLinearQuat3_18bitController::componentMultiplier =
+    1.0f / static_cast<float>(componentMask);
+
 struct BiLinearQuat3_8bitController : RETrackController_internal {
   static const uint32 ID = 0x30112;
   typedef es::allocator_hybrid<UCVector> Alloc_Type;
@@ -229,6 +306,11 @@ struct LinearQuat3Controller : LinearVector3Controller {
 struct BiLinearQuat3_5bitController : BiLinearVector3_5bitController {
   static const uint32 ID = 0x20112;
 
+  void Assign(char *data) override {
+    uint16 *start = reinterpret_cast<uint16 *>(data);
+    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+  }
+
   void Evaluate(uint32 id, Vector4A16 &out) const {
     BiLinearVector3_5bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
@@ -240,6 +322,11 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
   static const uint32 ID1 = 0x30112;
   static const uint32 ID2 = 0x40112;
 
+  void Assign(char *data) override {
+    uint32 *start = reinterpret_cast<uint32 *>(data);
+    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+  }
+
   void Evaluate(uint32 id, Vector4A16 &out) const {
     BiLinearVector3_10bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
@@ -249,6 +336,11 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
 
 struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
   static const uint32 ID = 0x70112;
+
+  void Assign(char *data) override {
+    uint64 *start = reinterpret_cast<uint64 *>(data);
+    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+  }
 
   void Evaluate(uint32 id, Vector4A16 &out) const {
     BiLinearVector3_21bitController::Evaluate(id, out);
@@ -464,6 +556,10 @@ static const std::unordered_map<uint32, RETrackController_internal *(*)()>
          controlDummy<BiLinearQuat3_10bitController>},
         {BiLinearQuat3_13bitController::ID,
          controlDummy<BiLinearQuat3_13bitController>},
+        {BiLinearQuat3_16bitController::ID,
+         controlDummy<BiLinearQuat3_16bitController>},
+        {BiLinearQuat3_18bitController::ID,
+         controlDummy<BiLinearQuat3_18bitController>},
 };
 
 RETrackController *RETrackCurve78::GetController() {

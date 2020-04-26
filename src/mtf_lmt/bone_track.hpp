@@ -51,7 +51,5 @@ public:
   int SaveBuffers(BinWritterRef wr, LMTFixupStorage &storage) const;
   virtual void Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
 
-  void SwapEndian();
-
   LMTTrack_internal();
 };

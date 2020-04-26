@@ -50,6 +50,7 @@ int REAsset_internal::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   rd.ReadContainer(buffer, fleSize);
   Fixup();
+  ClearESPointers();
 
   return 0;
 }

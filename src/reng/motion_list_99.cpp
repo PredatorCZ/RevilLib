@@ -59,15 +59,13 @@ void REMotlist99Asset::Build() {
       continue;
     }
 
-    motionListStorage.emplace_back(
-        uni::Element<REMotion78Asset>(new REMotion78Asset()));
+    motionListStorage.emplace_back(new REMotion78Asset());
     std::prev(motionListStorage.end())->get()->Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
   auto &cMot = *data.motions[0];
-  skeletonStorage.emplace_back(
-      uni::Element<RESkeletonWrap>(new RESkeletonWrap()));
+  skeletonStorage.emplace_back(new RESkeletonWrap());
   std::prev(skeletonStorage.end())
       ->get()
       ->Assign(cMot.bones->ptr, cMot.numBones);

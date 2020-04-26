@@ -239,6 +239,8 @@ int LMTAnimation_internal::Load(BinReaderRef rd,
 
   out->masterBuffer = MasterBufferPtr(props.masterBuffer);
 
+  ClearESPointers();
+
   return 0;
 }
 
@@ -331,6 +333,8 @@ int LMT::Load(BinReaderRef rd) {
 
     storage[a] = pointer_class_type(LMTAnimation::Create(cProps));
   }
+
+  ClearESPointers();
 
   return 0;
 }

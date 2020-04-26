@@ -16,16 +16,16 @@
 */
 
 #include "event.hpp"
-#include "fixup_storage.hpp"
 #include "datas/reflector_xml.hpp"
+#include "fixup_storage.hpp"
 
 #include <array>
 #include <unordered_map>
 
-typedef AnimEvents<PointerX86> EventTablePointerX86;
+typedef AnimEvents<esPointerX86> EventTablePointerX86;
 REFLECTOR_CREATE(EventTablePointerX86, 2, VARNAMES, TEMPLATE, eventRemaps)
 
-typedef AnimEvents<PointerX64> EventTablePointerX64;
+typedef AnimEvents<esPointerX64> EventTablePointerX64;
 REFLECTOR_CREATE(EventTablePointerX64, 2, VARNAMES, TEMPLATE, eventRemaps)
 
 template <class C, const uint32 numGroups>
@@ -51,7 +51,7 @@ public:
 
     for (auto &g : groupArray) {
       g.Fixup(masterBuffer, swapEndian);
-      AnimEvent *groupEvents = g.events.GetData(masterBuffer);
+      AnimEvent *groupEvents = g.events;
 
       if (!groupEvents)
         continue;
@@ -93,7 +93,9 @@ public:
     return events[groupID];
   }
 
-  EventsCollection &GetEvents(uint32 groupID) override { return events[groupID]; }
+  EventsCollection &GetEvents(uint32 groupID) override {
+    return events[groupID];
+  }
 
   const uint16 *GetRemaps(uint32 groupID) const override {
     return (*groups)[groupID].eventRemaps;
@@ -132,18 +134,23 @@ void AnimEvents<PtrType>::SwapEndian() {
     FByteswapper(v);
 
   FByteswapper(numEvents);
+  FByteswapper(events);
 }
 
 template <template <class C> class PtrType>
 void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
-  events.Fixup(masterBuffer, swapEndian);
+  if (events.Fixed())
+    return;
+
+  if (swapEndian)
+    SwapEndian();
+
+  events.Fixup(masterBuffer, true);
 
   if (!swapEndian)
     return;
 
-  SwapEndian();
-
-  AnimEvent *_events = events.GetData(masterBuffer);
+  AnimEvent *_events = events;
 
   for (uint32 e = 0; e < numEvents; e++)
     _events[e].SwapEndian();
@@ -173,7 +180,7 @@ LMTAnimationEventV1_Internal::GetEvents(uint32 groupID, uint32 eventID) const {
 REFLECTOR_CREATE(AnimEventFrameV2, 1, VARNAMES, frame, type, dataType);
 
 struct AnimEventV2 {
-  typedef PointerX64<AnimEventFrameV2> FramesPtr;
+  typedef esPointerX64<AnimEventFrameV2> FramesPtr;
 
   FramesPtr frames;
   uint64 numFrames;
@@ -181,20 +188,25 @@ struct AnimEventV2 {
   EventFrameV2DataType dataType;
 
   void SwapEndian() {
+    FByteswapper(frames);
     FByteswapper(numFrames);
     FByteswapper(eventHash);
     FByteswapper(dataType);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    frames.Fixup(masterBuffer, swapEndian);
+    if (frames.Fixed())
+      return;
+
+    if (swapEndian)
+      SwapEndian();
+
+    frames.Fixup(masterBuffer, true);
 
     if (!swapEndian)
       return;
 
-    SwapEndian();
-
-    AnimEventFrameV2 *_frames = frames.GetData(masterBuffer);
+    AnimEventFrameV2 *_frames = frames;
 
     for (uint32 e = 0; e < numFrames; e++)
       _frames[e].SwapEndian();
@@ -202,24 +214,28 @@ struct AnimEventV2 {
 };
 
 struct AnimEventGroupV2 {
-  typedef PointerX64<AnimEventV2> EventPtr;
+  typedef esPointerX64<AnimEventV2> EventPtr;
 
   EventPtr events;
   uint64 numEvents;
   uint32 groupHash;
 
   void SwapEndian() {
+    FByteswapper(events);
     FByteswapper(numEvents);
     FByteswapper(groupHash);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    events.Fixup(masterBuffer, swapEndian);
+    if (events.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
 
-    AnimEventV2 *_events = events.GetData(masterBuffer);
+    events.Fixup(masterBuffer, true);
+
+    AnimEventV2 *_events = events;
 
     for (uint32 e = 0; e < numEvents; e++)
       _events[e].Fixup(masterBuffer, swapEndian);
@@ -227,7 +243,7 @@ struct AnimEventGroupV2 {
 };
 
 struct AnimEventsHeaderV2 {
-  typedef PointerX64<AnimEventGroupV2> GroupPtr;
+  typedef esPointerX64<AnimEventGroupV2> GroupPtr;
 
   GroupPtr eventGroups;
   uint64 numGroups;
@@ -239,17 +255,21 @@ struct AnimEventsHeaderV2 {
   uint32 collectionHash;
 
   void SwapEndian() {
+    FByteswapper(eventGroups);
     FByteswapper(numGroups);
     FByteswapper(collectionHash);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    eventGroups.Fixup(masterBuffer, swapEndian);
+    if (eventGroups.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
 
-    AnimEventGroupV2 *groups = eventGroups.GetData(masterBuffer);
+    eventGroups.Fixup(masterBuffer, true);
+
+    AnimEventGroupV2 *groups = eventGroups;
 
     for (uint32 e = 0; e < numGroups; e++)
       groups[e].Fixup(masterBuffer, swapEndian);
@@ -270,7 +290,7 @@ public:
     data = EventPtr(fromPtr, false);
     data->Fixup(masterBuffer, swapEndian);
 
-    AnimEventFrameV2 *rawFrames = data->frames.GetData(masterBuffer);
+    AnimEventFrameV2 *rawFrames = data->frames;
 
     frames = FramesCollection(rawFrames, rawFrames + data->numFrames,
                               FramesCollection::allocator_type(rawFrames));
@@ -301,7 +321,7 @@ public:
     group = GroupPtr(fromPtr, false);
     group->Fixup(masterBuffer, swapEndian);
 
-    AnimEventV2 *rawEvents = group->events.GetData(masterBuffer);
+    AnimEventV2 *rawEvents = group->events;
 
     for (uint32 e = 0; e < group->numEvents; e++)
       events.push_back(EventPtr(
@@ -333,7 +353,7 @@ public:
     header = HeaderPtr(fromPtr, false);
     header->Fixup(masterBuffer, swapEndian);
 
-    AnimEventGroupV2 *rawGroups = header->eventGroups.GetData(masterBuffer);
+    AnimEventGroupV2 *rawGroups = header->eventGroups;
 
     for (uint32 g = 0; g < header->numGroups; g++)
       groups.push_back(GroupPtr(new AnimEventV2Group_wrapper(
@@ -379,12 +399,12 @@ static LMTAnimationEvent *_creator2(void *ptr, char *buff, bool endi) {
                                   endi);
 }
 
-static const std::unordered_map<uint16, LMTAnimationEvent *(*)()> eventRegistry =
-    {{0x108, _creattorBase<EventTablePointerX64, 2>},
-     {0x104, _creattorBase<EventTablePointerX86, 2>},
-     {0x208, _creattorBase<EventTablePointerX64, 4>},
-     {0x204, _creattorBase<EventTablePointerX86, 4>},
-     {0x308, _creattorBase2}};
+static const std::unordered_map<uint16, LMTAnimationEvent *(*)()>
+    eventRegistry = {{0x108, _creattorBase<EventTablePointerX64, 2>},
+                     {0x104, _creattorBase<EventTablePointerX86, 2>},
+                     {0x208, _creattorBase<EventTablePointerX64, 4>},
+                     {0x204, _creattorBase<EventTablePointerX86, 4>},
+                     {0x308, _creattorBase2}};
 
 static const std::unordered_map<uint16,
                                 LMTAnimationEvent *(*)(void *, char *, bool)>

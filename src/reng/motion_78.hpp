@@ -21,9 +21,9 @@
 struct RETrackCurve78 {
   uint32 flags;
   uint32 numFrames;
-  REPointerX86<uint8> frames;
-  REPointerX86<char> controlPoints;
-  REPointerX86<REMimMaxBounds> minMaxBounds;
+  esPointerX86<uint8> frames;
+  esPointerX86<char> controlPoints;
+  esPointerX86<REMimMaxBounds> minMaxBounds;
 
   RETrackController *GetController();
   int Fixup(char *masterBuffer);
@@ -33,18 +33,18 @@ struct REMotionTrack78 {
   uint16 unk;
   esFlags<uint16, REMotionTrack::TrackType> usedCurves;
   uint32 boneHash;
-  REPointerX86<RETrackCurve78> curves;
+  esPointerX86<RETrackCurve78> curves;
 
   int Fixup(char *masterBuffer);
 };
 
 struct REMotion78 : public REAssetBase {
   uint64 pad;
-  REPointerX64<REArray<REMotionBone>> bones;
-  REPointerX64<REMotionTrack78> tracks;
-  REPointerX64<char> null[5];
-  REPointerX64<char> unkOffset02;
-  REPointerX64<char16_t> animationName;
+  esPointerX64<REArray<REMotionBone>> bones;
+  esPointerX64<REMotionTrack78> tracks;
+  esPointerX64<char> null[5];
+  esPointerX64<char> unkOffset02;
+  esPointerX64<char16_t> animationName;
   float intervals[4];
   uint16 numBones;
   uint16 numTracks;

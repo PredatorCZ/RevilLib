@@ -17,7 +17,7 @@
 
 #pragma once
 #include "datas/supercore.hpp"
-#include "pointer.hpp"
+#include "datas/pointer.hpp"
 #include "re_asset.hpp"
 
 #include "datas/allocator_hybrid.hpp"
@@ -25,7 +25,7 @@
 #include <vector>
 
 template <class C> struct REArray {
-  REPointerX64<C> ptr;
+  esPointerX64<C> ptr;
   int32 numItems;
 };
 

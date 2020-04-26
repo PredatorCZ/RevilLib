@@ -415,7 +415,7 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
 
   void FromString(std::string &input) override;
 
-  void Assign(char *ptr, uint32 size) override;
+  void Assign(char *ptr, uint32 size, bool swapEndian) override;
 
   void SwapEndian() override;
 

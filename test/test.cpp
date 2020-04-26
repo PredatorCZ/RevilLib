@@ -1,12 +1,9 @@
 
 #include "lmt_codecs.inl"
+#include "datas/tchar.hpp"
 
 int main() {
-#ifndef UNICODE
-  printer.AddPrinterFunction(reinterpret_cast<void *>(printf));
-#else
-  printer.AddPrinterFunction(reinterpret_cast<void *>(wprintf));
-#endif
+  printer.AddPrinterFunction(UPrintf);
 
   TEST_CASES(int testResult, TEST_FUNC(test_lmt_codec00),
              TEST_FUNC(test_lmt_codec01), TEST_FUNC(test_lmt_codec02),

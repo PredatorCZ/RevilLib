@@ -23,6 +23,7 @@
 
 #include "lmt.hpp"
 #include "datas/binwritter_stream.hpp"
+#include "datas/pointer.hpp"
 
 #include <memory>
 #include <vector>
@@ -31,73 +32,6 @@ struct LMTFixupStorage;
 
 static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
-};
-
-template <class C> union PointerX64 {
-  uint64 fullPtr;
-  C *ptr;
-  int32 offset;
-  esIntPtr varPtr;
-
-  static const esIntPtr mask = ~static_cast<esIntPtr>(1);
-
-  PointerX64() : fullPtr(0) {}
-  C *GetData(char *) { return reinterpret_cast<C *>(varPtr & mask); }
-  void Fixup(char *masterBuffer, bool &swapEndian) {
-    if (swapEndian && !offset)
-      FByteswapper(fullPtr);
-
-    if (offset & 1) {
-      swapEndian = false;
-      return;
-    }
-
-    if (offset)
-      ptr = reinterpret_cast<C *>(masterBuffer + offset);
-
-    offset |= 1;
-  }
-};
-
-template <class C> union PointerX86 {
-  uint32 varPtr;
-
-  static const uint32 mask = ~1U;
-
-  PointerX86() : varPtr(0) {}
-
-  template <bool enbabled = ES_X64>
-  typename std::enable_if<enbabled, C *>::type GetData(char *masterBuffer) {
-    uint32 tempPtr = varPtr & mask;
-
-    if (!tempPtr)
-      return nullptr;
-
-    return reinterpret_cast<C *>(masterBuffer + tempPtr);
-  }
-
-  template <bool enbabled = ES_X64>
-  typename std::enable_if<!enbabled, C *>::type GetData(char *) {
-    return reinterpret_cast<C *>(varPtr & mask);
-  }
-
-  void Fixup(char *masterBuffer, bool &swapEndian) {
-    if (swapEndian && !(varPtr & 0x01000001))
-      FByteswapper(varPtr);
-
-    if (varPtr & 1) {
-      swapEndian = false;
-      return;
-    }
-
-    if (ES_X64 || !varPtr) {
-      varPtr |= 1;
-      return;
-    }
-
-    varPtr += reinterpret_cast<uint32 &>(masterBuffer);
-    varPtr |= 1;
-  }
 };
 
 struct TrackMinMax {
@@ -137,7 +71,7 @@ struct LMTTrackController {
   virtual void ToString(std::string &strBuf, uint32 numIdents) const = 0;
 
   virtual void FromString(std::string &input) = 0;
-  virtual void Assign(char *ptr, uint32 size) = 0;
+  virtual void Assign(char *ptr, uint32 size, bool swapEndian) = 0;
   virtual void SwapEndian() = 0;
   virtual void Devaluate(const Vector4A16 &in, uint32 frame) = 0;
   virtual void Save(BinWritterRef wr) const = 0;

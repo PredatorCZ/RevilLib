@@ -142,7 +142,7 @@ void REMotionAsset::Build() {
       wk->cType = REMotionTrackWorker::Position;
       wk->boneHash = tck->boneHash;
       wk->numFrames = data->numFrames;
-      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+      storage.emplace_back(wk);
     }
 
     if (tck->usedCurves[REMotionTrack::TrackType_Rotation]) {
@@ -153,7 +153,7 @@ void REMotionAsset::Build() {
       wk->cType = REMotionTrackWorker::Rotation;
       wk->boneHash = tck->boneHash;
       wk->numFrames = data->numFrames;
-      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+      storage.emplace_back(wk);
     }
 
     if (tck->usedCurves[REMotionTrack::TrackType_Scale]) {
@@ -164,7 +164,7 @@ void REMotionAsset::Build() {
       wk->cType = REMotionTrackWorker::Scale;
       wk->boneHash = tck->boneHash;
       wk->numFrames = data->numFrames;
-      storage.emplace_back(uni::Element<REMotionTrackWorker>(wk));
+      storage.emplace_back(wk);
     }
   }
 }

@@ -16,8 +16,8 @@
 */
 
 #include "float_track.hpp"
-#include "fixup_storage.hpp"
 #include "datas/reflector_xml.hpp"
+#include "fixup_storage.hpp"
 
 #include <array>
 #include <unordered_map>
@@ -32,21 +32,27 @@ template <template <class C> class PtrType> struct FloatTrack {
   uint32 numFloats;
   PtrType<FloatFrame> frames;
 
-  void SwapEndian() { FByteswapper(numFloats); }
+  void SwapEndian() {
+    FByteswapper(frames);
+    FByteswapper(numFloats);
+  }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    frames.Fixup(masterBuffer, swapEndian);
+    if (frames.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
+
+    frames.Fixup(masterBuffer, swapEndian);
   }
 };
 
-typedef FloatTrack<PointerX86> FloatEventGroupPointerX86;
+typedef FloatTrack<esPointerX86> FloatEventGroupPointerX86;
 REFLECTOR_CREATE(FloatEventGroupPointerX86, 2, VARNAMES, TEMPLATE,
                  componentRemaps);
 
-typedef FloatTrack<PointerX64> FloatEventGroupPointerX64;
+typedef FloatTrack<esPointerX64> FloatEventGroupPointerX64;
 REFLECTOR_CREATE(FloatEventGroupPointerX64, 2, VARNAMES, TEMPLATE,
                  componentRemaps);
 
@@ -68,7 +74,7 @@ public:
 
     for (auto &g : groupArray) {
       g.Fixup(masterBuffer, swapEndian);
-      FloatFrame *groupFrames = g.frames.GetData(masterBuffer);
+      FloatFrame *groupFrames = g.frames;
 
       if (!groupFrames)
         continue;
@@ -115,7 +121,8 @@ static const std::unordered_map<uint16, LMTFloatTrack *(*)()> floatRegistry = {
     {0x8, _creattorBase<FloatEventGroupPointerX64>},
     {0x4, _creattorBase<FloatEventGroupPointerX86>}};
 
-static const std::unordered_map<uint16, LMTFloatTrack *(*)(void *, char *, bool)>
+static const std::unordered_map<uint16,
+                                LMTFloatTrack *(*)(void *, char *, bool)>
     floatRegistryLink = {{0x8, _creator<FloatEventGroupPointerX64>},
                          {0x4, _creator<FloatEventGroupPointerX86>}};
 

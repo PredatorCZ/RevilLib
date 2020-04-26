@@ -27,8 +27,8 @@ struct RETrackCurve;
 struct RETrackCurve78;
 
 struct REMotionBone {
-  REPointerX64<char16_t> boneName;
-  REPointerX64<char16_t *> parentBoneNamePtr, firstChildBoneNamePtr,
+  esPointerX64<char16_t> boneName;
+  esPointerX64<char16_t *> parentBoneNamePtr, firstChildBoneNamePtr,
       lastChildBoneNamePtr;
   Vector4A16 position;
   Vector4A16 rotation;
@@ -55,9 +55,9 @@ struct RETrackCurve {
   uint32 flags;
   uint32 numFrames, framesPerSecond;
   float duration;
-  REPointerX64<uint8> frames;
-  REPointerX64<char> controlPoints;
-  REPointerX64<REMimMaxBounds> minMaxBounds;
+  esPointerX64<uint8> frames;
+  esPointerX64<char> controlPoints;
+  esPointerX64<REMimMaxBounds> minMaxBounds;
 
   RETrackController *GetController();
   int Fixup(char *masterBuffer);
@@ -74,18 +74,18 @@ struct REMotionTrack {
   esFlags<uint16, TrackType> usedCurves;
   uint32 boneHash;
   float weight;
-  REPointerX64<RETrackCurve> curves;
+  esPointerX64<RETrackCurve> curves;
 
   int Fixup(char *masterBuffer);
 };
 
 struct REMotion : public REAssetBase {
   uint64 pad;
-  REPointerX64<REArray<REMotionBone>> bones;
-  REPointerX64<REMotionTrack> tracks;
-  REPointerX64<char> null[5];
-  REPointerX64<char> unkOffset02;
-  REPointerX64<char16_t> animationName;
+  esPointerX64<REArray<REMotionBone>> bones;
+  esPointerX64<REMotionTrack> tracks;
+  esPointerX64<char> null[5];
+  esPointerX64<char> unkOffset02;
+  esPointerX64<char16_t> animationName;
   float intervals[4];
   uint16 numBones;
   uint16 numTracks;

@@ -38,3 +38,4 @@ lib/*
 *.user
 build/*
 test/build/*
+.vscode/*

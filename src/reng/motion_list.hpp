@@ -24,10 +24,10 @@
 
 struct REMotlist : public REAssetBase {
   uint64 pad;
-  REPointerX64<REPointerX64<REMotion>> motions;
-  REPointerX64<char> unkOffset00;
-  REPointerX64<char16_t> fileName;
-  REPointerX64<char> null;
+  esPointerX64<esPointerX64<REMotion>> motions;
+  esPointerX64<char> unkOffset00;
+  esPointerX64<char16_t> fileName;
+  esPointerX64<char> null;
   uint32 numMotions;
 
   int Fixup();

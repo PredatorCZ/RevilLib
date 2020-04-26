@@ -47,8 +47,7 @@ void REMotlistAsset::Build() {
       continue;
     }
 
-    motionListStorage.emplace_back(
-        uni::Element<REMotionAsset>(new REMotionAsset()));
+    motionListStorage.emplace_back(new REMotionAsset());
     std::prev(motionListStorage.end())->get()->Assign(cMot);
   }
 
@@ -58,7 +57,7 @@ void REMotlistAsset::Build() {
     auto &cMot = *data.motions[m];
     auto *ma = new RESkeletonWrap();
     ma->Assign(cMot.bones->ptr, cMot.numBones);
-    skeletonStorage.emplace_back(uni::Element<RESkeletonWrap>(ma));
+    skeletonStorage.emplace_back(ma);
   }
 }
 
@@ -73,7 +72,7 @@ void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
   for (size_t b = 0; b < numBones; b++) {
     auto *bn = new REMotionBoneWrap();
     bn->bone = data + b;
-    bones.storage.emplace_back(uni::Element<REMotionBoneWrap>(bn));
+    bones.storage.emplace_back(bn);
   }
 
   for (size_t b = 0; b < numBones; b++) {

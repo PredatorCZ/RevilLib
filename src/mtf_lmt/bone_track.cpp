@@ -61,15 +61,19 @@ template <template <class C> class PtrType> struct TrackV0 {
   void noRefFrame();
 
   void SwapEndian() {
+    FByteswapper(bufferOffset);
     FByteswapper(weight);
     FByteswapper(bufferSize);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    bufferOffset.Fixup(masterBuffer, swapEndian);
+    if (bufferOffset.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
+
+    bufferOffset.Fixup(masterBuffer, true);
   }
 };
 
@@ -102,14 +106,18 @@ template <template <class C> class PtrType, class BufferType> struct TrackV1 {
   void SwapEndian() {
     FByteswapper(weight);
     FByteswapper(bufferSize);
+    FByteswapper(bufferOffset);
     FByteswapper(referenceData);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    bufferOffset.Fixup(masterBuffer, swapEndian);
+    if (bufferOffset.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
+
+    bufferOffset.Fixup(masterBuffer, true);
   }
 };
 
@@ -135,15 +143,20 @@ template <template <class C> class PtrType> struct TrackV2 {
     FByteswapper(reinterpret_cast<uint32 &>(compression));
     FByteswapper(weight);
     FByteswapper(bufferSize);
+    FByteswapper(bufferOffset);
     FByteswapper(referenceData);
+    FByteswapper(extremes);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    bufferOffset.Fixup(masterBuffer, swapEndian);
-    extremes.Fixup(masterBuffer, swapEndian);
+    if (bufferOffset.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
+
+    bufferOffset.Fixup(masterBuffer, true);
+    extremes.Fixup(masterBuffer, true);
   }
 };
 
@@ -169,22 +182,22 @@ template <template <class C> class PtrType> struct TrackV3 {
     FByteswapper(boneID);
     FByteswapper(weight);
     FByteswapper(bufferSize);
+    FByteswapper(bufferOffset);
     FByteswapper(referenceData);
+    FByteswapper(extremes);
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    bufferOffset.Fixup(masterBuffer, swapEndian);
-    extremes.Fixup(masterBuffer, swapEndian);
+    if (bufferOffset.Fixed())
+      return;
 
     if (swapEndian)
       SwapEndian();
+
+    bufferOffset.Fixup(masterBuffer, true);
+    extremes.Fixup(masterBuffer, true);
   }
 };
-
-void LMTTrack_internal::SwapEndian() {
-  if (controller)
-    controller->SwapEndian();
-}
 
 uint32 LMTTrack_internal::NumFrames() const {
   return controller->NumFrames() + useRefFrame;
@@ -269,8 +282,7 @@ template <class C> class LMTTrackShared : public LMTTrack_internal {
 
   enabledFunction(noExtremes, TrackMinMax *)
       GetTrackExtremes(char *masterBuffer) {
-    return reinterpret_cast<TrackMinMax *>(
-        data->extremes.GetData(masterBuffer));
+    return data->extremes;
   }
 
   disabledFunction(noExtremes, TrackMinMax *) GetTrackExtremes(char *) {
@@ -293,13 +305,9 @@ public:
     data->Fixup(masterBuffer, swapEndian);
 
     if (CreateController())
-      controller->Assign(data->bufferOffset.GetData(masterBuffer),
-                         data->bufferSize);
+      controller->Assign(data->bufferOffset, data->bufferSize, swapEndian);
 
     minMax = MinMaxPtr(GetTrackExtremes(masterBuffer), false);
-
-    if (swapEndian)
-      SwapEndian();
   }
 
   bool CreateController() override {
@@ -397,7 +405,7 @@ LMTTrack_internal::LMTTrack_internal() : controller(nullptr), minMax(nullptr) {
   RegisterLocalEnums();
 }
 
-typedef TrackV0<PointerX86> TrackV0PointerX86;
+typedef TrackV0<esPointerX86> TrackV0PointerX86;
 static const uint32 TrackV0PointerX86_PTR_00 =
     offsetof(TrackV0PointerX86, bufferOffset);
 template <>
@@ -405,7 +413,7 @@ const uint32 TrackV0PointerX86::POINTERS[] = {TrackV0PointerX86_PTR_00};
 REFLECTOR_CREATE(TrackV0PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight);
 
-typedef TrackV0<PointerX64> TrackV0PointerX64;
+typedef TrackV0<esPointerX64> TrackV0PointerX64;
 static const uint32 TrackV0PointerX64_PTR_00 =
     offsetof(TrackV0PointerX64, bufferOffset);
 template <>
@@ -413,7 +421,7 @@ const uint32 TrackV0PointerX64::POINTERS[] = {TrackV0PointerX64_PTR_00};
 REFLECTOR_CREATE(TrackV0PointerX64, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight);
 
-typedef TrackV1<PointerX86, TrackV1BufferTypes>
+typedef TrackV1<esPointerX86, TrackV1BufferTypes>
     TrackV1TrackV1BufferTypesPointerX86;
 static const uint32 TrackV1TrackV1BufferTypesPointerX86_PTR_00 =
     offsetof(TrackV1TrackV1BufferTypesPointerX86, bufferOffset);
@@ -424,7 +432,7 @@ REFLECTOR_CREATE(TrackV1TrackV1BufferTypesPointerX86, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
-typedef TrackV1<PointerX64, TrackV1BufferTypes>
+typedef TrackV1<esPointerX64, TrackV1BufferTypes>
     TrackV1TrackV1BufferTypesPointerX64;
 static const uint32 TrackV1TrackV1BufferTypesPointerX64_PTR_00 =
     offsetof(TrackV1TrackV1BufferTypesPointerX64, bufferOffset);
@@ -435,7 +443,7 @@ REFLECTOR_CREATE(TrackV1TrackV1BufferTypesPointerX64, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
-typedef TrackV1<PointerX86, TrackV1_5BufferTypes>
+typedef TrackV1<esPointerX86, TrackV1_5BufferTypes>
     TrackV1TrackV1_5BufferTypesPointerX86;
 static const uint32 TrackV1TrackV1_5BufferTypesPointerX86_PTR_00 =
     offsetof(TrackV1TrackV1_5BufferTypesPointerX86, bufferOffset);
@@ -446,7 +454,7 @@ REFLECTOR_CREATE(TrackV1TrackV1_5BufferTypesPointerX86, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
-typedef TrackV1<PointerX64, TrackV1_5BufferTypes>
+typedef TrackV1<esPointerX64, TrackV1_5BufferTypes>
     TrackV1TrackV1_5BufferTypesPointerX64;
 static const uint32 TrackV1TrackV1_5BufferTypesPointerX64_PTR_00 =
     offsetof(TrackV1TrackV1_5BufferTypesPointerX64, bufferOffset);
@@ -457,7 +465,7 @@ REFLECTOR_CREATE(TrackV1TrackV1_5BufferTypesPointerX64, 2, VARNAMES, TEMPLATE,
                  compression, trackType, boneType, boneID, weight,
                  referenceData);
 
-typedef TrackV2<PointerX86> TrackV2PointerX86;
+typedef TrackV2<esPointerX86> TrackV2PointerX86;
 static const uint32 TrackV2PointerX86_PTR_00 =
     offsetof(TrackV2PointerX86, bufferOffset);
 static const uint32 TrackV2PointerX86_PTR_01 =
@@ -468,7 +476,7 @@ const uint32 TrackV2PointerX86::POINTERS[] = {TrackV2PointerX86_PTR_00,
 REFLECTOR_CREATE(TrackV2PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight, referenceData);
 
-typedef TrackV2<PointerX64> TrackV2PointerX64;
+typedef TrackV2<esPointerX64> TrackV2PointerX64;
 static const uint32 TrackV2PointerX64_PTR_00 =
     offsetof(TrackV2PointerX64, bufferOffset);
 static const uint32 TrackV2PointerX64_PTR_01 =
@@ -479,7 +487,7 @@ const uint32 TrackV2PointerX64::POINTERS[] = {TrackV2PointerX64_PTR_00,
 REFLECTOR_CREATE(TrackV2PointerX64, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, weight, referenceData);
 
-typedef TrackV3<PointerX86> TrackV3PointerX86;
+typedef TrackV3<esPointerX86> TrackV3PointerX86;
 static const uint32 TrackV3PointerX86_PTR_00 =
     offsetof(TrackV3PointerX86, bufferOffset);
 static const uint32 TrackV3PointerX86_PTR_01 =
@@ -490,7 +498,7 @@ const uint32 TrackV3PointerX86::POINTERS[] = {TrackV3PointerX86_PTR_00,
 REFLECTOR_CREATE(TrackV3PointerX86, 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, boneID2, weight, referenceData);
 
-typedef TrackV3<PointerX64> TrackV3PointerX64;
+typedef TrackV3<esPointerX64> TrackV3PointerX64;
 static const uint32 TrackV3PointerX64_PTR_00 =
     offsetof(TrackV3PointerX64, bufferOffset);
 static const uint32 TrackV3PointerX64_PTR_01 =
