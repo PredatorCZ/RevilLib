@@ -22,7 +22,6 @@
 #include "uni/list_vector.hpp"
 #include "uni/motion.hpp"
 
-struct REMotionTrack78;
 struct RETrackCurve;
 struct RETrackCurve78;
 
@@ -63,7 +62,7 @@ struct RETrackCurve {
   int Fixup(char *masterBuffer);
 };
 
-struct REMotionTrack {
+struct REMotionTrack43 {
   enum TrackType {
     TrackType_Position,
     TrackType_Rotation,
@@ -73,16 +72,16 @@ struct REMotionTrack {
   int16 unk;
   esFlags<uint16, TrackType> usedCurves;
   uint32 boneHash;
-  float weight;
   esPointerX64<RETrackCurve> curves;
 
   int Fixup(char *masterBuffer);
 };
 
-struct REMotion : public REAssetBase {
+template<class trackType>
+struct REMotion_t : public REAssetBase {
   uint64 pad;
   esPointerX64<REArray<REMotionBone>> bones;
-  esPointerX64<REMotionTrack> tracks;
+  esPointerX64<trackType> tracks;
   esPointerX64<char> null[5];
   esPointerX64<char> unkOffset02;
   esPointerX64<char16_t> animationName;
@@ -111,14 +110,16 @@ public:
   uint32 numFrames;
 };
 
-class REMotionAsset
+typedef REMotion_t<REMotionTrack43> REMotion43;
+
+class REMotion43Asset
     : public REAsset_internal,
       public uni::Motion,
       protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
 public:
-  REMotion &Get() { return REAssetBase::Get<REMotion>(this->buffer); }
-  const REMotion &Get() const {
-    return REAssetBase::Get<const REMotion>(this->buffer);
+  REMotion43 &Get() { return REAssetBase::Get<REMotion43>(this->buffer); }
+  const REMotion43 &Get() const {
+    return REAssetBase::Get<const REMotion43>(this->buffer);
   }
 
   std::string Name() const override {
@@ -137,5 +138,5 @@ public:
 
 public:
   static const uint64 ID = CompileFourCC("mot ");
-  static const uint64 VERSION = 65;
+  static const uint64 VERSION = 43;
 };

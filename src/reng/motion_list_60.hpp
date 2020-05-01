@@ -17,17 +17,16 @@
 
 #pragma once
 #include "asset.hpp"
-#include "motion.hpp"
 #include "uni/list_vector.hpp"
 #include "uni/skeleton.hpp"
 #include "datas/unicode.hpp"
+#include "motion_43.hpp"
 
-struct REMotlist : public REAssetBase {
+struct REMotlist60 : public REAssetBase {
   uint64 pad;
-  esPointerX64<esPointerX64<REMotion>> motions;
+  esPointerX64<esPointerX64<REMotion43>> motions;
   esPointerX64<char> unkOffset00;
   esPointerX64<char16_t> fileName;
-  esPointerX64<char> null;
   uint32 numMotions;
 
   int Fixup();
@@ -61,15 +60,15 @@ public:
   }
 };
 
-typedef uni::VectorList<uni::Motion, REMotionAsset> MotionList;
+typedef uni::VectorList<uni::Motion, REMotion43Asset> MotionList60;
 typedef uni::VectorList<uni::Skeleton, RESkeletonWrap> SkeletonList;
 
-class REMotlistAsset : public REAsset_internal,
-                       public MotionList,
+class REMotlist60Asset : public REAsset_internal,
+                       public MotionList60,
                        public SkeletonList {
-  REMotlist &Get() { return REAssetBase::Get<REMotlist>(this->buffer); }
-  const REMotlist &Get() const {
-    return REAssetBase::Get<const REMotlist>(this->buffer);
+  REMotlist60 &Get() { return REAssetBase::Get<REMotlist60>(this->buffer); }
+  const REMotlist60 &Get() const {
+    return REAssetBase::Get<const REMotlist60>(this->buffer);
   }
 
   int Fixup() override;
@@ -77,5 +76,5 @@ class REMotlistAsset : public REAsset_internal,
 
 public:
   static const uint64 ID = CompileFourCC("mlst");
-  static const uint64 VERSION = 85;
+  static const uint64 VERSION = 60;
 };

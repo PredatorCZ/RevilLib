@@ -24,9 +24,10 @@
 
 template <class C> REAsset_internal *creator() { return new C(); }
 
-static const std::unordered_map<uint64, REAsset_internal *(*)()> assetRegistry = {
-    StaticFor(EVAL_MASTER, REMotlistAsset, REMotlist99Asset, REMotionAsset,
-              REMotion78Asset)};
+static const std::unordered_map<uint64, REAsset_internal *(*)()> assetRegistry =
+    {StaticFor(EVAL_MASTER, REMotlist60Asset, REMotlist85Asset,
+               REMotlist99Asset, REMotion43Asset, REMotion78Asset,
+               REMotion65Asset)};
 
 REAsset_internal *REAsset_internal::Create(REAssetBase &base) {
   uint64 key = base.assetFourCC;
@@ -38,3 +39,5 @@ REAsset_internal *REAsset_internal::Create(REAssetBase &base) {
 
   return nullptr;
 }
+
+thread_local std::vector<void *> es::usedPts;

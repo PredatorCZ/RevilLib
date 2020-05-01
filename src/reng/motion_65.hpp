@@ -16,47 +16,45 @@
 */
 
 #pragma once
-#include "motion_65.hpp"
+#include "motion_43.hpp"
 
-struct RETrackCurve78 {
-  uint32 flags;
-  uint32 numFrames;
-  esPointerX86<uint8> frames;
-  esPointerX86<char> controlPoints;
-  esPointerX86<REMimMaxBounds> minMaxBounds;
-
-  RETrackController *GetController();
-  int Fixup(char *masterBuffer);
-};
-
-struct REMotionTrack78 {
-  uint16 unk;
+struct REMotionTrack65 {
+  int16 unk;
   esFlags<uint16, REMotionTrack43::TrackType> usedCurves;
   uint32 boneHash;
-  esPointerX86<RETrackCurve78> curves;
+  float weight;
+  esPointerX64<RETrackCurve> curves;
 
   int Fixup(char *masterBuffer);
 };
 
-typedef REMotion_t<REMotionTrack78> REMotion78;
+using REMotion65 = REMotion_t<REMotionTrack65>;
 
-class REMotion78Asset final : public REMotion43Asset {
+class REMotion65Asset
+    : public REAsset_internal,
+      public uni::Motion,
+      protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
 public:
-  REMotion78 &Get() { return REAssetBase::Get<REMotion78>(this->buffer); }
-  const REMotion78 &Get() const {
-    return REAssetBase::Get<const REMotion78>(this->buffer);
+  REMotion65 &Get() { return REAssetBase::Get<REMotion65>(this->buffer); }
+  const REMotion65 &Get() const {
+    return REAssetBase::Get<const REMotion65>(this->buffer);
   }
 
   std::string Name() const override {
     return es::ToUTF8(Get().animationName.operator->());
   }
+  void FrameRate(uint32 fps) override;
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
+  uni::MotionTracksConst Tracks() const override {
+    return uni::MotionTracksConst(this, false);
+  }
+  MotionType_e MotionType() const override { return MotionType_e::Relative; }
 
   int Fixup() override;
   void Build() override;
 
 public:
   static const uint64 ID = CompileFourCC("mot ");
-  static const uint64 VERSION = 78;
+  static const uint64 VERSION = 65;
 };

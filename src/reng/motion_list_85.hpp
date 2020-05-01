@@ -16,22 +16,28 @@
 */
 
 #pragma once
-#include "motion_78.hpp"
-#include "motion_list_85.hpp"
+#include "motion_list_60.hpp"
+#include "motion_65.hpp"
 
-class REMotlist99 : public REMotlist85 {
-public:
+struct REMotlist85 : public REAssetBase {
+  uint64 pad;
+  esPointerX64<esPointerX64<REMotion65>> motions;
+  esPointerX64<char> unkOffset00;
+  esPointerX64<char16_t> fileName;
+  esPointerX64<char> null;
+  uint32 numMotions;
+
   int Fixup();
 };
 
-typedef uni::VectorList<uni::Motion, REMotion78Asset> MotionList99;
+typedef uni::VectorList<uni::Motion, REMotion65Asset> MotionList85;
 
-class REMotlist99Asset : public REAsset_internal,
-                         public MotionList99,
-                         public SkeletonList {
-  REMotlist99 &Get() { return REAssetBase::Get<REMotlist99>(this->buffer); }
-  const REMotlist99 &Get() const {
-    return REAssetBase::Get<const REMotlist99>(this->buffer);
+class REMotlist85Asset : public REAsset_internal,
+                       public MotionList85,
+                       public SkeletonList {
+  REMotlist85 &Get() { return REAssetBase::Get<REMotlist85>(this->buffer); }
+  const REMotlist85 &Get() const {
+    return REAssetBase::Get<const REMotlist85>(this->buffer);
   }
 
   int Fixup() override;
@@ -39,5 +45,5 @@ class REMotlist99Asset : public REAsset_internal,
 
 public:
   static const uint64 ID = CompileFourCC("mlst");
-  static const uint64 VERSION = 99;
+  static const uint64 VERSION = 85;
 };

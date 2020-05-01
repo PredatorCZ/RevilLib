@@ -16,6 +16,7 @@
 */
 
 #include "motion_list_99.hpp"
+#include "motion_78.hpp"
 
 int REMotlist99::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
@@ -38,15 +39,22 @@ int REMotlist99::Fixup() {
     REMotion78 *cMot = static_cast<REMotion78 *>(cMotBase);
     cMot->Fixup();
 
-    if (!m) {
-      char *localBuffer = reinterpret_cast<char *>(cMot);
-      cMot->bones.Fixup(localBuffer);
-      cMot->bones->ptr.Fixup(localBuffer);
-      REMotionBone *bonesPtr = cMot->bones->ptr;
+    char *localBuffer = reinterpret_cast<char *>(cMot);
 
-      for (size_t b = 0; b < cMot->numBones; b++) {
-        bonesPtr[b].Fixup(localBuffer);
-      }
+    if (cMot->pad || !cMot->bones) {
+      continue;
+    }
+
+    cMot->bones.Fixup(localBuffer);
+    cMot->bones->ptr.Fixup(localBuffer);
+    REMotionBone *bonesPtr = cMot->bones->ptr;
+
+    if (!bonesPtr) {
+      continue;
+    }
+
+    for (size_t b = 0; b < cMot->numBones; b++) {
+      bonesPtr[b].Fixup(localBuffer);
     }
   }
 
@@ -58,9 +66,10 @@ void REMotlist99Asset::Build() {
   const size_t numAnims = data.numMotions;
 
   auto &motionListStorage = static_cast<MotionList99 &>(*this).storage;
+  auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
-    REAssetBase *cMot = data.motions[m];
+    auto cMot = data.motions[m];
 
     if (!cMot || cMot->assetID != REMotion78Asset::VERSION ||
         cMot->assetFourCC != REMotion78Asset::ID) {
@@ -69,18 +78,16 @@ void REMotlist99Asset::Build() {
 
     motionListStorage.emplace_back(new REMotion78Asset());
     std::prev(motionListStorage.end())->get()->Assign(cMot);
+
+    if (cMot->pad || !cMot->bones || !cMot->bones->ptr) {
+      continue;
+    }
+
+    skeletonStorage.emplace_back(new RESkeletonWrap());
+    std::prev(skeletonStorage.end())
+        ->get()
+        ->Assign(cMot->bones->ptr, cMot->numBones);
   }
-
-  auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
-  auto &cMot = *data.motions[0];
-
-  if (!&cMot)
-    return;
-
-  skeletonStorage.emplace_back(new RESkeletonWrap());
-  std::prev(skeletonStorage.end())
-      ->get()
-      ->Assign(cMot.bones->ptr, cMot.numBones);
 }
 
 int REMotlist99Asset::Fixup() {

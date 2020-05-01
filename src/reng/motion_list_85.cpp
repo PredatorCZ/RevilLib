@@ -15,9 +15,9 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "motion_list.hpp"
+#include "motion_list_85.hpp"
 
-int REMotlist::Fixup() {
+int REMotlist85::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   motions.Fixup(masterBuffer);
@@ -30,8 +30,8 @@ int REMotlist::Fixup() {
 
     REAssetBase *cMotBase = motions[m];
 
-    if (!cMotBase || cMotBase->assetID != REMotionAsset::VERSION ||
-        cMotBase->assetFourCC != REMotionAsset::ID) {
+    if (!cMotBase || cMotBase->assetID != REMotion65Asset::VERSION ||
+        cMotBase->assetFourCC != REMotion65Asset::ID) {
       continue;
     }
 
@@ -41,65 +41,43 @@ int REMotlist::Fixup() {
   return 0;
 }
 
-void REMotlistAsset::Build() {
-  REMotlist &data = Get();
+void REMotlist85Asset::Build() {
+  REMotlist85 &data = Get();
   const size_t numAnims = data.numMotions;
 
-  auto &motionListStorage = static_cast<MotionList &>(*this).storage;
+  auto &motionListStorage = static_cast<MotionList85 &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
     REAssetBase *cMot = data.motions[m];
 
-    if (!cMot || cMot->assetID != REMotionAsset::VERSION ||
-        cMot->assetFourCC != REMotionAsset::ID) {
+    if (!cMot || cMot->assetID != REMotion65Asset::VERSION ||
+        cMot->assetFourCC != REMotion65Asset::ID) {
       continue;
     }
 
-    motionListStorage.emplace_back(new REMotionAsset());
+    motionListStorage.emplace_back(new REMotion65Asset());
     std::prev(motionListStorage.end())->get()->Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
-    auto &cMot = *data.motions[m];
+    auto cMot = data.motions[m];
 
-    if (!&cMot)
+    if (!cMot || cMot->assetID != REMotion65Asset::VERSION ||
+        cMot->assetFourCC != REMotion65Asset::ID || !cMot->bones) {
       continue;
+    }
 
     auto *ma = new RESkeletonWrap();
-    ma->Assign(cMot.bones->ptr, cMot.numBones);
+    ma->Assign(cMot->bones->ptr, cMot->numBones);
     skeletonStorage.emplace_back(ma);
   }
 }
 
-int REMotlistAsset::Fixup() {
-  REMotlist &data = Get();
+int REMotlist85Asset::Fixup() {
+  REMotlist85 &data = Get();
   int rtVal = data.Fixup();
   Build();
   return rtVal;
-}
-
-void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
-  for (size_t b = 0; b < numBones; b++) {
-    auto *bn = new REMotionBoneWrap();
-    bn->bone = data + b;
-    bones.storage.emplace_back(bn);
-  }
-
-  for (size_t b = 0; b < numBones; b++) {
-    char16_t **parentNameRaw = data[b].parentBoneNamePtr;
-
-    if (!parentNameRaw)
-      continue;
-
-    std::u16string parentName = *parentNameRaw;
-
-    for (auto &_b : bones.storage) {
-      if (parentName == &*_b->bone->boneName) {
-        bones.storage[b]->parent = _b.get();
-        break;
-      }
-    }
-  }
 }
