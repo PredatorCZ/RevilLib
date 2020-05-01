@@ -18,12 +18,17 @@
 #pragma once
 #include "motion_43.hpp"
 
+struct RETrackCurve65 : RETrackCurve43 {
+  RETrackController *GetController();
+ // operator RETrackCurve43() = delete;
+};
+
 struct REMotionTrack65 {
   int16 unk;
   esFlags<uint16, REMotionTrack43::TrackType> usedCurves;
   uint32 boneHash;
   float weight;
-  esPointerX64<RETrackCurve> curves;
+  esPointerX64<RETrackCurve65> curves;
 
   int Fixup(char *masterBuffer);
 };

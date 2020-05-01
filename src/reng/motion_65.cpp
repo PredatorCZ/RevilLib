@@ -17,7 +17,7 @@
 
 #include "motion_65.hpp"
 
-int REMotion65::Fixup() {
+template<> int REMotion65::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   bones.Fixup(masterBuffer);

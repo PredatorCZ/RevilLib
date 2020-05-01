@@ -22,7 +22,8 @@
 #include "uni/list_vector.hpp"
 #include "uni/motion.hpp"
 
-struct RETrackCurve;
+struct RETrackCurve43;
+struct RETrackCurve65;
 struct RETrackCurve78;
 
 struct REMotionBone {
@@ -43,14 +44,15 @@ struct REMimMaxBounds {
 };
 
 struct RETrackController {
-  virtual void Assign(RETrackCurve *iCurve) = 0;
+  virtual void Assign(RETrackCurve43 *iCurve) = 0;
+  virtual void Assign(RETrackCurve65 *iCurve) = 0;
   virtual void Assign(RETrackCurve78 *iCurve) = 0;
   virtual uint16 GetFrame(uint32 id) const = 0;
   virtual void Evaluate(uint32 id, Vector4A16 &out) const = 0;
   virtual ~RETrackController() {}
 };
 
-struct RETrackCurve {
+struct RETrackCurve43 {
   uint32 flags;
   uint32 numFrames, framesPerSecond;
   float duration;
@@ -72,7 +74,7 @@ struct REMotionTrack43 {
   int16 unk;
   esFlags<uint16, TrackType> usedCurves;
   uint32 boneHash;
-  esPointerX64<RETrackCurve> curves;
+  esPointerX64<RETrackCurve43> curves;
 
   int Fixup(char *masterBuffer);
 };

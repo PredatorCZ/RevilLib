@@ -47,7 +47,8 @@ struct RETrackController_internal : RETrackController {
   }
 
   virtual void Assign(char *data) = 0;
-  void Assign(RETrackCurve *iCurve) { _Assign(iCurve); }
+  void Assign(RETrackCurve43 *iCurve) { _Assign(iCurve); }
+  void Assign(RETrackCurve65 *iCurve) { _Assign(iCurve); }
   void Assign(RETrackCurve78 *iCurve) { _Assign(iCurve); }
 
   uint16 GetFrame(uint32 id) const {
@@ -335,7 +336,8 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
 };
 
 struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
-  static const uint32 ID = 0x70112;
+  static const uint32 ID1 = 0x70112;
+  static const uint32 ID2 = 0x80112;
 
   void Assign(char *data) override {
     uint64 *start = reinterpret_cast<uint64 *>(data);
@@ -444,6 +446,20 @@ struct BiLinearSCQuat3_16bitController : BiLinearSCVector3_16bitController {
   }
 };
 
+struct BiLinearSCQuat3_16bitController_old : BiLinearSCQuat3_16bitController {
+  static const uint32 ID1 = 0x21112;
+  static const uint32 ID2 = 0x22112;
+  static const uint32 ID3 = 0x23112;
+
+  void Evaluate(uint32 id, Vector4A16 &out) const {
+    const uint16 &retreived = dataStorage[id];
+    out[componentID] = minMaxBounds.max[componentID] +
+                       (minMaxBounds.min[componentID] *
+                        (static_cast<float>(retreived) * componentMultiplier));
+    out.QComputeElement();
+  }
+};
+
 template <class C> RETrackController_internal *controlDummy() { return new C; }
 
 static const std::unordered_map<uint32, RETrackController_internal *(*)()>
@@ -485,11 +501,11 @@ static const std::unordered_map<uint32, RETrackController_internal *(*)()>
 
         {BiLinearQuat3_10bitController::ID1,
          controlDummy<BiLinearQuat3_10bitController>},
-        {BiLinearQuat3_21bitController::ID,
+        {BiLinearQuat3_21bitController::ID1,
          controlDummy<BiLinearQuat3_21bitController>},
 };
 
-RETrackController *RETrackCurve::GetController() {
+RETrackController *RETrackCurve65::GetController() {
   const uint32 type = flags & 0xff0fffff;
   RETrackController_internal *iCon = nullptr;
 
@@ -560,6 +576,8 @@ static const std::unordered_map<uint32, RETrackController_internal *(*)()>
          controlDummy<BiLinearQuat3_16bitController>},
         {BiLinearQuat3_18bitController::ID,
          controlDummy<BiLinearQuat3_18bitController>},
+        {BiLinearQuat3_21bitController::ID2,
+         controlDummy<BiLinearQuat3_21bitController>},
 };
 
 RETrackController *RETrackCurve78::GetController() {
@@ -568,6 +586,47 @@ RETrackController *RETrackCurve78::GetController() {
 
   if (curveControllers78.count(type)) {
     iCon = curveControllers78.at(type)();
+    iCon->Assign(this);
+  } else {
+    printerror("[RETrackController]: Unhandled curve compression: " << std::hex
+                                                                    << type);
+  }
+
+  return iCon;
+}
+
+static const std::unordered_map<uint32, RETrackController_internal *(*)()>
+    curveControllers43 = {
+        {LinearVector3Controller::ID, controlDummy<LinearVector3Controller>},
+        {LinearQuat3Controller::ID1, controlDummy<LinearQuat3Controller>},
+
+        {BiLinearSCQuat3Controller::ID1,
+         controlDummy<BiLinearSCQuat3Controller>},
+        {BiLinearSCQuat3Controller::ID2,
+         controlDummy<BiLinearSCQuat3Controller>},
+        {BiLinearSCQuat3Controller::ID3,
+         controlDummy<BiLinearSCQuat3Controller>},
+
+        {BiLinearSCQuat3_16bitController_old::ID1,
+         controlDummy<BiLinearSCQuat3_16bitController_old>},
+        {BiLinearSCQuat3_16bitController_old::ID2,
+         controlDummy<BiLinearSCQuat3_16bitController_old>},
+        {BiLinearSCQuat3_16bitController_old::ID3,
+         controlDummy<BiLinearSCQuat3_16bitController_old>},
+
+        {BiLinearQuat3_10bitController::ID1,
+         controlDummy<BiLinearQuat3_10bitController>},
+        {BiLinearQuat3_21bitController::ID1,
+         controlDummy<BiLinearQuat3_21bitController>},
+        
+};
+
+RETrackController *RETrackCurve43::GetController() {
+  const uint32 type = flags & 0xff0fffff;
+  RETrackController_internal *iCon = nullptr;
+
+  if (curveControllers43.count(type)) {
+    iCon = curveControllers43.at(type)();
     iCon->Assign(this);
   } else {
     printerror("[RETrackController]: Unhandled curve compression: " << std::hex

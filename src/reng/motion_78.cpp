@@ -17,7 +17,7 @@
 
 #include "motion_78.hpp"
 
-int REMotion78::Fixup() {
+template<> int REMotion78::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
   tracks.Fixup(masterBuffer);
   unkOffset02.Fixup(masterBuffer);

@@ -17,7 +17,7 @@
 
 #include "motion_43.hpp"
 
-int REMotion43::Fixup() {
+template<> int REMotion43::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   bones.Fixup(masterBuffer);
@@ -59,7 +59,7 @@ int REMotionBone::Fixup(char *masterBuffer) {
   return 0;
 }
 
-int RETrackCurve::Fixup(char *masterBuffer) {
+int RETrackCurve43::Fixup(char *masterBuffer) {
   frames.Fixup(masterBuffer);
   controlPoints.Fixup(masterBuffer);
   minMaxBounds.Fixup(masterBuffer);
