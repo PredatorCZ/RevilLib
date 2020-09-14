@@ -17,7 +17,7 @@
 
 #include "asset.hpp"
 #include "datas/binreader.hpp"
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 #include <map>
 
 REAsset *REAsset::Load(const char *fileName) {

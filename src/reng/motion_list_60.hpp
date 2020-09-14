@@ -17,10 +17,10 @@
 
 #pragma once
 #include "asset.hpp"
-#include "uni/list_vector.hpp"
-#include "uni/skeleton.hpp"
 #include "datas/unicode.hpp"
 #include "motion_43.hpp"
+#include "uni/list_vector.hpp"
+#include "uni/skeleton.hpp"
 
 struct REMotlist60 : public REAssetBase {
   uint64 pad;
@@ -37,15 +37,25 @@ public:
   REMotionBone *bone;
   REMotionBoneWrap *parent = nullptr;
 
-  esMatrix44 Transform() const override {
-    esMatrix44 retval(bone->rotation);
-    retval.r4 = Vector4A16(bone->position, 1.0f);
-    return retval;
+  TransformType TMType() const override { return TMTYPE_RTS; }
+
+  void GetTM(uni::RTSValue &out) const override {
+    out.rotation = bone->rotation;
+    out.translation = bone->position;
   }
+
+  void GetTM(esMatrix44 &out) const override {
+    throw std::logic_error("Unsupported call!");
+  }
+
   const Bone *Parent() const override { return parent; }
   size_t Index() const override { return bone->boneHash; }
   std::string Name() const override {
     return es::ToUTF8(bone->boneName.operator->());
+  }
+
+  operator uni::Element<const uni::Bone>() const {
+    return uni::Element<const uni::Bone>{this, false};
   }
 };
 
@@ -58,14 +68,18 @@ public:
   uni::SkeletonBonesConst Bones() const override {
     return uni::SkeletonBonesConst(&bones, false);
   }
+
+  operator uni::Element<const uni::Skeleton>() const {
+    return uni::Element<const uni::Skeleton>{this, false};
+  }
 };
 
 typedef uni::VectorList<uni::Motion, REMotion43Asset> MotionList60;
 typedef uni::VectorList<uni::Skeleton, RESkeletonWrap> SkeletonList;
 
 class REMotlist60Asset : public REAsset_internal,
-                       public MotionList60,
-                       public SkeletonList {
+                         public MotionList60,
+                         public SkeletonList {
   REMotlist60 &Get() { return REAssetBase::Get<REMotlist60>(this->buffer); }
   const REMotlist60 &Get() const {
     return REAssetBase::Get<const REMotlist60>(this->buffer);

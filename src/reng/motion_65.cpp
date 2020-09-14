@@ -17,7 +17,7 @@
 
 #include "motion_65.hpp"
 
-template<> int REMotion65::Fixup() {
+template <> int REMotion65::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   bones.Fixup(masterBuffer);
@@ -62,36 +62,33 @@ void REMotion65Asset::Build() {
     size_t curCurve = 0;
 
     if (tck->usedCurves[REMotionTrack43::TrackType_Position]) {
-      auto *wk = new REMotionTrackWorker();
+      REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk->controller =
-          std::unique_ptr<RETrackController>(data->GetController());
-      wk->cType = REMotionTrackWorker::Position;
-      wk->boneHash = tck->boneHash;
-      wk->numFrames = data->numFrames;
-      storage.emplace_back(wk);
+      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.cType = REMotionTrackWorker::Position;
+      wk.boneHash = tck->boneHash;
+      wk.numFrames = data->numFrames;
+      storage.emplace_back(std::move(wk));
     }
 
     if (tck->usedCurves[REMotionTrack43::TrackType_Rotation]) {
-      auto *wk = new REMotionTrackWorker();
+      REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk->controller =
-          std::unique_ptr<RETrackController>(data->GetController());
-      wk->cType = REMotionTrackWorker::Rotation;
-      wk->boneHash = tck->boneHash;
-      wk->numFrames = data->numFrames;
-      storage.emplace_back(wk);
+      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.cType = REMotionTrackWorker::Rotation;
+      wk.boneHash = tck->boneHash;
+      wk.numFrames = data->numFrames;
+      storage.emplace_back(std::move(wk));
     }
 
     if (tck->usedCurves[REMotionTrack43::TrackType_Scale]) {
-      auto *wk = new REMotionTrackWorker();
+      REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk->controller =
-          std::unique_ptr<RETrackController>(data->GetController());
-      wk->cType = REMotionTrackWorker::Scale;
-      wk->boneHash = tck->boneHash;
-      wk->numFrames = data->numFrames;
-      storage.emplace_back(wk);
+      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.cType = REMotionTrackWorker::Scale;
+      wk.boneHash = tck->boneHash;
+      wk.numFrames = data->numFrames;
+      storage.emplace_back(std::move(wk));
     }
   }
 }

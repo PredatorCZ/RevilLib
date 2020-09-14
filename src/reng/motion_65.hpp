@@ -20,7 +20,7 @@
 
 struct RETrackCurve65 : RETrackCurve43 {
   RETrackController *GetController();
- // operator RETrackCurve43() = delete;
+  // operator RETrackCurve43() = delete;
 };
 
 struct REMotionTrack65 {
@@ -55,6 +55,10 @@ public:
     return uni::MotionTracksConst(this, false);
   }
   MotionType_e MotionType() const override { return MotionType_e::Relative; }
+
+  operator uni::Element<const uni::Motion>() const {
+    return uni::Element<const uni::Motion>{this, false};
+  }
 
   int Fixup() override;
   void Build() override;

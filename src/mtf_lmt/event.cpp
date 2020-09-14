@@ -22,11 +22,8 @@
 #include <array>
 #include <unordered_map>
 
-typedef AnimEvents<esPointerX86> EventTablePointerX86;
-REFLECTOR_CREATE(EventTablePointerX86, 2, VARNAMES, TEMPLATE, eventRemaps)
-
-typedef AnimEvents<esPointerX64> EventTablePointerX64;
-REFLECTOR_CREATE(EventTablePointerX64, 2, VARNAMES, TEMPLATE, eventRemaps)
+REFLECTOR_CREATE((AnimEvents<esPointerX86>), 2, VARNAMES, TEMPLATE, eventRemaps)
+REFLECTOR_CREATE((AnimEvents<esPointerX64>), 2, VARNAMES, TEMPLATE, eventRemaps)
 
 template <class C, const uint32 numGroups>
 class AnimEvents_shared : public LMTAnimationEventV1_Internal {
@@ -74,12 +71,12 @@ public:
   }
 
   void _ToXML(pugi::xml_node &node, uint32 groupID) const override {
-    ReflectorWrapConst<const C> reflEvent(&(*groups)[groupID]);
+    ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 
   void _FromXML(pugi::xml_node &node, uint32 groupID) override {
-    ReflectorWrap<C> reflEvent(&(*groups)[groupID]);
+    ReflectorWrap<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Load(reflEvent, node);
   }
 
@@ -120,7 +117,9 @@ public:
     }
   }
 
-  bool _Is64bit() const override { return sizeof(C::events) == 8; }
+  bool _Is64bit() const override {
+    return sizeof(std::declval<C>().events) == 8;
+  }
 };
 
 void AnimEvent::SwapEndian() {
@@ -399,27 +398,29 @@ static LMTAnimationEvent *_creator2(void *ptr, char *buff, bool endi) {
                                   endi);
 }
 
-static const std::unordered_map<uint16, LMTAnimationEvent *(*)()>
-    eventRegistry = {{0x108, _creattorBase<EventTablePointerX64, 2>},
-                     {0x104, _creattorBase<EventTablePointerX86, 2>},
-                     {0x208, _creattorBase<EventTablePointerX64, 4>},
-                     {0x204, _creattorBase<EventTablePointerX86, 4>},
-                     {0x308, _creattorBase2}};
+static const std::unordered_map<uint16, LMTAnimationEvent *(*)()> eventRegistry{
+    {0x108, _creattorBase<AnimEvents<esPointerX64>, 2>},
+    {0x104, _creattorBase<AnimEvents<esPointerX86>, 2>},
+    {0x208, _creattorBase<AnimEvents<esPointerX64>, 4>},
+    {0x204, _creattorBase<AnimEvents<esPointerX86>, 4>},
+    {0x308, _creattorBase2},
+};
 
 static const std::unordered_map<uint16,
                                 LMTAnimationEvent *(*)(void *, char *, bool)>
-    eventRegistryLink = {{0x108, _creator<EventTablePointerX64, 2>},
-                         {0x104, _creator<EventTablePointerX86, 2>},
-                         {0x208, _creator<EventTablePointerX64, 4>},
-                         {0x204, _creator<EventTablePointerX86, 4>},
-                         {0x308, _creator2}};
-
-REGISTER_ENUMS(EventFrameV2DataType, EventFrameV2Type);
+    eventRegistryLink{
+        {0x108, _creator<AnimEvents<esPointerX64>, 2>},
+        {0x104, _creator<AnimEvents<esPointerX86>, 2>},
+        {0x208, _creator<AnimEvents<esPointerX64>, 4>},
+        {0x204, _creator<AnimEvents<esPointerX86>, 4>},
+        {0x308, _creator2},
+    };
 
 LMTAnimationEvent *
 LMTAnimationEvent::Create(const LMTConstructorProperties &props) {
   uint16 item = reinterpret_cast<const uint16 &>(props);
-  RegisterLocalEnums();
+
+  REFLECTOR_REGISTER(EventFrameV2DataType, EventFrameV2Type);
 
   if (!eventRegistry.count(item))
     return nullptr;

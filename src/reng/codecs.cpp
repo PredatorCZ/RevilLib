@@ -15,7 +15,7 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 #include "motion_78.hpp"
 #include <unordered_map>
 
@@ -70,7 +70,7 @@ struct LinearVector3Controller : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const { out = dataStorage[id]; }
+  void Evaluate(uint32 id, Vector4A16 &out) const override { out = dataStorage[id]; }
 };
 
 struct BiLinearVector3_5bitController : RETrackController_internal {
@@ -91,7 +91,7 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
     minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint16 &retreived = dataStorage[id];
     out = Vector(static_cast<float>(retreived & componentMask),
                  static_cast<float>((retreived >> 5) & componentMask),
@@ -121,7 +121,7 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
     minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint32 &retreived = dataStorage[id];
     out =
         Vector4A16(static_cast<float>(retreived & componentMask),
@@ -152,7 +152,7 @@ struct BiLinearVector3_21bitController : RETrackController_internal {
     minMaxBounds.max.X = minMaxBounds.min.W;
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint64 &retreived = dataStorage[id];
     out =
         Vector4A16(static_cast<float>(retreived & componentMask),
@@ -182,7 +182,7 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint64 retreived =
         (static_cast<uint64>(dataStorage[id].data[0]) << 32) |
         (static_cast<uint64>(dataStorage[id].data[1]) << 24) |
@@ -217,7 +217,7 @@ struct BiLinearQuat3_16bitController : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     out = Vector4A16(dataStorage[id].Convert<float>(), 0.0f);
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
@@ -245,7 +245,7 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint64 retreived =
         (static_cast<uint64>(dataStorage[id].data[0]) << 48) |
         (static_cast<uint64>(dataStorage[id].data[1]) << 40) |
@@ -282,7 +282,7 @@ struct BiLinearQuat3_8bitController : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     out = Vector4A16(dataStorage[id].Convert<float>(), 1.0f);
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
@@ -312,7 +312,7 @@ struct BiLinearQuat3_5bitController : BiLinearVector3_5bitController {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     BiLinearVector3_5bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
@@ -328,7 +328,7 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     BiLinearVector3_10bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
@@ -344,7 +344,7 @@ struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     BiLinearVector3_21bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
@@ -370,7 +370,7 @@ struct LinearSCVector3Controller : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const float &retreived = dataStorage[id];
     if (componentID == 3) {
       out = Vector4A16(retreived);
@@ -399,7 +399,7 @@ struct BiLinearSCVector3_16bitController : RETrackController_internal {
     dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
   }
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override  {
     const uint16 &retreived = dataStorage[id];
     float decompVal = minMaxBounds.min[0] +
                       (minMaxBounds.min[(componentID % 3) + 1] *

@@ -17,7 +17,7 @@
 
 #include "codecs.hpp"
 #include "datas/macroLoop.hpp"
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 #include "datas/reflector_xml.hpp"
 
 #include <cmath>
@@ -632,8 +632,8 @@ void Buf_LinearRotationQuat4_14bit::Evaluate(Vector4A16 &out) const {
                     static_cast<int32>(data >> 14), static_cast<int32>(data)) &
         componentMask;
 
-  const Vector4A16 signedHalf(
-      Vector4A16(static_cast<float>(componentMask)) - out);
+  const Vector4A16 signedHalf(Vector4A16(static_cast<float>(componentMask)) -
+                              out);
   const Vector4A16 multSign(out.X > componentSignMax ? -1.0f : 0.0f,
                             out.Y > componentSignMax ? -1.0f : 0.0f,
                             out.Z > componentSignMax ? -1.0f : 0.0f,
@@ -709,7 +709,7 @@ void Buf_BiLinearRotationQuat4_7bit::Evaluate(Vector4A16 &out) const {
 void Buf_BiLinearRotationQuat4_7bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
-  UIVector4A16 store(in * componentMultiplierInv);
+  UIVector4A16 store(IVector4A16(in * componentMultiplierInv));
 
   data |= store.W;
   data |= store.Z << 7;
@@ -754,7 +754,7 @@ void Buf_BiLinearRotationQuatXW_14bit::Evaluate(Vector4A16 &out) const {
 void Buf_BiLinearRotationQuatXW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
-  UIVector4A16 store(in * componentMultiplierInv);
+  UIVector4A16 store(IVector4A16(in * componentMultiplierInv));
 
   data |= store.X;
   data |= store.W << 14;
@@ -784,7 +784,7 @@ void Buf_BiLinearRotationQuatYW_14bit::Evaluate(Vector4A16 &out) const {
 void Buf_BiLinearRotationQuatYW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
-  UIVector4A16 store(in * componentMultiplierInv);
+  UIVector4A16 store(IVector4A16(in * componentMultiplierInv));
 
   data |= store.Y;
   data |= store.W << 14;
@@ -809,7 +809,7 @@ void Buf_BiLinearRotationQuatZW_14bit::Evaluate(Vector4A16 &out) const {
 void Buf_BiLinearRotationQuatZW_14bit::Devaluate(const Vector4A16 &in) {
   data ^= data & dataField;
 
-  UIVector4A16 store(in * componentMultiplierInv);
+  UIVector4A16 store(IVector4A16(in * componentMultiplierInv));
 
   data |= store.Z;
   data |= store.W << 14;
@@ -842,8 +842,8 @@ void Buf_BiLinearRotationQuat4_11bit::Evaluate(Vector4A16 &out) const {
   const uint64 &rVal = reinterpret_cast<const uint64 &>(data);
 
   out = IVector4A16(static_cast<int32>(rVal),
-                    static_cast<int32>(((rVal >> 11) << 6) | data[1] & 0x3f),
-                    static_cast<int32>((rVal >> 22) << 1 | data[2] & 1),
+                    static_cast<int32>(((rVal >> 11) << 6) | (data[1] & 0x3f)),
+                    static_cast<int32>((rVal >> 22) << 1 | (data[2] & 1)),
                     static_cast<int32>(rVal >> 33)) &
         componentMask;
   out *= componentMultiplier;
@@ -970,14 +970,11 @@ template <class C> void Buff_EvalShared<C>::FromString(std::string &input) {
 
   for (auto &d : data) {
     d.RetreiveFromString(input, iterPos);
-
-    if (iterPos < 0) {
-      printerror("[LMT] Unexpected end of <data/> buffer.") return;
-    }
   }
 }
 
-template <class C> void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
+template <class C>
+void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
   if (!C::VARIABLE_SIZE) {
     data = Store_Type(reinterpret_cast<C *>(ptr),
                       reinterpret_cast<C *>(ptr + size),
@@ -1064,39 +1061,56 @@ static const std::unordered_map<TrackTypesShared, float> fracRegistry = {
               BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)};
 
 static const TrackTypesShared buffRemapRegistry[][16] = {
-    {TrackTypesShared::None, TrackTypesShared::SingleVector3,
-     TrackTypesShared::SingleVector3, TrackTypesShared::None,
-     TrackTypesShared::StepRotationQuat3, TrackTypesShared::HermiteVector3,
-     TrackTypesShared::SphericalRotation, TrackTypesShared::None,
-     TrackTypesShared::None, TrackTypesShared::LinearVector3},
-
-    {TrackTypesShared::None, TrackTypesShared::SingleVector3,
-     TrackTypesShared::SingleVector3, TrackTypesShared::None,
-     TrackTypesShared::StepRotationQuat3, TrackTypesShared::HermiteVector3,
-     TrackTypesShared::LinearRotationQuat4_14bit, TrackTypesShared::None,
-     TrackTypesShared::None, TrackTypesShared::LinearVector3},
-
-    {TrackTypesShared::None, TrackTypesShared::SingleVector3,
-     TrackTypesShared::StepRotationQuat3, TrackTypesShared::LinearVector3,
-     TrackTypesShared::BiLinearVector3_16bit,
-     TrackTypesShared::BiLinearVector3_8bit,
-     TrackTypesShared::LinearRotationQuat4_14bit,
-     TrackTypesShared::BiLinearRotationQuat4_7bit, TrackTypesShared::None,
-     TrackTypesShared::None, TrackTypesShared::None,
-     TrackTypesShared::BiLinearRotationQuatXW_14bit,
-     TrackTypesShared::BiLinearRotationQuatYW_14bit,
-     TrackTypesShared::BiLinearRotationQuatZW_14bit,
-     TrackTypesShared::BiLinearRotationQuat4_11bit,
-     TrackTypesShared::BiLinearRotationQuat4_9bit}};
-
-REGISTER_ENUMS(Buf_HermiteVector3_Flags)
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::None,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::HermiteVector3,
+        TrackTypesShared::SphericalRotation,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::LinearVector3,
+    },
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::None,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::HermiteVector3,
+        TrackTypesShared::LinearRotationQuat4_14bit,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::LinearVector3,
+    },
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::LinearVector3,
+        TrackTypesShared::BiLinearVector3_16bit,
+        TrackTypesShared::BiLinearVector3_8bit,
+        TrackTypesShared::LinearRotationQuat4_14bit,
+        TrackTypesShared::BiLinearRotationQuat4_7bit,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::BiLinearRotationQuatXW_14bit,
+        TrackTypesShared::BiLinearRotationQuatYW_14bit,
+        TrackTypesShared::BiLinearRotationQuatZW_14bit,
+        TrackTypesShared::BiLinearRotationQuat4_11bit,
+        TrackTypesShared::BiLinearRotationQuat4_9bit,
+    },
+};
 
 LMTTrackController *LMTTrackController::CreateCodec(uint32 type,
                                                     uint32 subVersion) {
   const TrackTypesShared cType = subVersion == 0xffffffff
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];
-  RegisterLocalEnums();
+  REFLECTOR_REGISTER(Buf_HermiteVector3_Flags);
 
   if (codecRegistry.count(cType))
     return codecRegistry.at(cType)();

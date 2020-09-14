@@ -55,8 +55,8 @@ void REMotlist85Asset::Build() {
       continue;
     }
 
-    motionListStorage.emplace_back(new REMotion65Asset());
-    std::prev(motionListStorage.end())->get()->Assign(cMot);
+    motionListStorage.emplace_back();
+    std::prev(motionListStorage.end())->Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
@@ -69,9 +69,8 @@ void REMotlist85Asset::Build() {
       continue;
     }
 
-    auto *ma = new RESkeletonWrap();
-    ma->Assign(cMot->bones->ptr, cMot->numBones);
-    skeletonStorage.emplace_back(ma);
+    skeletonStorage.emplace_back();
+    std::prev(skeletonStorage.end())->Assign(cMot->bones->ptr, cMot->numBones);
   }
 }
 

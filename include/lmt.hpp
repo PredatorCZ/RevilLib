@@ -16,11 +16,11 @@
 */
 
 #pragma once
-#include "datas/VectorsSimd.hpp"
 #include "datas/binreader_stream.hpp"
 #include "datas/binwritter_stream.hpp"
-#include "uni/motion.hpp"
+#include "datas/vectors_simd.hpp"
 #include "uni/list_vector.hpp"
+#include "uni/motion.hpp"
 
 class AnimEvent;
 
@@ -114,7 +114,7 @@ public:
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual uint32 Stride() const = 0;
   virtual uint32 BoneType() const = 0;
-  
+
   MotionTrack::TrackType_e TrackType() const override;
   void GetValue(uni::RTSValue &output, float time) const override;
   void GetValue(esMatrix44 &output, float time) const override;
@@ -157,12 +157,12 @@ public:
   }
 };
 
-class LMT : public uni::VectorList<uni::Motion, LMTAnimation> {
+class LMT
+    : public uni::PolyVectorList<uni::Motion, LMTAnimation, uni::Element> {
   static constexpr uint32 ID = CompileFourCC("LMT\0");
   static constexpr uint32 ID_R = CompileFourCC("\0TML");
 
 public:
-
   enum V {
     V_22 = 22, // DR
     V_40 = 40, // LP

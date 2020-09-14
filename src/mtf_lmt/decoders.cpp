@@ -158,7 +158,7 @@ static CompressionReport ReportCompression(const float fractal,
     result.avgFrac += baseLess;
     result.maxFrac = std::max(baseLess, result.maxFrac);
 
-    const float oldNewDiff = abs((fractalLess * fractal) - oldRawData[i]);
+    const float oldNewDiff = fabs((fractalLess * fractal) - oldRawData[i]);
 
     result.avgDiff += oldNewDiff;
     result.maxDiff = std::max(oldNewDiff, result.maxDiff);
@@ -170,7 +170,7 @@ static CompressionReport ReportCompression(const float fractal,
   return result;
 }
 
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 #include <iomanip>
 
 static const TrackTypesShared possibleVec3Types[] = {

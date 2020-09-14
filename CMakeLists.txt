@@ -2,15 +2,11 @@ cmake_minimum_required(VERSION 3.3)
 
 project(RevilLib)
 
-if(NOT TARGETEX_LOCATION)
-	set(TARGETEX_LOCATION 3rd_party/PreCore/cmake)
-	include(${TARGETEX_LOCATION}/targetex.cmake)
-	include(${TARGETEX_LOCATION}/chartype.cmake)
-endif()
-
+set(CMAKE_CXX_STANDARD 11)
 add_subdirectory(3rd_party/PreCore)
 
-set(CMAKE_CXX_STANDARD 11)
+include(${PRECORE_SOURCE_DIR}/cmake/targetex.cmake)
+include(${PRECORE_SOURCE_DIR}/cmake/chartype.cmake)
 file(GLOB_RECURSE CORE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 build_target(

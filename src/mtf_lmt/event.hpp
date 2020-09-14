@@ -28,9 +28,8 @@ public:
   void SwapEndian();
 };
 
-template <template <class C> class PtrType> struct AnimEvents {
-  DECLARE_REFLECTOR;
-
+template <template <class C> class PtrType>
+struct AnimEvents : ReflectorInterface<AnimEvents<PtrType>> {
   uint16 eventRemaps[32];
   uint32 numEvents;
   PtrType<AnimEvent> events;
@@ -66,9 +65,7 @@ REFLECTOR_CREATE(EventFrameV2DataType, ENUM, 2, CLASS, 16, Int8, Int32, Float,
 REFLECTOR_CREATE(EventFrameV2Type, ENUM, 2, CLASS, 16, Scalar, Scalar2, Scalar3,
                  PackedFloat, PackedBitFlags = 5, PackedInt);
 
-struct AnimEventFrameV2 {
-  DECLARE_REFLECTOR;
-
+struct AnimEventFrameV2 : ReflectorInterface<AnimEventFrameV2> {
   union {
     Vector fdata;
     IVector idata;
@@ -119,8 +116,8 @@ public:
 };
 
 class LMTAnimationEventV2_Internal : public LMTAnimationEventV2 {
-  int ToXML(pugi::xml_node &node, bool standAlone) const;
-  int FromXML(pugi::xml_node &node);
+  int ToXML(pugi::xml_node &node, bool standAlone) const override;
+  int FromXML(pugi::xml_node &node) override;
   virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
 
 public:

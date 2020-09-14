@@ -54,8 +54,8 @@ void REMotlist60Asset::Build() {
       continue;
     }
 
-    motionListStorage.emplace_back(new REMotion43Asset());
-    std::prev(motionListStorage.end())->get()->Assign(cMot);
+    motionListStorage.emplace_back();
+    std::prev(motionListStorage.end())->Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
@@ -68,9 +68,8 @@ void REMotlist60Asset::Build() {
       continue;
     }
 
-    auto *ma = new RESkeletonWrap();
-    ma->Assign(cMot->bones->ptr, cMot->numBones);
-    skeletonStorage.emplace_back(ma);
+    skeletonStorage.emplace_back();
+    std::prev(skeletonStorage.end())->Assign(cMot->bones->ptr, cMot->numBones);
   }
 }
 
@@ -83,9 +82,8 @@ int REMotlist60Asset::Fixup() {
 
 void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
   for (size_t b = 0; b < numBones; b++) {
-    auto *bn = new REMotionBoneWrap();
-    bn->bone = data + b;
-    bones.storage.emplace_back(bn);
+    bones.storage.emplace_back();
+    std::prev(bones.storage.end())->bone = data + b;
   }
 
   for (size_t b = 0; b < numBones; b++) {
@@ -97,8 +95,8 @@ void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
     std::u16string parentName = *parentNameRaw;
 
     for (auto &_b : bones.storage) {
-      if (parentName == &*_b->bone->boneName) {
-        bones.storage[b]->parent = _b.get();
+      if (parentName == &*_b.bone->boneName) {
+        bones.storage[b].parent = &_b;
         break;
       }
     }

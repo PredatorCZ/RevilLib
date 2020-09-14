@@ -18,7 +18,7 @@
 #pragma once
 #include "internal.hpp"
 
-typedef uni::VectorList<uni::MotionTrack, LMTTrack> LMTTracks;
+typedef uni::PolyVectorList<uni::MotionTrack, LMTTrack> LMTTracks;
 
 class LMTAnimation_internal : public LMTAnimation, public LMTTracks {
   static const uint32 MTMI = CompileFourCC("MTMI");
@@ -31,7 +31,7 @@ public:
   typedef std::unique_ptr<char, es::deleter_hybrid_c> MasterBufferPtr;
   typedef std::unique_ptr<LMTAnimationEvent> LMTEventsPtr;
   typedef std::unique_ptr<LMTFloatTrack> LMTFloatTrackPtr;
-  typedef typename LMTTracks::pointer_class_type LMTTrackPtr;
+  typedef typename LMTTracks::class_type LMTTrackPtr;
 
   MasterBufferPtr masterBuffer;
   LMTEventsPtr events;
@@ -46,7 +46,7 @@ public:
   virtual LMTFloatTrackPtr CreateFloatTracks() const = 0;
   virtual std::vector<uint64> GetPtrValues() const = 0;
 
-  int Save(BinWritterRef wr, bool standAlone = true) const;
+  int Save(BinWritterRef wr, bool standAlone = true) const override;
   static int Load(BinReaderRef rd, LMTConstructorPropertiesBase expected,
                   LMTAnimation_internal *&out);
 

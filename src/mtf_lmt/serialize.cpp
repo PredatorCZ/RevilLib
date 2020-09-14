@@ -22,7 +22,7 @@
 #include "float_track.hpp"
 #include "datas/binreader.hpp"
 #include "datas/binwritter.hpp"
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 
 bool IsX64CompatibleAnimationClass(BinReaderRef rd, uint16 version);
 
@@ -331,7 +331,7 @@ int LMT::Load(BinReaderRef rd) {
 
     cProps.dataStart = buffer + cOffset;
 
-    storage[a] = pointer_class_type(LMTAnimation::Create(cProps));
+    storage[a] = class_type(LMTAnimation::Create(cProps));
   }
 
   ClearESPointers();

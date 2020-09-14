@@ -25,9 +25,8 @@
 REFLECTOR_CREATE(FloatTrackComponentRemap, ENUM, 2, CLASS, 8, NONE, X_COMP,
                  Y_COMP, Z_COMP);
 
-template <template <class C> class PtrType> struct FloatTrack {
-  DECLARE_REFLECTOR;
-
+template <template <class C> class PtrType>
+struct FloatTrack : ReflectorInterface<FloatTrack<PtrType>> {
   FloatTrackComponentRemap componentRemaps[4];
   uint32 numFloats;
   PtrType<FloatFrame> frames;
@@ -48,12 +47,10 @@ template <template <class C> class PtrType> struct FloatTrack {
   }
 };
 
-typedef FloatTrack<esPointerX86> FloatEventGroupPointerX86;
-REFLECTOR_CREATE(FloatEventGroupPointerX86, 2, VARNAMES, TEMPLATE,
+REFLECTOR_CREATE((FloatTrack<esPointerX86>), 2, VARNAMES, TEMPLATE,
                  componentRemaps);
 
-typedef FloatTrack<esPointerX64> FloatEventGroupPointerX64;
-REFLECTOR_CREATE(FloatEventGroupPointerX64, 2, VARNAMES, TEMPLATE,
+REFLECTOR_CREATE((FloatTrack<esPointerX64>), 2, VARNAMES, TEMPLATE,
                  componentRemaps);
 
 template <class C> class FloatTracks_shared : public LMTFloatTrack_internal {
@@ -86,7 +83,7 @@ public:
   }
 
   void _ToXML(pugi::xml_node &node, uint32 groupID) const override {
-    ReflectorWrapConst<const C> reflEvent(&(*groups)[groupID]);
+    ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 
@@ -105,7 +102,9 @@ public:
     }
   }
 
-  bool _Is64bit() const override { return sizeof(C::frames) == 8; }
+  bool _Is64bit() const override {
+    return sizeof(std::declval<C>().frames) == 8;
+  }
 };
 
 template <class C> static LMTFloatTrack *_creattorBase() {
@@ -118,20 +117,18 @@ static LMTFloatTrack *_creator(void *ptr, char *buff, bool endi) {
 }
 
 static const std::unordered_map<uint16, LMTFloatTrack *(*)()> floatRegistry = {
-    {0x8, _creattorBase<FloatEventGroupPointerX64>},
-    {0x4, _creattorBase<FloatEventGroupPointerX86>}};
+    {0x8, _creattorBase<FloatTrack<esPointerX64>>},
+    {0x4, _creattorBase<FloatTrack<esPointerX86>>}};
 
 static const std::unordered_map<uint16,
                                 LMTFloatTrack *(*)(void *, char *, bool)>
-    floatRegistryLink = {{0x8, _creator<FloatEventGroupPointerX64>},
-                         {0x4, _creator<FloatEventGroupPointerX86>}};
-
-REGISTER_ENUMS(FloatTrackComponentRemap)
+    floatRegistryLink = {{0x8, _creator<FloatTrack<esPointerX64>>},
+                         {0x4, _creator<FloatTrack<esPointerX86>>}};
 
 LMTFloatTrack *LMTFloatTrack::Create(const LMTConstructorProperties &props) {
   uint16 item = reinterpret_cast<const uint16 &>(props);
 
-  RegisterLocalEnums();
+  REFLECTOR_REGISTER(FloatTrackComponentRemap)
 
   if (!floatRegistry.count(item))
     return nullptr;

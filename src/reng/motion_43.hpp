@@ -79,8 +79,7 @@ struct REMotionTrack43 {
   int Fixup(char *masterBuffer);
 };
 
-template<class trackType>
-struct REMotion_t : public REAssetBase {
+template <class trackType> struct REMotion_t : public REAssetBase {
   uint64 pad;
   esPointerX64<REArray<REMotionBone>> bones;
   esPointerX64<trackType> tracks;
@@ -103,13 +102,17 @@ class REMotionTrackWorker : public uni::MotionTrack {
   void GetValue(esMatrix44 &output, float time) const override;
   void GetValue(float &output, float time) const override;
   void GetValue(Vector4A16 &output, float time) const override;
-  size_t BoneIndex() const { return boneHash; }
+  size_t BoneIndex() const override { return boneHash; }
 
 public:
   std::unique_ptr<RETrackController> controller;
   TrackType_e cType;
   uint32 boneHash;
   uint32 numFrames;
+
+  operator uni::Element<const uni::MotionTrack>() const {
+    return uni::Element<const uni::MotionTrack>{this, false};
+  }
 };
 
 typedef REMotion_t<REMotionTrack43> REMotion43;
@@ -134,6 +137,10 @@ public:
     return uni::MotionTracksConst(this, false);
   }
   MotionType_e MotionType() const override { return MotionType_e::Relative; }
+
+  operator uni::Element<const uni::Motion>() const {
+    return uni::Element<const uni::Motion>{this, false};
+  }
 
   int Fixup() override;
   void Build() override;

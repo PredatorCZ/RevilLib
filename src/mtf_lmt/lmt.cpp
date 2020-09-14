@@ -16,7 +16,7 @@
 */
 
 #include "internal.hpp"
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 
 REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);
 
@@ -39,7 +39,7 @@ void LMT::AppendAnimation(LMTAnimation *ani) {
     return;
   }
 
-  storage.push_back(pointer_class_type(ani, false));
+  storage.emplace_back(ani, false);
 }
 
 LMTAnimation *LMT::AppendAnimation() {
@@ -56,9 +56,9 @@ void LMT::InsertAnimation(LMTAnimation *ani, uint32 at, bool replace) {
 
   if (at >= storage.size()) {
     storage.resize(at);
-    storage.push_back(pointer_class_type(ani));
+    storage.emplace_back(ani);
   } else {
-    storage[at] = pointer_class_type(ani, false);
+    storage[at] = class_type(ani, false);
   }
 }
 

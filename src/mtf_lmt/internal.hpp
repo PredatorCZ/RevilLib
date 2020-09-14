@@ -34,8 +34,7 @@ static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
 };
 
-struct TrackMinMax {
-  DECLARE_REFLECTOR;
+struct TrackMinMax : ReflectorInterface<TrackMinMax> {
   Vector4A16 min;
   Vector4A16 max;
 };

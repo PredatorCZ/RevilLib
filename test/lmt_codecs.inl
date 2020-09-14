@@ -131,7 +131,8 @@ int test_lmt_codec08() {
   control->Evaluate(resultVector, 0);
 
   Vector4A16::SetEpsilon(0.00002f);
-  TEST_EQUAL(testingQuatBi * Vector4A16(1.0f, 0.0f, 0.0f, 1.0f), resultVector);
+  TEST_EQUAL(Vector4A16(testingQuatBi * Vector4A16(1.0f, 0.0f, 0.0f, 1.0f)),
+             resultVector);
 
   return 0;
 }
@@ -145,7 +146,8 @@ int test_lmt_codec09() {
   control->Evaluate(resultVector, 0);
 
   Vector4A16::SetEpsilon(0.00002f);
-  TEST_EQUAL(testingQuatBi * Vector4A16(0.0f, 1.0f, 0.0f, 1.0f), resultVector);
+  TEST_EQUAL(Vector4A16(testingQuatBi * Vector4A16(0.0f, 1.0f, 0.0f, 1.0f)),
+             resultVector);
 
   return 0;
 }
@@ -159,7 +161,8 @@ int test_lmt_codec10() {
   control->Evaluate(resultVector, 0);
 
   Vector4A16::SetEpsilon(0.00002f);
-  TEST_EQUAL(testingQuatBi * Vector4A16(0.0f, 0.0f, 1.0f, 1.0f), resultVector);
+  TEST_EQUAL(Vector4A16(testingQuatBi * Vector4A16(0.0f, 0.0f, 1.0f, 1.0f)),
+             resultVector);
 
   return 0;
 }

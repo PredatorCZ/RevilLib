@@ -21,8 +21,7 @@
 #include "datas/allocator_hybrid.hpp"
 #include "datas/flags.hpp"
 
-struct Buf_SingleVector3 {
-  DECLARE_REFLECTOR;
+struct Buf_SingleVector3 : ReflectorInterface<Buf_SingleVector3> {
   Vector data;
 
   static const uint32 NEWLINEMOD = 1;
@@ -45,7 +44,7 @@ struct Buf_SingleVector3 {
   void SetFrame(uint64) {}
 
   void Interpolate(Vector4A16 &out, const Buf_SingleVector3 &rightFrame,
-                  float delta, const TrackMinMax *) const;
+                   float delta, const TrackMinMax *) const;
 
   void SwapEndian();
 };
@@ -53,11 +52,10 @@ struct Buf_SingleVector3 {
 struct Buf_StepRotationQuat3 : Buf_SingleVector3 {
   void Evaluate(Vector4A16 &out) const;
   void Interpolate(Vector4A16 &out, const Buf_StepRotationQuat3 &rightFrame,
-                  float delta, const TrackMinMax *) const;
+                   float delta, const TrackMinMax *) const;
 };
 
-struct Buf_LinearVector3 {
-  DECLARE_REFLECTOR;
+struct Buf_LinearVector3 : ReflectorInterface<Buf_LinearVector3> {
   Vector data;
   uint32 additiveFrames;
 
@@ -81,7 +79,7 @@ struct Buf_LinearVector3 {
   void SetFrame(uint64 frame);
 
   void Interpolate(Vector4A16 &out, const Buf_LinearVector3 &rightFrame,
-                  float delta, const TrackMinMax *) const;
+                   float delta, const TrackMinMax *) const;
 
   void SwapEndian();
 };
@@ -89,9 +87,7 @@ struct Buf_LinearVector3 {
 REFLECTOR_CREATE(Buf_HermiteVector3_Flags, ENUM, 1, CLASS, InTangentX,
                  InTangentY, InTangentZ, OutTangentX, OutTangentY, OutTangentZ)
 
-struct Buf_HermiteVector3 {
-  DECLARE_REFLECTOR;
-
+struct Buf_HermiteVector3 : ReflectorInterface<Buf_HermiteVector3> {
   uint8 size;
   esFlags<uint8, Buf_HermiteVector3_Flags> flags;
   uint16 additiveFrames;
@@ -122,7 +118,7 @@ struct Buf_HermiteVector3 {
   void SetFrame(uint64 frame);
 
   void Interpolate(Vector4A16 &out, const Buf_HermiteVector3 &rightFrame,
-                  float delta, const TrackMinMax *) const;
+                   float delta, const TrackMinMax *) const;
 
   void SwapEndian();
 };
@@ -149,7 +145,7 @@ struct Buf_SphericalRotation {
   static const uint64 frameField = ~dataField;
 
   void Interpolate(Vector4A16 &out, const Buf_SphericalRotation &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   float delta, const TrackMinMax *minMax) const;
 
   void Devaluate(const Vector4A16 &in);
 
@@ -192,7 +188,7 @@ struct Buf_BiLinearVector3_16bit {
   void SetFrame(uint64 frame);
 
   void Interpolate(Vector4A16 &out, const Buf_BiLinearVector3_16bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   float delta, const TrackMinMax *minMax) const;
 
   void SwapEndian();
 };
@@ -225,7 +221,7 @@ struct Buf_BiLinearVector3_8bit {
   void SetFrame(uint64 frame);
 
   void Interpolate(Vector4A16 &out, const Buf_BiLinearVector3_8bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   float delta, const TrackMinMax *minMax) const;
 
   void SwapEndian() {}
 };
@@ -241,8 +237,8 @@ struct Buf_LinearRotationQuat4_14bit : Buf_SphericalRotation {
   void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_LinearRotationQuat4_14bit &rightFrame, float delta,
-                  const TrackMinMax *minMax) const;
+                   const Buf_LinearRotationQuat4_14bit &rightFrame, float delta,
+                   const TrackMinMax *minMax) const;
 };
 
 struct Buf_BiLinearRotationQuat4_7bit {
@@ -274,8 +270,8 @@ struct Buf_BiLinearRotationQuat4_7bit {
   void SetFrame(uint64 frame);
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuat4_7bit &rightFrame, float delta,
-                  const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuat4_7bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 
   void SwapEndian();
 };
@@ -290,8 +286,8 @@ struct Buf_BiLinearRotationQuatXW_14bit : Buf_BiLinearRotationQuat4_7bit {
   void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuatXW_14bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuatXW_14bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 };
 
 struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuatXW_14bit {
@@ -300,8 +296,8 @@ struct Buf_BiLinearRotationQuatYW_14bit : Buf_BiLinearRotationQuatXW_14bit {
   void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuatYW_14bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuatYW_14bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 };
 
 struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuatXW_14bit {
@@ -310,8 +306,8 @@ struct Buf_BiLinearRotationQuatZW_14bit : Buf_BiLinearRotationQuatXW_14bit {
   void Devaluate(const Vector4A16 &in);
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuatZW_14bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuatZW_14bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 };
 
 struct Buf_BiLinearRotationQuat4_11bit {
@@ -337,8 +333,8 @@ struct Buf_BiLinearRotationQuat4_11bit {
   void GetFrame(int32 &currentFrame) const;
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuat4_11bit &rightFrame,
-                  float delta, const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuat4_11bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 
   void SwapEndian();
 };
@@ -366,8 +362,8 @@ struct Buf_BiLinearRotationQuat4_9bit {
   void GetFrame(int32 &currentFrame) const;
 
   void Interpolate(Vector4A16 &out,
-                  const Buf_BiLinearRotationQuat4_9bit &rightFrame, float delta,
-                  const TrackMinMax *minMax) const;
+                   const Buf_BiLinearRotationQuat4_9bit &rightFrame,
+                   float delta, const TrackMinMax *minMax) const;
 
   void SwapEndian() {}
 };

@@ -17,13 +17,13 @@
 
 #include "animation.hpp"
 #include "bone_track.hpp"
-#include "event.hpp"
-#include "float_track.hpp"
 #include "datas/binreader.hpp"
 #include "datas/fileinfo.hpp"
-#include "datas/masterprinter.hpp"
+#include "datas/master_printer.hpp"
 #include "datas/pugiex.hpp"
 #include "datas/reflector_xml.hpp"
+#include "event.hpp"
+#include "float_track.hpp"
 #include "pugixml.hpp"
 #include <algorithm>
 
@@ -115,7 +115,7 @@ int LMTFloatTrack_internal::ToXML(pugi::xml_node &node, bool standAlone) const {
     const FloatFrame *cEvents = GetFrames(g);
     const FloatFrame *const cEventsEnd = cEvents + numEvents;
 
-    for (cEvents; cEvents != cEventsEnd; cEvents++)
+    for (; cEvents != cEventsEnd; cEvents++)
       cEvents->ToXML(rangesNode);
   }
 
@@ -177,7 +177,7 @@ int LMTFloatTrack_internal::FromXML(pugi::xml_node &floatTracksNode) {
 
     uint32 curEventTrigger = 0;
 
-    for (cFrames; cFrames != cFramesEnd; cFrames++, curEventTrigger++)
+    for (; cFrames != cFramesEnd; cFrames++, curEventTrigger++)
       cFrames->FromXML(rangeNodes[curEventTrigger]);
   }
   return 0;
@@ -346,7 +346,7 @@ int LMTAnimationEventV1_Internal::FromXML(pugi::xml_node &node) {
 }
 
 int AnimEventFrameV2::ToXML(pugi::xml_node &node) const {
-  ReflectorWrapConst<const AnimEventFrameV2> reflFrame(this);
+  ReflectorWrapConst<AnimEventFrameV2> reflFrame(this);
   ReflectorXMLUtil::Save(reflFrame, node);
 
   pugi::xml_node dNode = node.append_child("data");
@@ -562,7 +562,7 @@ int LMTTrack_internal::ToXML(pugi::xml_node &node, bool standAlone) const {
   _ToXML(node);
 
   if (minMax) {
-    ReflectorWrapConst<const TrackMinMax> refl(minMax.get());
+    ReflectorWrapConst<TrackMinMax> refl(minMax.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
@@ -611,7 +611,7 @@ int LMTAnimation_internal::FromXML(pugi::xml_node &node) {
   storage.reserve(trackNodes.size());
 
   for (auto &t : trackNodes) {
-    storage.push_back(CreateTrack());
+    storage.emplace_back(CreateTrack());
     (*(storage.end() - 1))->FromXML(t);
   }
 
@@ -826,7 +826,8 @@ int LMT::FromXML(pugi::xml_node &node, const char *fileName,
 
       if (!reslt) {
         printerror("[LMT] Couldn't load animation: "
-                   << absolutePath.c_str() << ", " << GetXMLErrorMessage(reslt)
+                   << absolutePath.c_str() << ", "
+                   << GetReflectedEnum<XMLError>()[reslt]
                    << " at offset: " << reslt.offset);
         delete cAni;
         storage.emplace_back(nullptr);
@@ -877,7 +878,8 @@ int LMT::FromXML(const char *fileName, Architecture forceArchitecture) {
 
   if (!reslt) {
     printerror("[LMT] Couldn't load xml file. "
-               << GetXMLErrorMessage(reslt) << " at offset: " << reslt.offset);
+               << GetReflectedEnum<XMLError>()[reslt]
+               << " at offset: " << reslt.offset);
     return 1;
   }
 
