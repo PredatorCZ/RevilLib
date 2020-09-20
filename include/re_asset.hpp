@@ -20,7 +20,7 @@
 
 class REAsset {
 public:
-  static REAsset *Load(const char *fileName);
+  static REAsset *Load(const char *fileName, bool suppressErrors = false);
   static REAsset *Load(BinReaderRef rd);
   virtual ~REAsset() {}
 };

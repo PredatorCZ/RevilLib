@@ -98,9 +98,6 @@ template <class trackType> struct REMotion_t : public REAssetBase {
 
 class REMotionTrackWorker : public uni::MotionTrack {
   TrackType_e TrackType() const override { return cType; }
-  void GetValue(uni::RTSValue &output, float time) const override;
-  void GetValue(esMatrix44 &output, float time) const override;
-  void GetValue(float &output, float time) const override;
   void GetValue(Vector4A16 &output, float time) const override;
   size_t BoneIndex() const override { return boneHash; }
 
@@ -130,7 +127,6 @@ public:
   std::string Name() const override {
     return es::ToUTF8(Get().animationName.operator->());
   }
-  void FrameRate(uint32 fps) override;
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
   uni::MotionTracksConst Tracks() const override {

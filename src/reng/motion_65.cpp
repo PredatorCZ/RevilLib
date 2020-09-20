@@ -50,10 +50,6 @@ int REMotionTrack65::Fixup(char *masterBuffer) {
   return 0;
 }
 
-void REMotion65Asset::FrameRate(uint32 fps) {
-  throw std::logic_error("Unsupported call!");
-}
-
 void REMotion65Asset::Build() {
   const uint32 numTracks = Get().numTracks;
 

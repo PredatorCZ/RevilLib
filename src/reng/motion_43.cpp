@@ -67,22 +67,6 @@ int RETrackCurve43::Fixup(char *masterBuffer) {
   return 0;
 }
 
-void REMotion43Asset::FrameRate(uint32 fps) {
-  throw std::logic_error("Unsupported call!");
-}
-
-void REMotionTrackWorker::GetValue(uni::RTSValue &output, float time) const {
-  throw std::logic_error("Unsupported call!");
-}
-
-void REMotionTrackWorker::GetValue(esMatrix44 &output, float time) const {
-  throw std::logic_error("Unsupported call!");
-}
-
-void REMotionTrackWorker::GetValue(float &output, float time) const {
-  throw std::logic_error("Unsupported call!");
-}
-
 void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
   if (!controller)
     return;

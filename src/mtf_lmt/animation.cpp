@@ -285,7 +285,7 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
   }
 };
 
-void LMTAnimation_internal::FrameRate(uint32 fps) {
+void LMTAnimation_internal::FrameRate(uint32 fps) const {
   for (auto &s : storage) {
     static_cast<LMTTrack_internal *>(s.get())->frameRate =
         static_cast<float>(fps);
@@ -500,7 +500,6 @@ REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX64, 4>>), 2, VARNAMES, TEMPLATE,
 ES_STATIC_ASSERT(sizeof(AnimV1<AnimTraitsV1<esPointerX86, 2>>) == 192);
 ES_STATIC_ASSERT(sizeof(AnimV3<AnimTraitsV2<esPointerX64, 4>>) == 96);
 ES_STATIC_ASSERT(alignof(AnimV3<AnimTraitsV2<esPointerX64, 4>>) == 16);
-ES_STATIC_ASSERT(alignof(Vector4A16) == 16);
 // ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
 
 template <class Derived> static LMTAnimation *_creattorBase() {

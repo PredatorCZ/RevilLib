@@ -20,11 +20,13 @@
 #include "datas/master_printer.hpp"
 #include <map>
 
-REAsset *REAsset::Load(const char *fileName) {
+REAsset *REAsset::Load(const char *fileName, bool suppressErrors) {
   BinReader rd(fileName);
 
   if (!rd.IsValid()) {
-    printerror("[REAsset] Couldn't open file: " << fileName);
+    if (!suppressErrors) {
+      printerror("[REAsset] Couldn't open file: " << fileName);
+    }
     return nullptr;
   }
 
@@ -57,6 +59,7 @@ int REAsset_internal::Load(BinReaderRef rd) {
 
 void REAsset_internal::Assign(REAssetBase *data) {
   char *rawData = reinterpret_cast<char *>(data);
-  buffer = buffer_type(rawData, rawData + 1, buffer_type::allocator_type(rawData));
+  buffer =
+      buffer_type(rawData, rawData + 1, buffer_type::allocator_type(rawData));
   Build();
 }

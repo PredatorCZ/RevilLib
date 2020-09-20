@@ -55,7 +55,7 @@ public:
   }
 
   std::string Name() const override { return ""; }
-  void FrameRate(uint32 fps) override;
+  void FrameRate(uint32 fps) const override;
   uint32 FrameRate() const override;
   float Duration() const override;
   MotionType_e MotionType() const override { return MotionType_e::Relative; }

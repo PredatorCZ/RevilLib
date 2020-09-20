@@ -48,7 +48,6 @@ public:
   std::string Name() const override {
     return es::ToUTF8(Get().animationName.operator->());
   }
-  void FrameRate(uint32 fps) override;
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
   uni::MotionTracksConst Tracks() const override {
