@@ -16,11 +16,10 @@
 */
 
 #include "internal.hpp"
-#include "datas/master_printer.hpp"
 
 REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);
 
-void LMT::Version(V _version, Architecture arch) {
+void LMT::Version(LMTVersion _version, LMTArchType _arch) {
   if (!masterBuffer.empty()) {
     throw std::runtime_error("Cannot set version for read only class!");
   }
@@ -29,14 +28,13 @@ void LMT::Version(V _version, Architecture arch) {
     throw std::runtime_error("Cannot set version for already used class.");
   }
 
-  props.version = static_cast<uint8>(_version);
-  props.ptrSize = arch == X64 ? 8 : 4;
+  props.version = _version;
+  props.arch = _arch;
 }
 
 void LMT::AppendAnimation(LMTAnimation *ani) {
   if (ani && *ani != props) {
-    printerror("[LMT] Cannot append animation. Properties mismatch.");
-    return;
+    throw std::runtime_error("Cannot append animation. Properties mismatch.");
   }
 
   storage.emplace_back(ani, false);
@@ -50,8 +48,7 @@ LMTAnimation *LMT::AppendAnimation() {
 
 void LMT::InsertAnimation(LMTAnimation *ani, uint32 at, bool replace) {
   if (*ani != props) {
-    printerror("[LMT] Cannot append animation. Properties mismatch.");
-    return;
+    std::runtime_error("Cannot append animation. Properties mismatch.");
   }
 
   if (at >= storage.size()) {
@@ -64,31 +61,4 @@ void LMT::InsertAnimation(LMTAnimation *ani, uint32 at, bool replace) {
 
 LMTAnimation *LMT::CreateAnimation() const {
   return LMTAnimation::Create(props);
-}
-
-uni::MotionTrack::TrackType_e LMTTrack::TrackType() const {
-  const auto iType = this->GetTrackType();
-
-  switch (iType) {
-  case TrackType_AbsolutePosition:
-  case TrackType_LocalPosition:
-    return MotionTrack::TrackType_e::Position;
-
-  case TrackType_AbsoluteRotation:
-  case TrackType_LocalRotation:
-    return MotionTrack::TrackType_e::Rotation;
-
-  default:
-    return MotionTrack::TrackType_e::Scale;
-  }
-}
-
-void LMTTrack::GetValue(uni::RTSValue &output, float time) const {
-  throw std::logic_error("Unsupported call!");
-}
-void LMTTrack::GetValue(esMatrix44 &output, float time) const {
-  throw std::logic_error("Unsupported call!");
-}
-void LMTTrack::GetValue(float &output, float time) const {
-  throw std::logic_error("Unsupported call!");
 }

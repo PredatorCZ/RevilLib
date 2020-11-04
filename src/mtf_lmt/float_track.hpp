@@ -79,5 +79,5 @@ public:
 
   int ToXML(pugi::xml_node &node, bool standAlone) const override;
   int FromXML(pugi::xml_node &node) override;
-  int Save(BinWritterRef wr) const;
+  void Save(BinWritterRef wr) const;
 };

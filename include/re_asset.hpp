@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2019 Lukas Cone
+    Copyright(C) 2017-2020 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -17,10 +17,17 @@
 
 #pragma once
 #include "datas/binreader_stream.hpp"
+#include "datas/string_view.hpp"
 
+/*Castable into:
+  uni::Motion
+  uni::SkeletonsConst
+  uni::MotionsConst
+*/
 class REAsset {
 public:
-  static REAsset *Load(const char *fileName, bool suppressErrors = false);
+  static REAsset *Load(es::string_view fileName);
+  static REAsset *Load(const std::string &fileName);
   static REAsset *Load(BinReaderRef rd);
   virtual ~REAsset() {}
 };

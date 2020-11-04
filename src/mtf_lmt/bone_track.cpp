@@ -20,8 +20,8 @@
 #include "datas/reflector_xml.hpp"
 #include "fixup_storage.hpp"
 
+#include <map>
 #include <memory>
-#include <unordered_map>
 
 REFLECTOR_CREATE(TrackType_er, ENUM, 2, CLASS, 8, LocalRotation, LocalPosition,
                  LocalScale, AbsoluteRotation, AbsolutePosition);
@@ -170,8 +170,7 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(TrackV2, bufferOffset),
-        offsetof(TrackV2, extremes),
+        offsetof(TrackV2, bufferOffset), offsetof(TrackV2, extremes),
     };
 
     return ptrs;
@@ -217,8 +216,7 @@ struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(TrackV3, bufferOffset),
-        offsetof(TrackV3, extremes),
+        offsetof(TrackV3, bufferOffset), offsetof(TrackV3, extremes),
     };
 
     return ptrs;
@@ -300,6 +298,23 @@ void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
         }
       }
     }
+  }
+}
+
+uni::MotionTrack::TrackType_e LMTTrack_internal::TrackType() const {
+  const auto iType = this->GetTrackType();
+
+  switch (iType) {
+  case TrackType_AbsolutePosition:
+  case TrackType_LocalPosition:
+    return MotionTrack::TrackType_e::Position;
+
+  case TrackType_AbsoluteRotation:
+  case TrackType_LocalRotation:
+    return MotionTrack::TrackType_e::Rotation;
+
+  default:
+    return MotionTrack::TrackType_e::Scale;
   }
 }
 
@@ -477,7 +492,7 @@ REFLECTOR_CREATE((TrackV3<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
 REFLECTOR_CREATE((TrackV3<esPointerX64>), 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, boneID2, weight, referenceData);
 
-template <class C> static LMTTrack *_creattorBase() {
+template <class C> static LMTTrack *_creatorBase() {
   return new LMTTrackShared<C>;
 }
 
@@ -485,42 +500,43 @@ template <class C> static LMTTrack *_creator(void *ptr, char *buff, bool endi) {
   return new LMTTrackShared<C>(static_cast<C *>(ptr), buff, endi);
 }
 
-static const std::unordered_map<uint16, LMTTrack *(*)()> trackRegistry = {
-    {0x08, _creattorBase<TrackV0<esPointerX64>>},
-    {0x04, _creattorBase<TrackV0<esPointerX86>>},
-    {0x108, _creattorBase<TrackV1<esPointerX64, TrackV1BufferTypes>>},
-    {0x104, _creattorBase<TrackV1<esPointerX86, TrackV1BufferTypes>>},
-    {0x208, _creattorBase<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
-    {0x204, _creattorBase<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
-    {0x308, _creattorBase<TrackV2<esPointerX64>>},
-    {0x304, _creattorBase<TrackV2<esPointerX86>>},
-    {0x408, _creattorBase<TrackV3<esPointerX64>>},
-    {0x404, _creattorBase<TrackV3<esPointerX86>>},
+static const std::map<LMTConstructorPropertiesBase, LMTTrack *(*)()>
+    trackRegistry = {
+        // clang-format off
+        {{LMTArchType::X64, LMTVersion::V_22}, _creatorBase<TrackV0<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_22}, _creatorBase<TrackV0<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_40}, _creatorBase<TrackV1<esPointerX64, TrackV1BufferTypes>>},
+        {{LMTArchType::X86, LMTVersion::V_40}, _creatorBase<TrackV1<esPointerX86, TrackV1BufferTypes>>},
+        {{LMTArchType::X64, LMTVersion::V_51}, _creatorBase<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
+        {{LMTArchType::X86, LMTVersion::V_51}, _creatorBase<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
+        {{LMTArchType::X64, LMTVersion::V_56}, _creatorBase<TrackV2<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_56}, _creatorBase<TrackV2<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_92}, _creatorBase<TrackV3<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_92}, _creatorBase<TrackV3<esPointerX86>>},
+        // clang-format on
 };
 
-static const std::unordered_map<uint16, LMTTrack *(*)(void *, char *, bool)>
+static const std::map<LMTConstructorPropertiesBase,
+                      LMTTrack *(*)(void *, char *, bool)>
     trackRegistryLink = {
-        {0x08, _creator<TrackV0<esPointerX64>>},
-        {0x04, _creator<TrackV0<esPointerX86>>},
-        {0x108, _creator<TrackV1<esPointerX64, TrackV1BufferTypes>>},
-        {0x104, _creator<TrackV1<esPointerX86, TrackV1BufferTypes>>},
-        {0x208, _creator<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
-        {0x204, _creator<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
-        {0x308, _creator<TrackV2<esPointerX64>>},
-        {0x304, _creator<TrackV2<esPointerX86>>},
-        {0x408, _creator<TrackV3<esPointerX64>>},
-        {0x404, _creator<TrackV3<esPointerX86>>},
+        // clang-format off
+        {{LMTArchType::X64, LMTVersion::V_22}, _creator<TrackV0<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_22}, _creator<TrackV0<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_40}, _creator<TrackV1<esPointerX64, TrackV1BufferTypes>>},
+        {{LMTArchType::X86, LMTVersion::V_40}, _creator<TrackV1<esPointerX86, TrackV1BufferTypes>>},
+        {{LMTArchType::X64, LMTVersion::V_51}, _creator<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
+        {{LMTArchType::X86, LMTVersion::V_51}, _creator<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
+        {{LMTArchType::X64, LMTVersion::V_56}, _creator<TrackV2<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_56}, _creator<TrackV2<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_92}, _creator<TrackV3<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::V_92}, _creator<TrackV3<esPointerX86>>},
+        // clang-format on
 };
 
 LMTTrack *LMTTrack::Create(const LMTConstructorProperties &props) {
-  uint16 item = reinterpret_cast<const uint16 &>(props);
-
-  if (!trackRegistry.count(item))
-    return nullptr;
-
   if (props.dataStart)
-    return trackRegistryLink.at(item)(props.dataStart, props.masterBuffer,
+    return trackRegistryLink.at(props)(props.dataStart, props.masterBuffer,
                                       props.swappedEndian);
   else
-    return trackRegistry.at(item)();
+    return trackRegistry.at(props)();
 }

@@ -21,7 +21,6 @@
 typedef uni::PolyVectorList<uni::MotionTrack, LMTTrack> LMTTracks;
 
 class LMTAnimation_internal : public LMTAnimation, public LMTTracks {
-  static const uint32 MTMI = CompileFourCC("MTMI");
   virtual void _ToXML(pugi::xml_node &node) const = 0;
   virtual void _FromXML(pugi::xml_node &node) = 0;
   virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
@@ -46,7 +45,11 @@ public:
   virtual LMTFloatTrackPtr CreateFloatTracks() const = 0;
   virtual std::vector<uint64> GetPtrValues() const = 0;
 
-  int Save(BinWritterRef wr, bool standAlone = true) const override;
+  void Save(pugi::xml_node &node, bool standAlone = false) const override;
+  void Save(BinWritterRef wr, bool standAlone = true) const override;
+  void Save(es::string_view fileName, bool asXML = true) const override;
+  void Save(const std::string &fileName, bool asXML = true) const override;
+
   static int Load(BinReaderRef rd, LMTConstructorPropertiesBase expected,
                   LMTAnimation_internal *&out);
 
@@ -61,5 +64,5 @@ public:
   MotionType_e MotionType() const override { return MotionType_e::Relative; }
 
   int FromXML(pugi::xml_node &node) override;
-  int ToXML(pugi::xml_node &node, bool standAlone) const override;
+  void ToXML(const std::string &fileName, bool standAlone = false) const;
 };

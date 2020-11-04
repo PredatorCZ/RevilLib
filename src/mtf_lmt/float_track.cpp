@@ -20,7 +20,7 @@
 #include "fixup_storage.hpp"
 
 #include <array>
-#include <unordered_map>
+#include <map>
 
 REFLECTOR_CREATE(FloatTrackComponentRemap, ENUM, 2, CLASS, 8, NONE, X_COMP,
                  Y_COMP, Z_COMP);
@@ -116,26 +116,29 @@ static LMTFloatTrack *_creator(void *ptr, char *buff, bool endi) {
   return new FloatTracks_shared<C>(static_cast<C *>(ptr), buff, endi);
 }
 
-static const std::unordered_map<uint16, LMTFloatTrack *(*)()> floatRegistry = {
-    {0x8, _creattorBase<FloatTrack<esPointerX64>>},
-    {0x4, _creattorBase<FloatTrack<esPointerX86>>}};
+static const std::map<LMTConstructorPropertiesBase, LMTFloatTrack *(*)()>
+    floatRegistry = {
+        {{LMTArchType::X64, LMTVersion::Auto},
+         _creattorBase<FloatTrack<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::Auto},
+         _creattorBase<FloatTrack<esPointerX86>>},
+};
 
-static const std::unordered_map<uint16,
-                                LMTFloatTrack *(*)(void *, char *, bool)>
-    floatRegistryLink = {{0x8, _creator<FloatTrack<esPointerX64>>},
-                         {0x4, _creator<FloatTrack<esPointerX86>>}};
+static const std::map<LMTConstructorPropertiesBase,
+                      LMTFloatTrack *(*)(void *, char *, bool)>
+    floatRegistryLink = {
+        {{LMTArchType::X64, LMTVersion::Auto},
+         _creator<FloatTrack<esPointerX64>>},
+        {{LMTArchType::X86, LMTVersion::Auto},
+         _creator<FloatTrack<esPointerX86>>},
+};
 
 LMTFloatTrack *LMTFloatTrack::Create(const LMTConstructorProperties &props) {
-  uint16 item = reinterpret_cast<const uint16 &>(props);
-
   REFLECTOR_REGISTER(FloatTrackComponentRemap)
 
-  if (!floatRegistry.count(item))
-    return nullptr;
-
   if (props.dataStart)
-    return floatRegistryLink.at(item)(props.dataStart, props.masterBuffer,
-                                      props.swappedEndian);
+    return floatRegistryLink.at(props)(props.dataStart, props.masterBuffer,
+                                       props.swappedEndian);
   else
-    return floatRegistry.at(item)();
+    return floatRegistry.at(props)();
 }

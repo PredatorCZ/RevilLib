@@ -17,14 +17,18 @@
 
 #include "animation.hpp"
 #include "bone_track.hpp"
+#include "datas/binreader.hpp"
+#include "datas/binwritter.hpp"
+#include "datas/except.hpp"
 #include "event.hpp"
 #include "fixup_storage.hpp"
 #include "float_track.hpp"
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/master_printer.hpp"
 
-bool IsX64CompatibleAnimationClass(BinReaderRef rd, uint16 version);
+static constexpr uint32 MTMI = CompileFourCC("MTMI");
+static constexpr uint32 LMT_ID = CompileFourCC("LMT\0");
+static constexpr uint32 TML_ID = CompileFourCC("\0TML");
+
+bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version);
 
 int LMTAnimationEventV1_Internal::SaveBuffer(BinWritterRef wr,
                                              LMTFixupStorage &fixups) const {
@@ -104,7 +108,7 @@ int LMTTrack_internal::SaveBuffers(BinWritterRef wr,
   return 0;
 }
 
-int LMTFloatTrack_internal::Save(BinWritterRef wr) const {
+void LMTFloatTrack_internal::Save(BinWritterRef wr) const {
   LMTFixupStorage localStorage;
 
   _Save(wr, localStorage);
@@ -119,31 +123,34 @@ int LMTFloatTrack_internal::Save(BinWritterRef wr) const {
   }
 
   localStorage.FixupPointers(wr, _Is64bit());
-
-  return 0;
 }
 
-int LMTAnimation::Save(const char *fileName, bool supressErrors) const {
+void LMTAnimation_internal::Save(const std::string &fileName,
+                                 bool asXML) const {
+  if (asXML) {
+    ToXML(fileName);
+  } else {
+    BinWritter wr(fileName);
 
-  BinWritter wr(fileName);
-
-  if (!wr.IsValid()) {
-    if (!supressErrors) {
-      printerror("[LMT] Couldn't save file: " << fileName);
+    if (!wr.IsValid()) {
+      throw es::FileInvalidAccessError(fileName);
     }
-    return -1;
+    Save(wr);
   }
-
-  return Save(wr);
 }
 
-int LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
+void LMTAnimation_internal::Save(es::string_view fileName, bool asXML) const {
+  auto sFile = fileName.to_string();
+  Save(sFile);
+}
+
+void LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
   LMTFixupStorage fixups;
   size_t saveposBuffSize;
 
   if (standAlone) {
     wr.Write(MTMI);
-    wr.Write<uint16>(props.version);
+    wr.Write(static_cast<uint16>(props.version));
     saveposBuffSize = wr.Tell();
     wr.ApplyPadding();
   }
@@ -201,8 +208,6 @@ int LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
   }
 
   fixups.FixupPointers(wr, _Is64bit());
-
-  return 0;
 }
 
 int LMTAnimation_internal::Load(BinReaderRef rd,
@@ -244,29 +249,28 @@ int LMTAnimation_internal::Load(BinReaderRef rd,
   return 0;
 }
 
-int LMT::Load(BinReaderRef rd) {
+void LMT::Load(BinReaderRef rd) {
   uint32 magic;
   rd.Read(magic);
 
-  if (magic == ID_R) {
+  if (magic == TML_ID) {
     rd.SwapEndian(true);
-  } else if (magic != ID) {
-    printerror("[LMT] Invalid file.");
-    return 1;
+  } else if (magic != LMT_ID) {
+    throw es::InvalidHeaderError(magic);
   }
 
-  uint16 version;
-  rd.Read(version);
+  uint16 iversion;
+  rd.Read(iversion);
+  LMTVersion version = static_cast<LMTVersion>(iversion);
 
-  if (!LMTAnimation::SupportedVersion(version)) {
-    printerror("[LMT] Unknown version: " << version);
-    return 2;
+  if (!LMTAnimation::SupportedVersion(iversion)) {
+    throw es::InvalidVersionError(magic);
   }
 
   uint16 numBlocks;
   rd.Read(numBlocks);
 
-  if (version == V_92)
+  if (version == LMTVersion::V_92)
     rd.Skip(8); // 0x17011700
 
   size_t calcutatedSizeX64 = numBlocks * 8 + rd.Tell();
@@ -284,8 +288,9 @@ int LMT::Load(BinReaderRef rd) {
   magic = 0;
 
   while (!magic) {
-    if (rd.IsEOF())
-      return 3;
+    if (rd.IsEOF()) {
+      throw es::UnexpectedEOS();
+    }
 
     rd.Read(magic);
   }
@@ -300,9 +305,10 @@ int LMT::Load(BinReaderRef rd) {
 
   const size_t fleSize = rd.GetSize();
   const uint32 multiplier = isX64 ? 2 : 1;
-  const uint32 lookupTableOffset = 8 + (version == V_92 ? (4 * multiplier) : 0);
+  const uint32 lookupTableOffset =
+      8 + (version == LMTVersion::V_92 ? (4 * multiplier) : 0);
 
-  Version(static_cast<V>(version), isX64 ? X64 : X86);
+  Version(version, isX64 ? LMTArchType::X64 : LMTArchType::X86);
 
   rd.ReadContainer(masterBuffer, fleSize);
   char *buffer = &masterBuffer[0];
@@ -335,48 +341,28 @@ int LMT::Load(BinReaderRef rd) {
   }
 
   ClearESPointers();
-
-  return 0;
 }
 
-int LMT::Load(const char *fileName, bool supressErrors) {
-  BinReader rd(fileName);
-
-  if (!rd.IsValid()) {
-    if (!supressErrors) {
-      printerror("[LMT] Cannot open file: " << fileName);
-    }
-    return -1;
-  }
-
-  return Load(rd);
+void LMT::Load(es::string_view fileName, LMTImportOverrides overrides) {
+  auto sFile = fileName.to_string();
+  Load(sFile, overrides);
 }
 
-int LMT::Save(const char *fileName, bool swapEndian, bool supressErrors) const {
-  BinWritter wr(fileName);
-
-  if (!wr.IsValid()) {
-    if (!supressErrors) {
-      printerror("[LMT] Cannot save file: " << fileName);
-    }
-    return -1;
-  }
-
-  wr.SwapEndian(swapEndian);
-
-  return Save(wr);
+void LMT::Save(es::string_view fileName, LMTExportSettings settings) const {
+  auto sFile = fileName.to_string();
+  Save(sFile, settings);
 }
 
-int LMT::Save(BinWritterRef wr) const {
-  wr.Write(ID);
-  wr.Write<uint16>(Version());
+void LMT::Save(BinWritterRef wr) const {
+  wr.Write(LMT_ID);
+  wr.Write(static_cast<uint16>(Version()));
   wr.Write(static_cast<uint16>(storage.size()));
 
-  V eVersion = static_cast<V>(Version());
-  bool isX64 = GetArchitecture() == X64;
+  auto eVersion = Version();
+  bool isX64 = Architecture() == LMTArchType::X64;
   LMTFixupStorage fixups;
 
-  if (eVersion == V_92) {
+  if (eVersion == LMTVersion::V_92) {
     wr.Write(0x17011700);
     wr.Write(0);
   }
@@ -398,6 +384,4 @@ int LMT::Save(BinWritterRef wr) const {
   }
 
   fixups.FixupPointers(wr, isX64);
-
-  return 0;
 }

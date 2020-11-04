@@ -18,6 +18,8 @@
 #include "animation.hpp"
 #include "bone_track.hpp"
 #include "datas/binreader.hpp"
+#include "datas/binwritter.hpp"
+#include "datas/except.hpp"
 #include "datas/fileinfo.hpp"
 #include "datas/master_printer.hpp"
 #include "datas/pugiex.hpp"
@@ -32,6 +34,10 @@
 
 #define XML_ERROR(node, ...)                                                   \
   printerror("[LMT XML: " << _xml_comp_offset(node) << "] " __VA_ARGS__);
+
+#define XML_FATAL(node, ...)                                                   \
+  throw std::runtime_error(__VA_ARGS__ + std::string(" [") +                   \
+                           std::to_string(_xml_comp_offset(node)) + "]")
 
 #define XML_WARNING(node, ...)                                                 \
   printwarning("[LMT XML: " << _xml_comp_offset(node) << "] " __VA_ARGS__);
@@ -618,7 +624,18 @@ int LMTAnimation_internal::FromXML(pugi::xml_node &node) {
   return 0;
 }
 
-int LMTAnimation_internal::ToXML(pugi::xml_node &node, bool standAlone) const {
+void LMTAnimation_internal::ToXML(const std::__cxx11::string &fileName,
+                                  bool standAlone) const {
+  pugi::xml_document doc = {};
+  Save(doc, standAlone);
+
+  if (!doc.save_file(fileName.data(), "\t",
+                     pugi::format_write_bom | pugi::format_indent)) {
+    throw es::FileInvalidAccessError(fileName);
+  }
+}
+
+void LMTAnimation_internal::Save(pugi::xml_node &node, bool standAlone) const {
   _ToXML(node);
 
   if (events)
@@ -634,16 +651,16 @@ int LMTAnimation_internal::ToXML(pugi::xml_node &node, bool standAlone) const {
     pugi::xml_node trackNode = tracksNode.append_child("track");
     t->ToXML(trackNode, standAlone);
   }
-
-  return 0;
 }
 
-int LMT::ToXML(pugi::xml_node &node, const char *fileName,
-               ExportSettings settings) {
+void LMT::Save(pugi::xml_node &node, es::string_view fileName,
+               LMTExportSettings settings) const {
   pugi::xml_node master = node.append_child("LMT");
-  master.append_attribute("version").set_value(Version());
+  master.append_attribute("version").set_value(static_cast<int>(Version()));
   master.append_attribute("numItems").set_value(storage.size());
-  master.append_attribute("X64").set_value(GetArchitecture() == X64);
+  const auto archtype =
+      settings.arch == LMTArchType::Auto ? Architecture() : settings.arch;
+  master.append_attribute("X64").set_value(archtype == LMTArchType::X64);
 
   uint32 curAniID = 0;
   AFileInfo fleInf(fileName);
@@ -653,235 +670,250 @@ int LMT::ToXML(pugi::xml_node &node, const char *fileName,
     cAni.append_attribute("ID").set_value(curAniID);
 
     if (a) {
-      if (settings == ExportSetting_FullXML)
-        a->ToXML(cAni);
-      else if (settings == ExportSetting_FullXMLLinkedMotions) {
+      if (settings.type == LMTExportType::FullXML)
+        a->Save(cAni);
+      else if (settings.type == LMTExportType::LinkedXML) {
         pugi::xml_document linkAni = {};
         pugi::xml_node subAni = linkAni.append_child("Animation");
-        subAni.append_attribute("version").set_value(Version());
-        a->ToXML(subAni, true);
+        subAni.append_attribute("version").set_value(
+            static_cast<int>(Version()));
+        a->Save(subAni, true);
         std::string linkedName = fleInf.GetFilename();
-        linkedName + "_m" + std::to_string(curAniID) + ".mtx";
+        linkedName += "_m" + std::to_string(curAniID) + ".mtx";
         std::string linkedFullName = fleInf.GetFolder();
         linkedFullName += linkedName;
         cAni.append_buffer(linkedName.c_str(), linkedName.size());
-        linkAni.save_file(linkedFullName.c_str(), "\t",
-                          pugi::format_write_bom | pugi::format_indent);
-      } else if (settings == ExportSetting_BinaryMotions) {
+
+        if (!linkAni.save_file(linkedFullName.c_str(), "\t",
+                               pugi::format_write_bom | pugi::format_indent)) {
+          throw es::FileInvalidAccessError(linkedFullName);
+        }
+      } else if (settings.type == LMTExportType::BinaryLinkedXML) {
         std::string linkedName = fleInf.GetFilename();
         linkedName += "_m" + std::to_string(curAniID) + ".mti";
         std::string linkedFullName = fleInf.GetFilename();
         linkedFullName += linkedName;
         cAni.append_buffer(linkedName.c_str(), linkedName.size());
-        a->Save(linkedFullName.c_str());
+        a->Save(linkedFullName);
       }
     }
     curAniID++;
   }
-
-  return 0;
 }
 
-int LMT::ToXML(const char *fileName, ExportSettings settings) {
-  pugi::xml_document doc = {};
-  ToXML(doc, fileName, settings);
+void LMT::Save(const std::string &fileName, LMTExportSettings settings) const {
 
-  if (!doc.save_file(fileName, "\t",
-                     pugi::format_write_bom | pugi::format_indent)) {
-    printerror("[LMT] Couldn't save file: " << fileName);
-    return 1;
+  if (settings.type == LMTExportType::FullBinary) {
+    BinWritter wr(fileName);
+    wr.SwapEndian(settings.swapEndian);
+    Save(wr);
+    return;
   }
 
-  return 0;
+  pugi::xml_document doc = {};
+  Save(doc, fileName, settings);
+
+  if (!doc.save_file(fileName.data(), "\t",
+                     pugi::format_write_bom | pugi::format_indent)) {
+    throw es::FileInvalidAccessError(fileName);
+  }
 }
 
-int LMT::FromXML(pugi::xml_node &node, const char *fileName,
-                 Architecture forceArchitecture) {
+void LMT::Load(const std::string &fileName, LMTImportOverrides overrides) {
+  BinReader rd(fileName);
+
+  if (!rd.IsValid()) {
+    throw es::FileNotFoundError(fileName);
+  }
+
+  try {
+    Load(rd);
+  } catch (const es::InvalidHeaderError &) {
+    { auto moved = std::move(rd); }
+    pugi::xml_document doc = {};
+    pugi::xml_parse_result reslt = doc.load_file(fileName.data());
+
+    if (!reslt) {
+      throw std::runtime_error("Couldn't load XML file: " +
+                               GetReflectedEnum<XMLError>()[reslt].to_string() +
+                               " at offset " + std::to_string(reslt.offset));
+    }
+  }
+}
+
+void LMT::Load(pugi::xml_node &node, es::string_view outPath,
+               LMTImportOverrides overrides) {
   auto children = node.children("LMT");
   std::vector<pugi::xml_node> mainNodes(children.begin(), children.end());
 
   if (!mainNodes.size()) {
-    XML_ERROR(node, "Couldn't find <LMT/>.");
-    return 2;
-  }
+    XML_FATAL(node, "Couldn't find <LMT/>");
 
-  if (mainNodes.size() > 1) {
-    XML_WARNING(node, "XML have too many root elements, only first processed.");
-  }
+    if (mainNodes.size() > 1) {
+      XML_WARNING(node,
+                  "XML have too many root elements, only first processed.");
+    }
 
-  pugi::xml_node masterNode = *children.begin();
+    pugi::xml_node masterNode = *children.begin();
 
-  pugi::xml_attribute versionAttr = masterNode.attribute("version");
+    pugi::xml_attribute versionAttr = masterNode.attribute("version");
 
-  if (versionAttr.empty()) {
-    XML_ERROR(masterNode, "Missing <LMT version=/>");
-    return 2;
-  }
+    if (versionAttr.empty()) {
+      XML_FATAL(masterNode, "Missing <LMT version=/>");
+    }
 
-  pugi::xml_attribute archAttr = masterNode.attribute("X64");
+    pugi::xml_attribute archAttr = masterNode.attribute("X64");
 
-  if (archAttr.empty()) {
-    XML_ERROR(masterNode, "Missing <LMT X64=/>");
-    return 2;
-  }
+    if (archAttr.empty()) {
+      XML_FATAL(masterNode, "Missing <LMT X64=/>");
+    }
 
-  props.version = versionAttr.as_int();
-  props.ptrSize |= (forceArchitecture == Xundefined && archAttr.as_bool()) ||
-                           forceArchitecture == X64
-                       ? 8
-                       : 4;
+    props.version = static_cast<LMTVersion>(versionAttr.as_int());
 
-  pugi::xml_attribute numItemsAttr = masterNode.attribute("numItems");
-
-  auto animationIter = masterNode.children("Animation");
-  std::vector<pugi::xml_node> animationNodes(animationIter.begin(),
-                                             animationIter.end());
-
-  if (!numItemsAttr.empty() && numItemsAttr.as_int() != animationNodes.size()) {
-    XML_WARNING(masterNode,
-                "<LMT numItems=/> differs from actual <Animation/> count.");
-  }
-
-  storage.reserve(animationNodes.size());
-
-  AFileInfo fleInf(fileName);
-
-  for (auto &a : animationNodes) {
-    pugi::xml_text nodeBuffer = a.text();
-
-    if (nodeBuffer.empty()) {
-      auto animationSubNodesIter = a.children();
-      std::vector<pugi::xml_node> animationSubNodes(
-          animationSubNodesIter.begin(), animationSubNodesIter.end());
-
-      if (!animationSubNodes.size()) {
-        storage.emplace_back(nullptr);
-        continue;
-      }
-
-      LMTAnimation *cAni =
-          LMTAnimation::Create(LMTConstructorProperties(props));
-      cAni->FromXML(a);
-      storage.emplace_back(cAni);
+    if (overrides.arch == LMTArchType::Auto) {
+      props.arch = archAttr.as_bool() ? LMTArchType::X64 : LMTArchType::X86;
     } else {
-      const char *path = nodeBuffer.get();
-      std::string absolutePath = path;
-      BinReader rd(absolutePath);
-      bool notMTMI = false;
+      props.arch = overrides.arch;
+    }
 
-      if (!rd.IsValid()) {
-        absolutePath = fleInf.GetFilename();
-        absolutePath += path;
-        rd.Open(absolutePath);
-        if (!rd.IsValid()) {
-          XML_ERROR(a, "Couldn't load animation: " << absolutePath.c_str());
+    pugi::xml_attribute numItemsAttr = masterNode.attribute("numItems");
+
+    auto animationIter = masterNode.children("Animation");
+    std::vector<pugi::xml_node> animationNodes(animationIter.begin(),
+                                               animationIter.end());
+
+    if (!numItemsAttr.empty() &&
+        numItemsAttr.as_int() != animationNodes.size()) {
+      XML_WARNING(masterNode,
+                  "<LMT numItems=/> differs from actual <Animation/> count.");
+    }
+
+    storage.reserve(animationNodes.size());
+
+    AFileInfo fleInf(outPath);
+
+    for (auto &a : animationNodes) {
+      pugi::xml_text nodeBuffer = a.text();
+
+      if (nodeBuffer.empty()) {
+        auto animationSubNodesIter = a.children();
+        std::vector<pugi::xml_node> animationSubNodes(
+            animationSubNodesIter.begin(), animationSubNodesIter.end());
+
+        if (!animationSubNodes.size()) {
           storage.emplace_back(nullptr);
           continue;
         }
-      }
 
-      LMTAnimation_internal *cAni = nullptr;
-      int errNo = LMTAnimation_internal::Load(rd, props, cAni);
-
-      if (errNo == 1)
-        notMTMI = true;
-      else if (errNo == 2) {
-        printerror("[LMT] Animation is empty: " << absolutePath.c_str());
-        storage.emplace_back(nullptr);
-        continue;
-      } else {
-        printerror(
-            "[LMT] Layout errors in animation: " << absolutePath.c_str());
-
-        LMTConstructorPropertiesBase errMsg =
-            reinterpret_cast<LMTConstructorPropertiesBase &>(errNo);
-
-        if (errMsg.version != props.version) {
-          printerror("[LMT] Unexpected animation version: "
-                     << errMsg.version << ", expected: " << props.version);
-        }
-
-        bool expectedX64Arch = props.ptrSize == 8;
-        bool haveX64Arch = errMsg.ptrSize == 8;
-
-        if (haveX64Arch != expectedX64Arch) {
-          printerror("[LMT] Unexpected animation architecture: "
-                     << (haveX64Arch ? "X64" : "X86")
-                     << ", expected: " << (expectedX64Arch ? "X64" : "X86"));
-        }
-
-        storage.emplace_back(nullptr);
-        continue;
-      }
-
-      if (!notMTMI) {
+        LMTAnimation *cAni =
+            LMTAnimation::Create(LMTConstructorProperties(props));
+        cAni->FromXML(a);
         storage.emplace_back(cAni);
-        continue;
-      } else
-        cAni = static_cast<LMTAnimation_internal *>(
-            LMTAnimation::Create(LMTConstructorProperties(props)));
+      } else {
+        const char *path = nodeBuffer.get();
+        std::string absolutePath = path;
+        BinReader rd(absolutePath);
+        bool notMTMI = false;
 
-      pugi::xml_document subAnim = {};
-      pugi::xml_parse_result reslt = subAnim.load_file(absolutePath.c_str());
+        if (!rd.IsValid()) {
+          absolutePath = fleInf.GetFilename();
+          absolutePath += path;
+          rd.Open(absolutePath);
+          if (!rd.IsValid()) {
+            XML_ERROR(a, "Couldn't load animation: " + absolutePath);
+            storage.emplace_back(nullptr);
+            continue;
+          }
+        }
 
-      if (!reslt) {
-        printerror("[LMT] Couldn't load animation: "
-                   << absolutePath.c_str() << ", "
-                   << GetReflectedEnum<XMLError>()[reslt]
-                   << " at offset: " << reslt.offset);
-        delete cAni;
-        storage.emplace_back(nullptr);
-        continue;
+        LMTAnimation_internal *cAni = nullptr;
+        int errNo = LMTAnimation_internal::Load(rd, props, cAni);
+
+        if (errNo == 1)
+          notMTMI = true;
+        else if (errNo == 2) {
+          printerror("[LMT] Animation is empty: " << absolutePath);
+          storage.emplace_back(nullptr);
+          continue;
+        } else {
+          printerror("[LMT] Layout errors in animation: " << absolutePath);
+
+          LMTConstructorPropertiesBase errMsg =
+              reinterpret_cast<LMTConstructorPropertiesBase &>(errNo);
+
+          if (errMsg.version != props.version) {
+            printerror("[LMT] Unexpected animation version: "
+                       << static_cast<int>(errMsg.version)
+                       << ", expected: " << static_cast<int>(props.version));
+          }
+
+          bool expectedX64Arch = props.arch == LMTArchType::X64;
+          bool haveX64Arch = errMsg.arch == LMTArchType::X64;
+
+          if (haveX64Arch != expectedX64Arch) {
+            printerror("[LMT] Unexpected animation architecture: "
+                       << (haveX64Arch ? "X64" : "X86")
+                       << ", expected: " << (expectedX64Arch ? "X64" : "X86"));
+          }
+
+          storage.emplace_back(nullptr);
+          continue;
+        }
+
+        if (!notMTMI) {
+          storage.emplace_back(cAni);
+          continue;
+        } else
+          cAni = static_cast<LMTAnimation_internal *>(
+              LMTAnimation::Create(LMTConstructorProperties(props)));
+
+        pugi::xml_document subAnim = {};
+        pugi::xml_parse_result reslt = subAnim.load_file(absolutePath.c_str());
+
+        if (!reslt) {
+          printerror("[LMT] Couldn't load animation: "
+                     << absolutePath.c_str() << ", "
+                     << GetReflectedEnum<XMLError>()[reslt]
+                     << " at offset: " << reslt.offset);
+          delete cAni;
+          storage.emplace_back(nullptr);
+          continue;
+        }
+
+        auto subAnimChildren = subAnim.children("Animation");
+        std::vector<pugi::xml_node> subAniMainNodes(subAnimChildren.begin(),
+                                                    subAnimChildren.end());
+
+        if (!subAniMainNodes.size()) {
+          XML_ERROR(subAnim, "Couldn't find <Animation/>.");
+          delete cAni;
+          storage.emplace_back(nullptr);
+          continue;
+        }
+
+        pugi::xml_node subAniMainNode = subAniMainNodes[0];
+        pugi::xml_attribute subVersionAttr =
+            subAniMainNode.attribute("version");
+
+        if (subVersionAttr.empty()) {
+          XML_ERROR(subAnim, "Missing <Animation version=/>");
+          delete cAni;
+          storage.emplace_back(nullptr);
+          continue;
+        }
+
+        if (static_cast<LMTVersion>(subVersionAttr.as_int()) != Version()) {
+          XML_ERROR(subAnim, "Unexpected animation version: "
+                                 << subVersionAttr.as_int() << ", expected: "
+                                 << static_cast<int>(Version()));
+          delete cAni;
+          storage.emplace_back(nullptr);
+          continue;
+        }
+
+        cAni->FromXML(subAniMainNode);
+        storage.emplace_back(cAni);
       }
-
-      auto subAnimChildren = subAnim.children("Animation");
-      std::vector<pugi::xml_node> subAniMainNodes(subAnimChildren.begin(),
-                                                  subAnimChildren.end());
-
-      if (!subAniMainNodes.size()) {
-        XML_ERROR(subAnim, "Couldn't find <Animation/>.");
-        delete cAni;
-        storage.emplace_back(nullptr);
-        continue;
-      }
-
-      pugi::xml_node subAniMainNode = subAniMainNodes[0];
-      pugi::xml_attribute subVersionAttr = subAniMainNode.attribute("version");
-
-      if (subVersionAttr.empty()) {
-        XML_ERROR(subAnim, "Missing <Animation version=/>");
-        delete cAni;
-        storage.emplace_back(nullptr);
-        continue;
-      }
-
-      if (subVersionAttr.as_int() != Version()) {
-        XML_ERROR(subAnim, "Unexpected animation version: "
-                               << subVersionAttr.as_int()
-                               << ", expected: " << Version());
-        delete cAni;
-        storage.emplace_back(nullptr);
-        continue;
-      }
-
-      cAni->FromXML(subAniMainNode);
-      storage.emplace_back(cAni);
     }
   }
-
-  return 0;
-}
-
-int LMT::FromXML(const char *fileName, Architecture forceArchitecture) {
-  pugi::xml_document doc = {};
-  pugi::xml_parse_result reslt = doc.load_file(fileName);
-
-  if (!reslt) {
-    printerror("[LMT] Couldn't load xml file. "
-               << GetReflectedEnum<XMLError>()[reslt]
-               << " at offset: " << reslt.offset);
-    return 1;
-  }
-
-  return FromXML(doc, fileName, forceArchitecture);
 }

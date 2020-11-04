@@ -17,17 +17,25 @@
 
 #include "asset.hpp"
 #include "datas/binreader.hpp"
+#include "datas/except.hpp"
 #include "datas/master_printer.hpp"
 #include <map>
 
-REAsset *REAsset::Load(const char *fileName, bool suppressErrors) {
+REAsset *REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);
 
   if (!rd.IsValid()) {
-    if (!suppressErrors) {
-      printerror("[REAsset] Couldn't open file: " << fileName);
-    }
-    return nullptr;
+    throw es::FileNotFoundError(fileName);
+  }
+
+  return Load(rd);
+}
+
+REAsset *REAsset::Load(es::string_view fileName) {
+  BinReader rd(fileName);
+
+  if (!rd.IsValid()) {
+    throw es::FileNotFoundError(fileName);
   }
 
   return Load(rd);
@@ -42,7 +50,7 @@ REAsset *REAsset::Load(BinReaderRef rd) {
   REAsset_internal *ass = REAsset_internal::Create(base);
 
   if (!ass)
-    return ass;
+    throw es::InvalidHeaderError(base.assetFourCC);
 
   ass->Load(rd);
   return ass;

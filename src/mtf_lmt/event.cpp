@@ -20,7 +20,7 @@
 #include "fixup_storage.hpp"
 
 #include <array>
-#include <unordered_map>
+#include <map>
 
 REFLECTOR_CREATE((AnimEvents<esPointerX86>), 2, VARNAMES, TEMPLATE, eventRemaps)
 REFLECTOR_CREATE((AnimEvents<esPointerX64>), 2, VARNAMES, TEMPLATE, eventRemaps)
@@ -155,7 +155,7 @@ void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
     _events[e].SwapEndian();
 }
 
-uint32 LMTAnimationEventV1::GetVersion() const { return 1; }
+uint32 LMTAnimationEventV1_Internal::GetVersion() const { return 1; }
 
 LMTAnimationEventV1::EventCollection
 LMTAnimationEventV1_Internal::GetEvents(uint32 groupID, uint32 eventID) const {
@@ -370,8 +370,6 @@ public:
   }
 };
 
-uint32 LMTAnimationEventV2::GetVersion() const { return 2; }
-
 void AnimEventFrameV2::SwapEndian() { FByteswapper(frame); }
 
 LMTAnimationEventV2Group *LMTAnimationEventV2Group::Create() {
@@ -382,7 +380,7 @@ LMTAnimationEventV2Event *LMTAnimationEventV2Event::Create() {
   return new AnimEventV2_wrapper;
 }
 
-template <class C, uint32 numG> static LMTAnimationEvent *_creattorBase() {
+template <class C, uint32 numG> static LMTAnimationEvent *_creatorBase() {
   return new AnimEvents_shared<C, numG>;
 }
 
@@ -391,46 +389,48 @@ static LMTAnimationEvent *_creator(void *ptr, char *buff, bool endi) {
   return new AnimEvents_shared<C, numG>(static_cast<C *>(ptr), buff, endi);
 }
 
-static LMTAnimationEvent *_creattorBase2() { return new AnimEventsV2_wrapper; }
+static LMTAnimationEvent *_creatorBase2() { return new AnimEventsV2_wrapper; }
 
 static LMTAnimationEvent *_creator2(void *ptr, char *buff, bool endi) {
   return new AnimEventsV2_wrapper(static_cast<AnimEventsHeaderV2 *>(ptr), buff,
                                   endi);
 }
 
-static const std::unordered_map<uint16, LMTAnimationEvent *(*)()> eventRegistry{
-    {0x108, _creattorBase<AnimEvents<esPointerX64>, 2>},
-    {0x104, _creattorBase<AnimEvents<esPointerX86>, 2>},
-    {0x208, _creattorBase<AnimEvents<esPointerX64>, 4>},
-    {0x204, _creattorBase<AnimEvents<esPointerX86>, 4>},
-    {0x308, _creattorBase2},
-};
+static const std::map<LMTConstructorPropertiesBase, LMTAnimationEvent *(*)()>
+    eventRegistry{
+        // clang-format off
+        {{LMTArchType::X64, LMTVersion::V_22}, _creatorBase<AnimEvents<esPointerX64>, 2>},
+        {{LMTArchType::X86, LMTVersion::V_22}, _creatorBase<AnimEvents<esPointerX86>, 2>},
+        {{LMTArchType::X64, LMTVersion::V_56}, _creatorBase<AnimEvents<esPointerX64>, 4>},
+        {{LMTArchType::X86, LMTVersion::V_56}, _creatorBase<AnimEvents<esPointerX86>, 4>},
+        {{LMTArchType::X64, LMTVersion::V_66}, _creatorBase2},
+        // clang-format on
+    };
 
-static const std::unordered_map<uint16,
-                                LMTAnimationEvent *(*)(void *, char *, bool)>
+static const std::map<LMTConstructorPropertiesBase,
+                      LMTAnimationEvent *(*)(void *, char *, bool)>
     eventRegistryLink{
-        {0x108, _creator<AnimEvents<esPointerX64>, 2>},
-        {0x104, _creator<AnimEvents<esPointerX86>, 2>},
-        {0x208, _creator<AnimEvents<esPointerX64>, 4>},
-        {0x204, _creator<AnimEvents<esPointerX86>, 4>},
-        {0x308, _creator2},
+        // clang-format off
+        {{LMTArchType::X64, LMTVersion::V_22}, _creator<AnimEvents<esPointerX64>, 2>},
+        {{LMTArchType::X86, LMTVersion::V_22}, _creator<AnimEvents<esPointerX86>, 2>},
+        {{LMTArchType::X64, LMTVersion::V_56}, _creator<AnimEvents<esPointerX64>, 4>},
+        {{LMTArchType::X86, LMTVersion::V_56}, _creator<AnimEvents<esPointerX86>, 4>},
+        {{LMTArchType::X64, LMTVersion::V_66}, _creator2},
+        // clang-format on
     };
 
 LMTAnimationEvent *
 LMTAnimationEvent::Create(const LMTConstructorProperties &props) {
-  uint16 item = reinterpret_cast<const uint16 &>(props);
-
   REFLECTOR_REGISTER(EventFrameV2DataType, EventFrameV2Type);
 
-  if (!eventRegistry.count(item))
-    return nullptr;
-
   if (props.dataStart)
-    return eventRegistryLink.at(item)(props.dataStart, props.masterBuffer,
+    return eventRegistryLink.at(props)(props.dataStart, props.masterBuffer,
                                       props.swappedEndian);
   else
-    return eventRegistry.at(item)();
+    return eventRegistry.at(props)();
 }
+
+uint32 LMTAnimationEventV2_Internal::GetVersion() const { return 2; }
 
 uint32 LMTAnimationEventV2_Internal::GetNumGroups() const {
   return static_cast<uint32>(groups.size());

@@ -24,30 +24,30 @@
 #include "fixup_storage.hpp"
 
 #include <list>
-#include <unordered_map>
+#include <map>
 
 /************************************************************************/
 /*************************** ANIM_TRAITS ********************************/
 /************************************************************************/
 
-template <template <class C> class PtrType, const uint32 trackVersion>
+template <template <class C> class PtrType, LMTVersion trackVersion>
 struct AnimTraitsV1 {
   typedef PtrType<char> Track_Pointer;
   typedef AnimEvents<PtrType> EventClass;
 
-  static const uint32 NUMEVENTGROUPS = 2;
-  static const uint32 TRACK_VERSION = trackVersion;
+  static constexpr uint32 NUMEVENTGROUPS = 2;
+  static constexpr LMTVersion TRACK_VERSION = trackVersion;
 };
 
-template <template <class C> class PtrType, const uint32 trackVersion>
+template <template <class C> class PtrType, LMTVersion trackVersion>
 struct AnimTraitsV2 {
   typedef PtrType<char> Track_Pointer;
   typedef AnimEvents<PtrType> EventClass;
   typedef PtrType<EventClass> EventClass_Pointer;
   typedef PtrType<char> FloatTracks_Pointer;
 
-  static const uint32 NUMEVENTGROUPS = 4;
-  static const uint32 TRACK_VERSION = trackVersion;
+  static constexpr uint32 NUMEVENTGROUPS = 4;
+  static constexpr LMTVersion TRACK_VERSION = trackVersion;
 };
 
 /************************************************************************/
@@ -72,7 +72,7 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
 
   typename Traits::EventClass *Events() { return events; }
 
-  char *FloatTracks(char *) { return nullptr; }
+  char *FloatTracks() { return nullptr; }
 
   void SwapEndian() {
     FByteswapper(tracks);
@@ -127,7 +127,7 @@ struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
 
   typename Traits::EventClass *Events() { return events; }
 
-  char *FloatTracks(char *) { return nullptr; }
+  char *FloatTracks() { return nullptr; }
 
   void SwapEndian() {
     FByteswapper(tracks);
@@ -184,7 +184,7 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
 
   typename Traits::EventClass *Events() { return eventTable; }
 
-  char *FloatTracks(char *masterBuffer) { return floatTracks; }
+  char *FloatTracks() { return floatTracks; }
 
   static const uint32 VERSION = 2;
   static const uint32 NUMPOINTERS = 3;
@@ -221,8 +221,7 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(AnimV2, tracks),
-        offsetof(AnimV2, eventTable),
+        offsetof(AnimV2, tracks), offsetof(AnimV2, eventTable),
         offsetof(AnimV2, floatTracks),
     };
 
@@ -249,7 +248,7 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
 
   typename Traits::EventClass *Events() { return eventTable; }
 
-  char *FloatTracks(char *) { return nullptr; }
+  char *FloatTracks() { return nullptr; }
 
   static const uint32 VERSION = 3;
   static const uint32 NUMPOINTERS = 2;
@@ -277,8 +276,7 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(AnimV3, tracks),
-        offsetof(AnimV3, eventTable),
+        offsetof(AnimV3, tracks), offsetof(AnimV3, eventTable),
     };
 
     return ptrs;
@@ -301,6 +299,11 @@ float LMTAnimation_internal::Duration() const {
 }
 
 template <class C> class AnimShared : public LMTAnimation_internal {
+  static constexpr LMTArchType GetArch() {
+    return sizeof(typename C::Traits::Track_Pointer) == 8 ? LMTArchType::X64
+                                                          : LMTArchType::X86;
+  }
+
 public:
   typedef C value_type;
   typedef std::unique_ptr<C, es::deleter_hybrid> AnimationTypePtr;
@@ -320,8 +323,7 @@ public:
 
     if (data->numTracks) {
       LMTConstructorProperties props;
-      props.ptrSize =
-          static_cast<uint8>(sizeof(typename C::Traits::Track_Pointer));
+      props.arch = GetArch();
       props.version = C::Traits::TRACK_VERSION;
       props.masterBuffer = buff;
       props.swappedEndian = swapEndian;
@@ -339,17 +341,22 @@ public:
     }
 
     LMTConstructorProperties eventProps;
-    eventProps.ptrSize =
-        static_cast<uint8>(sizeof(typename C::Traits::Track_Pointer));
+    eventProps.arch = GetArch();
     eventProps.swappedEndian = swapEndian;
     eventProps.dataStart = data->Events();
     eventProps.masterBuffer = buff;
-    eventProps.version = C::VERSION < 3 ? C::Traits::NUMEVENTGROUPS / 2 : 3;
+
+    if (C::VERSION < 3) {
+      eventProps.version =
+          C::Traits::NUMEVENTGROUPS > 2 ? LMTVersion::V_56 : LMTVersion::V_22;
+    } else {
+      eventProps.version = LMTVersion::V_66;
+    }
 
     events = LMTEventsPtr(LMTAnimationEvent::Create(eventProps));
 
-    eventProps.dataStart = data->FloatTracks(buff);
-    eventProps.version = 0;
+    eventProps.dataStart = data->FloatTracks();
+    eventProps.version = LMTVersion::Auto;
 
     if (eventProps.dataStart)
       floatTracks = LMTFloatTrackPtr(LMTFloatTrack::Create(eventProps));
@@ -380,7 +387,7 @@ public:
 
   LMTTrackPtr CreateTrack() const override {
     LMTConstructorProperties props;
-    props.ptrSize = sizeof(typename C::Traits::Track_Pointer);
+    props.arch = GetArch();
     props.version = C::Traits::TRACK_VERSION;
 
     return LMTTrackPtr(LMTTrack::Create(props));
@@ -388,8 +395,14 @@ public:
 
   LMTEventsPtr CreateEvents() const override {
     LMTConstructorProperties props;
-    props.ptrSize = sizeof(typename C::Traits::Track_Pointer);
-    props.version = C::VERSION < 3 ? C::Traits::NUMEVENTGROUPS / 2 : 3;
+    props.arch = GetArch();
+
+    if (C::VERSION < 3) {
+      props.version =
+          C::Traits::NUMEVENTGROUPS > 2 ? LMTVersion::V_56 : LMTVersion::V_22;
+    } else {
+      props.version = LMTVersion::V_66;
+    }
 
     return LMTEventsPtr(LMTAnimationEvent::Create(props));
   }
@@ -399,8 +412,7 @@ public:
       return nullptr;
 
     LMTConstructorProperties props;
-    props.ptrSize = sizeof(typename C::Traits::Track_Pointer);
-    props.version = 0;
+    props.arch = GetArch();
 
     return LMTFloatTrackPtr(LMTFloatTrack::Create(props));
   }
@@ -451,55 +463,60 @@ public:
   }
 };
 
-REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX86, 0>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition);
+REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition);
 
-REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX64, 0>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition);
+REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, 1>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, 1>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, 2>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, 2>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_51>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX86, 3>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX64, 3>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX86, 3>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX64, 3>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX86, 4>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX64, 4>>), 2, VARNAMES, TEMPLATE,
-                 numFrames, loopFrame, endFrameAdditiveScenePosition,
-                 endFrameAdditiveSceneRotation);
+REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>), 2,
+                 VARNAMES, TEMPLATE, numFrames, loopFrame,
+                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
 
-ES_STATIC_ASSERT(sizeof(AnimV1<AnimTraitsV1<esPointerX86, 2>>) == 192);
-ES_STATIC_ASSERT(sizeof(AnimV3<AnimTraitsV2<esPointerX64, 4>>) == 96);
-ES_STATIC_ASSERT(alignof(AnimV3<AnimTraitsV2<esPointerX64, 4>>) == 16);
+ES_STATIC_ASSERT(sizeof(AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>) ==
+                 192);
+ES_STATIC_ASSERT(sizeof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) ==
+                 96);
+ES_STATIC_ASSERT(
+    alignof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) == 16);
 // ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
 
 template <class Derived> static LMTAnimation *_creattorBase() {
@@ -512,97 +529,105 @@ static LMTAnimation *_creator(void *ptr, char *buff, bool endi) {
 }
 
 #define LMTANI_REG(version, ptrSize, ...)                                      \
-  { 0x0##ptrSize | (LMT::V_##version << 8), _creattorBase<__VA_ARGS__> }
+  {                                                                            \
+    {LMTArchType::X##ptrSize, LMTVersion::V_##version},                        \
+        _creattorBase<__VA_ARGS__>                                             \
+  }
 
 #define LMTANI_REG_LINK(version, ptrSize, ...)                                 \
-  { 0x0##ptrSize | (LMT::V_##version << 8), _creator<__VA_ARGS__> }
+  { {LMTArchType::X##ptrSize, LMTVersion::V_##version}, _creator<__VA_ARGS__> }
 
-static const std::unordered_map<uint16, LMTAnimation *(*)()> animationRegistry =
-    {LMTANI_REG(22, 4, AnimV0<AnimTraitsV1<esPointerX86, 0>>),
-     LMTANI_REG(40, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-     LMTANI_REG(49, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-     LMTANI_REG(50, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-     LMTANI_REG(51, 4, AnimV1<AnimTraitsV1<esPointerX86, 2>>),
-     LMTANI_REG(56, 4, AnimV1<AnimTraitsV2<esPointerX86, 3>>),
-     LMTANI_REG(57, 4, AnimV1<AnimTraitsV2<esPointerX86, 3>>),
-     LMTANI_REG(66, 4, AnimV2<AnimTraitsV2<esPointerX86, 3>>),
-     LMTANI_REG(67, 4, AnimV2<AnimTraitsV2<esPointerX86, 3>>),
-     LMTANI_REG(92, 4, AnimV3<AnimTraitsV2<esPointerX86, 4>>),
+static const std::map<LMTConstructorPropertiesBase, LMTAnimation *(*)()>
+    animationRegistry = {
+        // clang-format off
+        LMTANI_REG(22, 86, AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>),
+        LMTANI_REG(40, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG(49, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG(50, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG(51, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>),
+        LMTANI_REG(56, 86, AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG(57, 86, AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG(66, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG(67, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG(92, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
 
-     LMTANI_REG(22, 8, AnimV0<AnimTraitsV1<esPointerX64, 0>>),
-     LMTANI_REG(40, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-     LMTANI_REG(49, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-     LMTANI_REG(50, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-     LMTANI_REG(51, 8, AnimV1<AnimTraitsV1<esPointerX64, 2>>),
-     LMTANI_REG(56, 8, AnimV1<AnimTraitsV2<esPointerX64, 3>>),
-     LMTANI_REG(57, 8, AnimV1<AnimTraitsV2<esPointerX64, 3>>),
-     LMTANI_REG(66, 8, AnimV2<AnimTraitsV2<esPointerX64, 3>>),
-     LMTANI_REG(67, 8, AnimV2<AnimTraitsV2<esPointerX64, 3>>),
-     LMTANI_REG(92, 8, AnimV3<AnimTraitsV2<esPointerX64, 4>>)};
+        LMTANI_REG(22, 64, AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>),
+        LMTANI_REG(40, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG(49, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG(50, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG(51, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_51>>),
+        LMTANI_REG(56, 64, AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG(57, 64, AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG(66, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG(67, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG(92, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
+        // clang-format on
+};
 
-static const std::unordered_map<uint16, LMTAnimation *(*)(void *, char *, bool)>
+static const std::map<LMTConstructorPropertiesBase,
+                      LMTAnimation *(*)(void *, char *, bool)>
     animationLinkRegistry = {
-        LMTANI_REG_LINK(22, 4, AnimV0<AnimTraitsV1<esPointerX86, 0>>),
-        LMTANI_REG_LINK(40, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-        LMTANI_REG_LINK(49, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-        LMTANI_REG_LINK(50, 4, AnimV1<AnimTraitsV1<esPointerX86, 1>>),
-        LMTANI_REG_LINK(51, 4, AnimV1<AnimTraitsV1<esPointerX86, 2>>),
-        LMTANI_REG_LINK(56, 4, AnimV1<AnimTraitsV2<esPointerX86, 3>>),
-        LMTANI_REG_LINK(57, 4, AnimV1<AnimTraitsV2<esPointerX86, 3>>),
-        LMTANI_REG_LINK(66, 4, AnimV2<AnimTraitsV2<esPointerX86, 3>>),
-        LMTANI_REG_LINK(67, 4, AnimV2<AnimTraitsV2<esPointerX86, 3>>),
-        LMTANI_REG_LINK(92, 4, AnimV3<AnimTraitsV2<esPointerX86, 4>>),
+        // clang-format off
+        LMTANI_REG_LINK(22, 86, AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>),
+        LMTANI_REG_LINK(40, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(49, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(50, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(51, 86, AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>),
+        LMTANI_REG_LINK(56, 86, AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(57, 86, AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(66, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(67, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(92, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
 
-        LMTANI_REG_LINK(22, 8, AnimV0<AnimTraitsV1<esPointerX64, 0>>),
-        LMTANI_REG_LINK(40, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-        LMTANI_REG_LINK(49, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-        LMTANI_REG_LINK(50, 8, AnimV1<AnimTraitsV1<esPointerX64, 1>>),
-        LMTANI_REG_LINK(51, 8, AnimV1<AnimTraitsV1<esPointerX64, 2>>),
-        LMTANI_REG_LINK(56, 8, AnimV1<AnimTraitsV2<esPointerX64, 3>>),
-        LMTANI_REG_LINK(57, 8, AnimV1<AnimTraitsV2<esPointerX64, 3>>),
-        LMTANI_REG_LINK(66, 8, AnimV2<AnimTraitsV2<esPointerX64, 3>>),
-        LMTANI_REG_LINK(67, 8, AnimV2<AnimTraitsV2<esPointerX64, 3>>),
-        LMTANI_REG_LINK(92, 8, AnimV3<AnimTraitsV2<esPointerX64, 4>>)};
+        LMTANI_REG_LINK(22, 64, AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>),
+        LMTANI_REG_LINK(40, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(49, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(50, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        LMTANI_REG_LINK(51, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_51>>),
+        LMTANI_REG_LINK(56, 64, AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(57, 64, AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(66, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(67, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        LMTANI_REG_LINK(92, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
+        // clang-format on
+};
 
-static const std::list<LMT::V> supportedVersions = {
-    LMT::V_22, LMT::V_40, LMT::V_49, LMT::V_50, LMT::V_51,
-    LMT::V_56, LMT::V_57, LMT::V_66, LMT::V_67, LMT::V_92};
+static const std::list<LMTVersion> supportedVersions = {
+    LMTVersion::V_22, LMTVersion::V_40, LMTVersion::V_49, LMTVersion::V_50,
+    LMTVersion::V_51, LMTVersion::V_56, LMTVersion::V_57, LMTVersion::V_66,
+    LMTVersion::V_67, LMTVersion::V_92,
+};
 
 bool LMTAnimation::SupportedVersion(uint16 version) {
   for (auto &v : supportedVersions)
-    if (v == version)
+    if (static_cast<uint16>(v) == version)
       return true;
 
   return false;
 }
 
 LMTAnimation *LMTAnimation::Create(const LMTConstructorProperties &props) {
-  uint16 item = reinterpret_cast<const uint16 &>(props);
-
   REFLECTOR_REGISTER(AnimV2Flags);
-
-  if (!animationRegistry.count(item))
-    return nullptr;
 
   LMTAnimation *cAni = nullptr;
 
   if (props.dataStart)
-    cAni = animationLinkRegistry.at(item)(props.dataStart, props.masterBuffer,
-                                          props.swappedEndian);
+    cAni = animationLinkRegistry.at(props)(props.dataStart, props.masterBuffer,
+                                           props.swappedEndian);
   else
-    cAni = animationRegistry.at(item)();
+    cAni = animationRegistry.at(props)();
 
   cAni->props = props;
 
   return cAni;
 }
 
-bool IsX64CompatibleAnimationClass(BinReaderRef rd, uint16 version) {
-  uint16 item = 0x8 | version << 8;
+bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version) {
+  LMTConstructorPropertiesBase props{LMTArchType::X64, version};
 
   REFLECTOR_REGISTER(AnimV2Flags);
 
-  if (!animationRegistry.count(item))
+  if (!animationRegistry.count(props))
     return false;
 
   char buffer[0x100];
@@ -610,7 +635,7 @@ bool IsX64CompatibleAnimationClass(BinReaderRef rd, uint16 version) {
   rd.ReadBuffer(buffer, 0x100);
 
   LMTAnimation_internal *cAni = static_cast<LMTAnimation_internal *>(
-      animationLinkRegistry.at(item)(buffer, nullptr, rd.SwappedEndian()));
+      animationLinkRegistry.at(props)(buffer, nullptr, rd.SwappedEndian()));
 
   auto ptrVals = cAni->GetPtrValues();
 

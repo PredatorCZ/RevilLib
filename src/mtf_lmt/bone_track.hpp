@@ -45,6 +45,8 @@ public:
   void GetValue(Vector4A16 &output, float time) const override;
   int32 GetFrame(uint32 frame) const override;
 
+  MotionTrack::TrackType_e TrackType() const override;
+
   int FromXML(pugi::xml_node &node) override;
   int ToXML(pugi::xml_node &node, bool standAlone) const override;
 

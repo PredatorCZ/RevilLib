@@ -53,6 +53,7 @@ public:
   virtual const uint16 *GetRemaps(uint32 groupID) const = 0;
   virtual void SetNumEvents(uint32 groupID, uint32 newSize) = 0;
 
+  uint32 GetVersion() const override;
   int ToXML(pugi::xml_node &node, bool standAlone) const override;
   int FromXML(pugi::xml_node &node) override;
   int Save(BinWritterRef wr) const;
@@ -126,6 +127,7 @@ public:
 
   GroupsCollection groups;
 
+  uint32 GetVersion() const override;
   uint32 GetNumGroups() const override;
   uint32 GetGroupEventCount(uint32 groupID) const override;
   uint32 GetGroupHash(uint32 groupID) const override;

@@ -18,6 +18,7 @@
 #pragma once
 #include "datas/binreader_stream.hpp"
 #include "datas/binwritter_stream.hpp"
+#include "datas/string_view.hpp"
 #include "datas/vectors_simd.hpp"
 #include "uni/list_vector.hpp"
 #include "uni/motion.hpp"
@@ -28,10 +29,50 @@ namespace pugi {
 class xml_node;
 }
 
-struct LMTConstructorPropertiesBase {
-  uint8 ptrSize = 0; // 4, 8
-  uint8 version = 0;
+enum class LMTExportType : uint8 {
+  FullBinary,      // Propper LMT format
+  FullXML,         // Single XML format
+  LinkedXML,       // XML format with linked XML files per animation
+  BinaryLinkedXML, // XML format with linked binary files per animation
 };
+
+enum class LMTArchType : uint8 { Auto, X64, X86 };
+
+enum class LMTVersion : uint8 {
+  Auto = 0,
+  V_22 = 22, // DR
+  V_40 = 40, // LP
+  V_49 = 49, // DMC4
+  V_50 = 50, // LP PS3
+  V_51 = 51, // RE5
+  V_56 = 56, // LP2
+  V_57 = 57, // RE:M 3DS
+  V_66 = 66, // DD, DD:DA
+  V_67 = 67, // Other, generic MTF v2 format
+  V_92 = 92, // MH:W
+};
+
+struct LMTExportSettings {
+  LMTExportType type = LMTExportType::FullBinary;
+  LMTArchType arch = LMTArchType::Auto;
+  LMTVersion version = LMTVersion::Auto;
+  bool swapEndian = false;
+};
+
+struct alignas(2) LMTImportOverrides {
+  LMTArchType arch = LMTArchType::Auto;
+  LMTVersion version = LMTVersion::Auto;
+  constexpr LMTImportOverrides() = default;
+  constexpr LMTImportOverrides(LMTArchType a, LMTVersion v)
+      : arch(a), version(v) {}
+
+  bool operator<(const LMTImportOverrides &o) const {
+    return reinterpret_cast<const uint16 &>(*this) <
+           reinterpret_cast<const uint16 &>(o);
+  }
+};
+
+using LMTConstructorPropertiesBase = LMTImportOverrides;
 
 struct LMTConstructorProperties : LMTConstructorPropertiesBase {
   bool swappedEndian; // optional, assign only
@@ -55,8 +96,7 @@ public:
   virtual uint32 GetGroupTrackCount(uint32 groupID) const = 0;
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual int FromXML(pugi::xml_node &node) = 0;
-
-  virtual ~LMTFloatTrack() {}
+  virtual ~LMTFloatTrack() = default;
 
   static LMTFloatTrack *Create(const LMTConstructorProperties &props);
 };
@@ -68,8 +108,7 @@ public:
   virtual int FromXML(pugi::xml_node &node) = 0;
   virtual uint32 GetNumGroups() const = 0;
   virtual uint32 GetGroupEventCount(uint32 groupID) const = 0;
-
-  virtual ~LMTAnimationEvent() {}
+  virtual ~LMTAnimationEvent() = default;
 
   static LMTAnimationEvent *Create(const LMTConstructorProperties &props);
 };
@@ -78,16 +117,12 @@ class LMTAnimationEventV1 : public LMTAnimationEvent {
 public:
   typedef std::vector<short> EventCollection;
 
-  uint32 GetVersion() const override;
-
   virtual EventCollection GetEvents(uint32 groupID, uint32 eventID) const = 0;
   virtual int32 GetEventFrame(uint32 groupID, uint32 eventID) const = 0;
 };
 
 class LMTAnimationEventV2 : public LMTAnimationEvent {
 public:
-  uint32 GetVersion() const override;
-
   virtual uint32 GetHash() const = 0;
   virtual void SetHash(uint32 nHash) = 0;
   virtual uint32 GetGroupHash(uint32 groupID) const = 0;
@@ -114,13 +149,7 @@ public:
   virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
   virtual uint32 Stride() const = 0;
   virtual uint32 BoneType() const = 0;
-
-  MotionTrack::TrackType_e TrackType() const override;
-  void GetValue(uni::RTSValue &output, float time) const override;
-  void GetValue(esMatrix44 &output, float time) const override;
-  void GetValue(float &output, float time) const override;
-
-  virtual ~LMTTrack() {}
+  virtual ~LMTTrack() = default;
 
   static LMTTrack *Create(const LMTConstructorProperties &props);
 };
@@ -135,21 +164,20 @@ public:
   virtual uint32 GetVersion() const = 0;
   virtual uint32 NumFrames() const = 0;
   virtual int32 LoopFrame() const = 0;
-
-  virtual int ToXML(pugi::xml_node &node, bool standAlone = false) const = 0;
-  virtual int FromXML(pugi::xml_node &node) = 0;
-  virtual int Save(BinWritterRef wr, bool standAlone = true) const = 0;
-
-  virtual ~LMTAnimation() {}
-
   virtual void Sanitize() const = 0;
-  int Save(const char *fileName, bool supressErrors = false) const;
+
+  virtual int FromXML(pugi::xml_node &node) = 0;
+  virtual void Save(pugi::xml_node &node, bool standAlone = false) const = 0;
+  virtual void Save(BinWritterRef wr, bool standAlone = true) const = 0;
+  virtual void Save(const std::string &fileName, bool asXML = false) const = 0;
+  virtual void Save(es::string_view fileName, bool asXML = false) const = 0;
+  virtual ~LMTAnimation() = default;
 
   static LMTAnimation *Create(const LMTConstructorProperties &props);
   static bool SupportedVersion(uint16 version);
 
   bool operator==(const LMTConstructorPropertiesBase &input) {
-    return props.ptrSize == input.ptrSize && props.version == input.version;
+    return props.arch == input.arch && props.version == input.version;
   }
 
   bool operator!=(const LMTConstructorPropertiesBase &input) {
@@ -159,37 +187,10 @@ public:
 
 class LMT
     : public uni::PolyVectorList<uni::Motion, LMTAnimation, uni::Element> {
-  static constexpr uint32 ID = CompileFourCC("LMT\0");
-  static constexpr uint32 ID_R = CompileFourCC("\0TML");
-
 public:
-  enum V {
-    V_22 = 22, // DR
-    V_40 = 40, // LP
-    V_49 = 49, // DMC4
-    V_50 = 50, // LP PS3
-    V_51 = 51, // RE5
-    V_56 = 56, // LP2
-    V_57 = 57, // RE:M 3DS
-    V_66 = 66, // DD, DD:DA
-    V_67 = 67, // Other, generic MTF v2 format
-    V_92 = 92, // MH:W
-  };
-
-  enum Architecture { Xundefined, X86, X64 };
-
-  enum ExportSettings {
-    ExportSetting_FullXML,
-    ExportSetting_FullXMLLinkedMotions,
-    ExportSetting_BinaryMotions
-  };
-
-  uint8 Version() const { return props.version; }
-  void Version(V version, Architecture arch);
-
-  Architecture GetArchitecture() const {
-    return (props.ptrSize == 8) ? X64 : X86;
-  }
+  LMTVersion Version() const { return props.version; }
+  void Version(LMTVersion version, LMTArchType arch);
+  LMTArchType Architecture() const { return props.arch; }
 
   LMTAnimation *AppendAnimation();
   void AppendAnimation(LMTAnimation *ani);
@@ -197,20 +198,16 @@ public:
 
   LMTAnimation *CreateAnimation() const;
 
-  int Load(BinReaderRef rd);
-  int Load(const char *fileName, bool supressErrors = false);
-  int Save(BinWritterRef wr) const;
-  int Save(const char *fileName, bool swapEndian = false,
-           bool supressErrors = false) const;
-
-  int ToXML(pugi::xml_node &node, const char *fileName,
-            ExportSettings settings);
-  int ToXML(const char *fileName, ExportSettings settings);
-
-  int FromXML(pugi::xml_node &node, const char *fileName,
-              Architecture forceArchitecture = Xundefined);
-  int FromXML(const char *fileName,
-              Architecture forceArchitecture = Xundefined);
+  void Load(BinReaderRef rd);
+  void Load(es::string_view fileName, LMTImportOverrides overrides = {});
+  void Load(const std::string &fileName, LMTImportOverrides overrides = {});
+  void Load(pugi::xml_node &node, es::string_view outPath,
+            LMTImportOverrides overrides = {});
+  void Save(BinWritterRef wr) const;
+  void Save(es::string_view fileName, LMTExportSettings settings = {}) const;
+  void Save(const std::string &fileName, LMTExportSettings settings = {}) const;
+  void Save(pugi::xml_node &node, es::string_view outPath,
+            LMTExportSettings settings = {}) const;
 
 private:
   std::string masterBuffer;
