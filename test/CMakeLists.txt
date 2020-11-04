@@ -15,3 +15,5 @@ build_target(
 
 set_precore_sources(test_main)
 add_test(test_main test_main)
+
+add_subdirectory(resources_lmt)
