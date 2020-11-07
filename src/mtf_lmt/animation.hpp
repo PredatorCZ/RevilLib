@@ -18,27 +18,24 @@
 #pragma once
 #include "internal.hpp"
 
-typedef uni::PolyVectorList<uni::MotionTrack, LMTTrack> LMTTracks;
+using LMTTracks = uni::PolyVectorList<uni::MotionTrack, LMTTrack>;
 
 class LMTAnimation_internal : public LMTAnimation, public LMTTracks {
-  virtual void _ToXML(pugi::xml_node &node) const = 0;
-  virtual void _FromXML(pugi::xml_node &node) = 0;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
-  virtual bool _Is64bit() const = 0;
+  virtual void ReflectToXML(pugi::xml_node &node) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node &node) = 0;
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &storage) const = 0;
+  virtual bool Is64bit() const = 0;
 
 public:
-  typedef std::unique_ptr<char, es::deleter_hybrid_c> MasterBufferPtr;
-  typedef std::unique_ptr<LMTAnimationEvent> LMTEventsPtr;
-  typedef std::unique_ptr<LMTFloatTrack> LMTFloatTrackPtr;
-  typedef typename LMTTracks::class_type LMTTrackPtr;
+  using MasterBufferPtr = uni::Element<std::string>;
+  using LMTEventsPtr = std::unique_ptr<LMTAnimationEvent>;
+  using LMTFloatTrackPtr = std::unique_ptr<LMTFloatTrack>;
+  using LMTTrackPtr = typename LMTTracks::class_type;
 
   MasterBufferPtr masterBuffer;
   LMTEventsPtr events;
   LMTFloatTrackPtr floatTracks;
-
-  LMTAnimation_internal() : masterBuffer(nullptr) {}
-
-  LMTConstructorPropertiesBase &_Props() { return props; }
 
   virtual LMTTrackPtr CreateTrack() const = 0;
   virtual LMTEventsPtr CreateEvents() const = 0;
@@ -47,11 +44,9 @@ public:
 
   void Save(pugi::xml_node &node, bool standAlone = false) const override;
   void Save(BinWritterRef wr, bool standAlone = true) const override;
-  void Save(es::string_view fileName, bool asXML = true) const override;
-  void Save(const std::string &fileName, bool asXML = true) const override;
+  void Load(pugi::xml_node &node) override;
 
-  static int Load(BinReaderRef rd, LMTConstructorPropertiesBase expected,
-                  LMTAnimation_internal *&out);
+  static Ptr Load(BinReaderRef rd, LMTConstructorPropertiesBase expected);
 
   uni::MotionTracksConst Tracks() const override {
     return uni::MotionTracksConst(this, false);
@@ -62,7 +57,4 @@ public:
   uint32 FrameRate() const override;
   float Duration() const override;
   MotionType_e MotionType() const override { return MotionType_e::Relative; }
-
-  int FromXML(pugi::xml_node &node) override;
-  void ToXML(const std::string &fileName, bool standAlone = false) const;
 };

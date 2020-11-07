@@ -28,9 +28,6 @@ REFLECTOR_CREATE(Buf_SingleVector3, 1, VARNAMES, data);
 REFLECTOR_CREATE(Buf_LinearVector3, 1, VARNAMES, data, additiveFrames);
 REFLECTOR_CREATE(Buf_HermiteVector3, 1, VARNAMES, flags, additiveFrames, data);
 
-static const float fPI = 3.14159265f;
-static const float fPI2 = 0.5 * fPI;
-
 // https://en.wikipedia.org/wiki/Slerp
 static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
   Vector4A16 v1 = _v1;
@@ -85,74 +82,65 @@ static Vector4A16 bslerp(const Vector4A16 &v0, const Vector4A16 &v1,
 template <class C>
 void AppendToStringRaw(const C *clPtr, std::stringstream &buffer) {
   const uint8 *rawData = reinterpret_cast<const uint8 *>(clPtr);
-  const uint32 hexSize = clPtr->Size() * 2;
-  uint32 cBuff = 0;
+  const size_t hexSize = clPtr->Size() * 2;
+  size_t cBuff = 0;
 
-  for (uint32 i = 0; i < hexSize; i++) {
+  for (size_t i = 0; i < hexSize; i++) {
     bool idk = i & 1;
     char temp = 0x30 + (idk ? rawData[cBuff++] & 0xf : rawData[cBuff] >> 4);
 
-    if (temp > 0x39)
+    if (temp > 0x39) {
       temp += 7;
+    }
 
     buffer << temp;
   }
 }
 
 template <class C>
-void RetreiveFromRawString(C *clPtr, const std::string &buffer,
-                           uint32 &bufferIter) {
+es::string_view RetreiveFromRawString(C *clPtr, es::string_view buffer) {
   uint8 *rawData = reinterpret_cast<uint8 *>(clPtr);
-  const uint32 hexSize = clPtr->Size() * 2;
-  uint32 cBuff = 0;
+  const size_t buffSize = clPtr->Size() * 2;
+  size_t cBuff = 0;
 
-  for (uint32 i = 0; i < hexSize; i++, bufferIter++) {
-    if (bufferIter >= buffer.size()) {
-      bufferIter = -1;
-      return;
-    }
-
-    const char &cRef = buffer.at(bufferIter);
+  while (!buffer.empty() && cBuff < buffSize) {
+    const auto cRef = buffer.at(0);
 
     if (cRef < '0' || cRef > 'F' || (cRef > '9' && cRef < 'A')) {
-      i--;
+      buffer.remove_prefix(1);
       continue;
     }
 
-    bool idk = i & 1;
-
-    if (!idk)
+    if (!(cBuff & 1)) {
       rawData[cBuff] = atohLUT[cRef] << 4;
-    else
+    } else {
       rawData[cBuff++] |= atohLUT[cRef];
-  }
-}
-
-static void ltrim(const std::string &s, uint32 &curIterPos) {
-  for (auto it = s.begin() + curIterPos; it != s.end(); it++) {
-    switch (*it) {
-    case '\n':
-    case '\t':
-    case ' ':
-      curIterPos++;
-      break;
-    default:
-      return;
     }
+
+    buffer.remove_prefix(1);
   }
+
+  if (cBuff < buffSize) {
+    throw std::runtime_error("Raw buffer is too short!");
+  }
+
+  return buffer;
 }
 
-static void SeekTo(const std::string &s, uint32 &curIterPos,
-                   const char T = '\n') {
-  for (auto it = s.begin() + curIterPos; it != s.end(); it++) {
-    curIterPos++;
+static auto SeekTo(es::string_view buffer, const char T = '\n') {
+  while (!buffer.empty()) {
+    if (buffer.front() == T) {
+      buffer.remove_prefix(1);
+      return buffer;
+    }
 
-    if (*it == T)
-      return;
+    buffer.remove_prefix(1);
   }
+
+  return buffer;
 }
 
-uint32 Buf_SingleVector3::Size() const { return 12; }
+size_t Buf_SingleVector3::Size() const { return 12; }
 
 void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_SingleVector3> tRefl(this);
@@ -160,13 +148,12 @@ void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
   buffer << tRefl.GetReflectedValue(0);
 }
 
-void Buf_SingleVector3::RetreiveFromString(const std::string &buffer,
-                                           uint32 &bufferIter) {
-  ltrim(buffer, bufferIter);
+es::string_view Buf_SingleVector3::RetreiveFromString(es::string_view buffer) {
+  buffer = es::SkipStartWhitespace(buffer, true);
 
   ReflectorWrap<Buf_SingleVector3> tRefl(this);
-  tRefl.SetReflectedValue(0, buffer.c_str() + bufferIter);
-  SeekTo(buffer, bufferIter);
+  tRefl.SetReflectedValue(0, buffer);
+  return SeekTo(buffer);
 }
 
 void Buf_SingleVector3::Evaluate(Vector4A16 &out) const {
@@ -209,7 +196,7 @@ void Buf_StepRotationQuat3::Interpolate(Vector4A16 &out,
   out = slerp(startPoint, endPoint, delta);
 }
 
-uint32 Buf_LinearVector3::Size() const { return 16; }
+size_t Buf_LinearVector3::Size() const { return 16; }
 
 void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_LinearVector3> tRefl(this);
@@ -218,21 +205,20 @@ void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
          << tRefl.GetReflectedValue(1) << " }";
 }
 
-void Buf_LinearVector3::RetreiveFromString(const std::string &buffer,
-                                           uint32 &bufferIter) {
-  SeekTo(buffer, bufferIter, '{');
-  ltrim(buffer, bufferIter);
+es::string_view Buf_LinearVector3::RetreiveFromString(es::string_view buffer) {
+  buffer = SeekTo(buffer, '{');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
   ReflectorWrap<Buf_LinearVector3> tRefl(this);
-  tRefl.SetReflectedValue(0, buffer.c_str() + bufferIter);
+  tRefl.SetReflectedValue(0, buffer);
 
-  SeekTo(buffer, bufferIter, ']');
-  SeekTo(buffer, bufferIter, ',');
-  ltrim(buffer, bufferIter);
+  buffer = SeekTo(buffer, ']');
+  buffer = SeekTo(buffer, ',');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
-  tRefl.SetReflectedValue(1, buffer.c_str() + bufferIter);
+  tRefl.SetReflectedValue(1, buffer);
 
-  SeekTo(buffer, bufferIter);
+  return SeekTo(buffer);
 }
 
 void Buf_LinearVector3::Devaluate(const Vector4A16 &in) { data = in; }
@@ -267,7 +253,7 @@ void Buf_LinearVector3::SwapEndian() {
   FByteswapper(additiveFrames);
 }
 
-uint32 Buf_HermiteVector3::Size() const { return size; }
+size_t Buf_HermiteVector3::Size() const { return size; }
 
 void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
   ReflectorWrapConst<Buf_HermiteVector3> tRefl(this);
@@ -275,55 +261,50 @@ void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
   buffer << "{ " << tRefl.GetReflectedValue(2) << ", "
          << tRefl.GetReflectedValue(1) << ", " << tRefl.GetReflectedValue(0);
 
-  int curTang = 0;
+  size_t curTang = 0;
 
-  for (int f = 0; f < 6; f++)
+  for (size_t f = 0; f < 6; f++) {
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
       buffer << ", " << tangents[curTang++];
     }
+  }
 
   buffer << " }";
 }
 
-void Buf_HermiteVector3::RetreiveFromString(const std::string &buffer,
-                                            uint32 &bufferIter) {
-  SeekTo(buffer, bufferIter, '{');
-  ltrim(buffer, bufferIter);
+es::string_view Buf_HermiteVector3::RetreiveFromString(es::string_view buffer) {
+  buffer = SeekTo(buffer, '{');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
   ReflectorWrap<Buf_HermiteVector3> tRefl(this);
-  tRefl.SetReflectedValue(2, buffer.c_str() + bufferIter);
+  tRefl.SetReflectedValue(2, buffer);
 
-  SeekTo(buffer, bufferIter, ']');
-  SeekTo(buffer, bufferIter, ',');
-  ltrim(buffer, bufferIter);
+  buffer = SeekTo(buffer, ',');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
-  tRefl.SetReflectedValue(1, buffer.c_str() + bufferIter);
+  tRefl.SetReflectedValue(1, buffer);
 
-  SeekTo(buffer, bufferIter, ',');
-  ltrim(buffer, bufferIter);
+  buffer = SeekTo(buffer, ',');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
-  tRefl.SetReflectedValue(0, buffer.c_str() + bufferIter);
+  tRefl.SetReflectedValue(0, buffer);
 
-  SeekTo(buffer, bufferIter, ',');
-  ltrim(buffer, bufferIter);
+  buffer = SeekTo(buffer, ',');
+  buffer = es::SkipStartWhitespace(buffer, true);
 
-  uint32 curTang = 0;
-  uint32 lastIter = bufferIter;
+  size_t curTang = 0;
 
-  for (uint32 f = 0; f < 6; f++)
+  for (size_t f = 0; f < 6; f++) {
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
-      tangents[curTang++] =
-          static_cast<float>(std::atof(buffer.c_str() + bufferIter));
-      lastIter = bufferIter;
-      SeekTo(buffer, bufferIter, ',');
-      ltrim(buffer, bufferIter);
+      tangents[curTang++] = static_cast<float>(std::atof(buffer.c_str()));
+      buffer = SeekTo(buffer, ',');
+      buffer = es::SkipStartWhitespace(buffer, true);
     }
-
-  bufferIter = lastIter;
+  }
 
   size = static_cast<uint8>(sizeof(Buf_HermiteVector3) - (6 - curTang) * 4);
 
-  SeekTo(buffer, bufferIter);
+  return SeekTo(buffer);
 }
 
 void Buf_HermiteVector3::Evaluate(Vector4A16 &out) const {
@@ -332,7 +313,7 @@ void Buf_HermiteVector3::Evaluate(Vector4A16 &out) const {
 
 void Buf_HermiteVector3::GetTangents(Vector4A16 &inTangs,
                                      Vector4A16 &outTangs) const {
-  uint32 currentTangIndex = 0;
+  size_t currentTangIndex = 0;
 
   inTangs.X = flags[Buf_HermiteVector3_Flags::InTangentX]
                   ? tangents[currentTangIndex++]
@@ -391,32 +372,34 @@ void Buf_HermiteVector3::SwapEndian() {
   FByteswapper(additiveFrames);
   FByteswapper(data);
 
-  uint32 curTang = 0;
+  size_t curTang = 0;
 
-  for (uint32 f = 0; f < 6; f++)
+  for (size_t f = 0; f < 6; f++) {
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
       FByteswapper(tangents[curTang]);
       curTang++;
     }
+  }
 }
 
-uint32 Buf_SphericalRotation::Size() const { return 8; }
+size_t Buf_SphericalRotation::Size() const { return 8; }
 
 void Buf_SphericalRotation::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_SphericalRotation::RetreiveFromString(const std::string &buffer,
-                                               uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_SphericalRotation::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_SphericalRotation::Devaluate(const Vector4A16 &_in) {
   Vector4A16 in = _in;
   data ^= data & dataField;
 
-  if (in.W < 0.0f)
+  if (in.W < 0.0f) {
     in = -in;
+  }
 
   if (in.X < 0.0f) {
     in.X *= -1;
@@ -476,14 +459,17 @@ void Buf_SphericalRotation::Evaluate(Vector4A16 &out) const {
   out.Z = var1.Z * var1.W * magnitude;
   out.W = wComp;
 
-  if ((data >> 53) & 1)
+  if ((data >> 53) & 1) {
     out.X *= -1;
+  }
 
-  if ((data >> 54) & 1)
+  if ((data >> 54) & 1) {
     out.Y *= -1;
+  }
 
-  if ((data >> 55) & 1)
+  if ((data >> 55) & 1) {
     out.Z *= -1;
+  }
 }
 
 void Buf_SphericalRotation::GetFrame(int32 &currentFrame) const {
@@ -511,23 +497,16 @@ void Buf_SphericalRotation::Interpolate(Vector4A16 &out,
 
 void Buf_SphericalRotation::SwapEndian() { FByteswapper(data); }
 
-const float Buf_SphericalRotation::componentMultiplierInv =
-    static_cast<float>(componentMask) / fPI2;
-const float Buf_SphericalRotation::componentMultiplier =
-    1.0f / componentMultiplierInv;
-const float Buf_SphericalRotation::componentMultiplierW =
-    1.0f / static_cast<float>(componentMaskW);
-
-uint32 Buf_BiLinearVector3_16bit::Size() const { return 8; }
+size_t Buf_BiLinearVector3_16bit::Size() const { return 8; }
 
 void Buf_BiLinearVector3_16bit::AppendToString(
     std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_BiLinearVector3_16bit::RetreiveFromString(const std::string &buffer,
-                                                   uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_BiLinearVector3_16bit::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_BiLinearVector3_16bit::Evaluate(Vector4A16 &out) const {
@@ -575,15 +554,15 @@ const Vector4A16 Buf_BiLinearVector3_16bit::componentMultiplierInv =
 const Vector4A16 Buf_BiLinearVector3_16bit::componentMultiplier =
     Vector4A16(1.0f) / componentMultiplierInv;
 
-uint32 Buf_BiLinearVector3_8bit::Size() const { return 4; }
+size_t Buf_BiLinearVector3_8bit::Size() const { return 4; }
 
 void Buf_BiLinearVector3_8bit::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_BiLinearVector3_8bit::RetreiveFromString(const std::string &buffer,
-                                                  uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_BiLinearVector3_8bit::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_BiLinearVector3_8bit::Evaluate(Vector4A16 &out) const {
@@ -650,25 +629,29 @@ void Buf_LinearRotationQuat4_14bit::Devaluate(const Vector4A16 &_in) {
 
   in *= componentMultiplierInv;
 
-  if (in.W < 0.0f)
+  if (in.W < 0.0f) {
     data |= componentMask - static_cast<uint64>(-in.W);
-  else
+  } else {
     data |= static_cast<uint64>(in.W);
+  }
 
-  if (in.Z < 0.0f)
+  if (in.Z < 0.0f) {
     data |= (componentMask - static_cast<uint64>(-in.Z)) << 14;
-  else
+  } else {
     data |= static_cast<uint64>(in.Z) << 14;
+  }
 
-  if (in.Y < 0.0f)
+  if (in.Y < 0.0f) {
     data |= (componentMask - static_cast<uint64>(-in.Y)) << 28;
-  else
+  } else {
     data |= static_cast<uint64>(in.Y) << 28;
+  }
 
-  if (in.X < 0.0f)
+  if (in.X < 0.0f) {
     data |= (componentMask - static_cast<uint64>(-in.X)) << 42;
-  else
+  } else {
     data |= static_cast<uint64>(in.X) << 42;
+  }
 }
 
 void Buf_LinearRotationQuat4_14bit::Interpolate(
@@ -682,23 +665,16 @@ void Buf_LinearRotationQuat4_14bit::Interpolate(
   out = slerp(startPoint, endPoint, delta);
 }
 
-const float Buf_LinearRotationQuat4_14bit::componentMultiplierInv =
-    static_cast<float>(componentMask) / 4.0f;
-const float Buf_LinearRotationQuat4_14bit::componentMultiplier =
-    1.0f / componentMultiplierInv;
-const float Buf_LinearRotationQuat4_14bit::componentSignMax =
-    static_cast<float>(componentMask) * 0.5f;
-
-uint32 Buf_BiLinearRotationQuat4_7bit::Size() const { return 4; }
+size_t Buf_BiLinearRotationQuat4_7bit::Size() const { return 4; }
 
 void Buf_BiLinearRotationQuat4_7bit::AppendToString(
     std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(
-    const std::string &buffer, uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_BiLinearRotationQuat4_7bit::Evaluate(Vector4A16 &out) const {
@@ -741,11 +717,6 @@ void Buf_BiLinearRotationQuat4_7bit::Interpolate(
 
 void Buf_BiLinearRotationQuat4_7bit::SwapEndian() { FByteswapper(data); }
 
-const float Buf_BiLinearRotationQuat4_7bit::componentMultiplierInv =
-    static_cast<float>(componentMask);
-const float Buf_BiLinearRotationQuat4_7bit::componentMultiplier =
-    1.0f / componentMultiplierInv;
-
 void Buf_BiLinearRotationQuatXW_14bit::Evaluate(Vector4A16 &out) const {
   out = IVector4A16(data, 0, 0, data >> 14) & componentMask;
   out *= componentMultiplier;
@@ -770,11 +741,6 @@ void Buf_BiLinearRotationQuatXW_14bit::Interpolate(
 
   out = bslerp(startPoint, endPoint, minMax, delta);
 }
-
-const float Buf_BiLinearRotationQuatXW_14bit::componentMultiplierInv =
-    static_cast<float>(componentMask);
-const float Buf_BiLinearRotationQuatXW_14bit::componentMultiplier =
-    1.0f / componentMultiplierInv;
 
 void Buf_BiLinearRotationQuatYW_14bit::Evaluate(Vector4A16 &out) const {
   out = IVector4A16(0, data, 0, data >> 14) & componentMask;
@@ -826,16 +792,16 @@ void Buf_BiLinearRotationQuatZW_14bit::Interpolate(
   out = bslerp(startPoint, endPoint, minMax, delta);
 }
 
-uint32 Buf_BiLinearRotationQuat4_11bit::Size() const { return 6; }
+size_t Buf_BiLinearRotationQuat4_11bit::Size() const { return 6; }
 
 void Buf_BiLinearRotationQuat4_11bit::AppendToString(
     std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(
-    const std::string &buffer, uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_BiLinearRotationQuat4_11bit::Evaluate(Vector4A16 &out) const {
@@ -879,21 +845,16 @@ void Buf_BiLinearRotationQuat4_11bit::Interpolate(
 
 void Buf_BiLinearRotationQuat4_11bit::SwapEndian() { FByteswapper(data); }
 
-const float Buf_BiLinearRotationQuat4_11bit::componentMultiplierInv =
-    static_cast<float>(componentMask);
-const float Buf_BiLinearRotationQuat4_11bit::componentMultiplier =
-    1.0f / componentMultiplierInv;
-
-uint32 Buf_BiLinearRotationQuat4_9bit::Size() const { return 5; }
+size_t Buf_BiLinearRotationQuat4_9bit::Size() const { return 5; }
 
 void Buf_BiLinearRotationQuat4_9bit::AppendToString(
     std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-void Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(
-    const std::string &buffer, uint32 &bufferIter) {
-  RetreiveFromRawString(this, buffer, bufferIter);
+es::string_view
+Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(es::string_view buffer) {
+  return RetreiveFromRawString(this, buffer);
 }
 
 void Buf_BiLinearRotationQuat4_9bit::Evaluate(Vector4A16 &out) const {
@@ -935,46 +896,41 @@ void Buf_BiLinearRotationQuat4_9bit::Interpolate(
   out = bslerp(startPoint, endPoint, minMax, delta);
 }
 
-const float Buf_BiLinearRotationQuat4_9bit::componentMultiplierInv =
-    static_cast<float>(componentMask);
-const float Buf_BiLinearRotationQuat4_9bit::componentMultiplier =
-    1.0f / componentMultiplierInv;
-
 template <class C>
 void Buff_EvalShared<C>::ToString(std::string &strBuff,
-                                  uint32 numIdents) const {
+                                  size_t numIdents) const {
   std::stringstream str;
   str << std::endl << idents[numIdents];
 
-  uint32 curLine = 1;
+  size_t curLine = 1;
 
   for (auto &d : data) {
     d.AppendToString(str);
 
-    if (!(curLine % C::NEWLINEMOD))
+    if (!(curLine % C::NEWLINEMOD)) {
       str << std::endl << idents[numIdents];
+    }
 
     curLine++;
   }
 
-  if (!((curLine - 1) % C::NEWLINEMOD))
+  if (!((curLine - 1) % C::NEWLINEMOD)) {
     str.seekp(-1, std::ios_base::cur) << '\0';
-  else
+  } else {
     str << std::endl << idents[numIdents - 1];
+  }
 
   strBuff = str.str();
 }
 
-template <class C> void Buff_EvalShared<C>::FromString(std::string &input) {
-  uint32 iterPos = 0;
-
+template <class C> void Buff_EvalShared<C>::FromString(es::string_view input) {
   for (auto &d : data) {
-    d.RetreiveFromString(input, iterPos);
+    input = d.RetreiveFromString(input);
   }
 }
 
 template <class C>
-void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
+void Buff_EvalShared<C>::Assign(char *ptr, size_t size, bool swapEndian) {
   if (!C::VARIABLE_SIZE) {
     data = Store_Type(reinterpret_cast<C *>(ptr),
                       reinterpret_cast<C *>(ptr + size),
@@ -989,12 +945,13 @@ void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
     }
   }
 
-  if (swapEndian)
+  if (swapEndian) {
     SwapEndian();
+  }
 
   frames.resize(NumFrames());
   int32 currentFrame = 0;
-  uint32 curFrameID = 0;
+  size_t curFrameID = 0;
 
   for (auto &f : frames) {
     f = currentFrame;
@@ -1004,11 +961,12 @@ void Buff_EvalShared<C>::Assign(char *ptr, uint32 size, bool swapEndian) {
 
 template <class C> void Buff_EvalShared<C>::Save(BinWritterRef wr) const {
   if (!C::VARIABLE_SIZE) {
-    if (!wr.SwappedEndian())
+    if (!wr.SwappedEndian()) {
       wr.WriteBuffer(reinterpret_cast<const char *>(data.data()),
                      data.size() * sizeof(typename Store_Type::value_type));
-    else
+    } else {
       wr.WriteContainer(data);
+    }
   } else {
     for (auto &r : data) {
       C tmp = r;
@@ -1019,8 +977,9 @@ template <class C> void Buff_EvalShared<C>::Save(BinWritterRef wr) const {
 }
 
 template <class C> void Buff_EvalShared<C>::SwapEndian() {
-  for (auto &d : data)
+  for (auto &d : data) {
     d.SwapEndian();
+  }
 }
 
 template <class Derived> LMTTrackController *_creatorDummyBuffEval() {
@@ -1030,7 +989,7 @@ template <class Derived> LMTTrackController *_creatorDummyBuffEval() {
 #define TCON_REG(val) {TrackTypesShared::val, _creatorDummyBuffEval<Buf_##val>},
 
 #define TCONFRC_REG(val)                                                       \
-  {TrackTypesShared::val, Buf_##val::componentMultiplier},
+  {TrackTypesShared::val, [] { return Buf_##val::componentMultiplier; }()},
 
 namespace std {
 template <> struct hash<TrackTypesShared> {
@@ -1062,65 +1021,67 @@ static const std::unordered_map<TrackTypesShared, float> fracRegistry = {
 
 static const TrackTypesShared buffRemapRegistry[][16] = {
     {
-        TrackTypesShared::None,
-        TrackTypesShared::SingleVector3,
-        TrackTypesShared::SingleVector3,
-        TrackTypesShared::None,
-        TrackTypesShared::StepRotationQuat3,
-        TrackTypesShared::HermiteVector3,
-        TrackTypesShared::SphericalRotation,
-        TrackTypesShared::None,
-        TrackTypesShared::None,
-        TrackTypesShared::LinearVector3,
+        TrackTypesShared::None,              //
+        TrackTypesShared::SingleVector3,     //
+        TrackTypesShared::SingleVector3,     //
+        TrackTypesShared::None,              //
+        TrackTypesShared::StepRotationQuat3, //
+        TrackTypesShared::HermiteVector3,    //
+        TrackTypesShared::SphericalRotation, //
+        TrackTypesShared::None,              //
+        TrackTypesShared::None,              //
+        TrackTypesShared::LinearVector3,     //
     },
     {
-        TrackTypesShared::None,
-        TrackTypesShared::SingleVector3,
-        TrackTypesShared::SingleVector3,
-        TrackTypesShared::None,
-        TrackTypesShared::StepRotationQuat3,
-        TrackTypesShared::HermiteVector3,
-        TrackTypesShared::LinearRotationQuat4_14bit,
-        TrackTypesShared::None,
-        TrackTypesShared::None,
-        TrackTypesShared::LinearVector3,
+        TrackTypesShared::None,                      //
+        TrackTypesShared::SingleVector3,             //
+        TrackTypesShared::SingleVector3,             //
+        TrackTypesShared::None,                      //
+        TrackTypesShared::StepRotationQuat3,         //
+        TrackTypesShared::HermiteVector3,            //
+        TrackTypesShared::LinearRotationQuat4_14bit, //
+        TrackTypesShared::None,                      //
+        TrackTypesShared::None,                      //
+        TrackTypesShared::LinearVector3,             //
     },
     {
-        TrackTypesShared::None,
-        TrackTypesShared::SingleVector3,
-        TrackTypesShared::StepRotationQuat3,
-        TrackTypesShared::LinearVector3,
-        TrackTypesShared::BiLinearVector3_16bit,
-        TrackTypesShared::BiLinearVector3_8bit,
-        TrackTypesShared::LinearRotationQuat4_14bit,
-        TrackTypesShared::BiLinearRotationQuat4_7bit,
-        TrackTypesShared::None,
-        TrackTypesShared::None,
-        TrackTypesShared::None,
-        TrackTypesShared::BiLinearRotationQuatXW_14bit,
-        TrackTypesShared::BiLinearRotationQuatYW_14bit,
-        TrackTypesShared::BiLinearRotationQuatZW_14bit,
-        TrackTypesShared::BiLinearRotationQuat4_11bit,
-        TrackTypesShared::BiLinearRotationQuat4_9bit,
+        TrackTypesShared::None,                         //
+        TrackTypesShared::SingleVector3,                //
+        TrackTypesShared::StepRotationQuat3,            //
+        TrackTypesShared::LinearVector3,                //
+        TrackTypesShared::BiLinearVector3_16bit,        //
+        TrackTypesShared::BiLinearVector3_8bit,         //
+        TrackTypesShared::LinearRotationQuat4_14bit,    //
+        TrackTypesShared::BiLinearRotationQuat4_7bit,   //
+        TrackTypesShared::None,                         //
+        TrackTypesShared::None,                         //
+        TrackTypesShared::None,                         //
+        TrackTypesShared::BiLinearRotationQuatXW_14bit, //
+        TrackTypesShared::BiLinearRotationQuatYW_14bit, //
+        TrackTypesShared::BiLinearRotationQuatZW_14bit, //
+        TrackTypesShared::BiLinearRotationQuat4_11bit,  //
+        TrackTypesShared::BiLinearRotationQuat4_9bit,   //
     },
 };
 
-LMTTrackController *LMTTrackController::CreateCodec(uint32 type,
-                                                    uint32 subVersion) {
-  const TrackTypesShared cType = subVersion == 0xffffffff
+LMTTrackController *LMTTrackController::CreateCodec(size_t type,
+                                                    size_t subVersion) {
+  const TrackTypesShared cType = subVersion & 0xffffffff
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];
-  REFLECTOR_REGISTER(Buf_HermiteVector3_Flags);
+  RegisterReflectedType<Buf_HermiteVector3_Flags>();
 
-  if (codecRegistry.count(cType))
+  if (codecRegistry.count(cType)) {
     return codecRegistry.at(cType)();
+  }
 
   return nullptr;
 }
 
 float LMTTrackController::GetTrackMaxFrac(TrackTypesShared type) {
-  if (fracRegistry.count(type))
+  if (fracRegistry.count(type)) {
     return fracRegistry.at(type);
+  }
 
   return FLT_MAX;
 }

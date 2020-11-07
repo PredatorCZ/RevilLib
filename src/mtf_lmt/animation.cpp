@@ -32,21 +32,21 @@
 
 template <template <class C> class PtrType, LMTVersion trackVersion>
 struct AnimTraitsV1 {
-  typedef PtrType<char> Track_Pointer;
-  typedef AnimEvents<PtrType> EventClass;
+  using Track_Pointer = PtrType<char>;
+  using EventClass = AnimEvents<PtrType>;
 
-  static constexpr uint32 NUMEVENTGROUPS = 2;
+  static constexpr size_t NUMEVENTGROUPS = 2;
   static constexpr LMTVersion TRACK_VERSION = trackVersion;
 };
 
 template <template <class C> class PtrType, LMTVersion trackVersion>
 struct AnimTraitsV2 {
-  typedef PtrType<char> Track_Pointer;
-  typedef AnimEvents<PtrType> EventClass;
-  typedef PtrType<EventClass> EventClass_Pointer;
-  typedef PtrType<char> FloatTracks_Pointer;
+  using Track_Pointer = PtrType<char>;
+  using EventClass = AnimEvents<PtrType>;
+  using EventClass_Pointer = PtrType<EventClass>;
+  using FloatTracks_Pointer = PtrType<char>;
 
-  static constexpr uint32 NUMEVENTGROUPS = 4;
+  static constexpr size_t NUMEVENTGROUPS = 4;
   static constexpr LMTVersion TRACK_VERSION = trackVersion;
 };
 
@@ -56,7 +56,11 @@ struct AnimTraitsV2 {
 
 template <class AnimTraits>
 struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
-  typedef AnimTraits Traits;
+  using Traits = AnimTraits;
+
+  static constexpr size_t VERSION = 1;
+  static constexpr size_t _EVENT_STRIDE = sizeof(typename Traits::EventClass);
+  static constexpr size_t NUMPOINTERS = 1 + Traits::NUMEVENTGROUPS;
 
   typename Traits::Track_Pointer tracks;
   uint32 numTracks, numFrames;
@@ -66,11 +70,7 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
 
   AnimV0() : numTracks(0), numFrames(0), loopFrame(0), events() {}
 
-  static const uint32 VERSION = 1;
-  static const uint32 _EVENT_STRIDE = sizeof(typename Traits::EventClass);
-  static const size_t NUMPOINTERS = 1 + Traits::NUMEVENTGROUPS;
-
-  typename Traits::EventClass *Events() { return events; }
+  auto Events() { return events; }
 
   char *FloatTracks() { return nullptr; }
 
@@ -83,16 +83,19 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed())
+    if (tracks.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     tracks.Fixup(masterBuffer, true);
 
-    for (auto &e : events)
+    for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
+    }
   }
 
   static const size_t *Pointers() {
@@ -112,7 +115,11 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
 
 template <class AnimTraits>
 struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
-  typedef AnimTraits Traits;
+  using Traits = AnimTraits;
+
+  static constexpr size_t VERSION = 1;
+  static constexpr size_t _EVENT_STRIDE = sizeof(typename Traits::EventClass);
+  static constexpr size_t NUMPOINTERS = 1 + Traits::NUMEVENTGROUPS;
 
   typename Traits::Track_Pointer tracks;
   uint32 numTracks, numFrames;
@@ -121,11 +128,7 @@ struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
   Vector4A16 endFrameAdditiveSceneRotation;
   typename Traits::EventClass events[Traits::NUMEVENTGROUPS];
 
-  static const uint32 VERSION = 1;
-  static const uint32 _EVENT_STRIDE = sizeof(typename Traits::EventClass);
-  static const size_t NUMPOINTERS = 1 + Traits::NUMEVENTGROUPS;
-
-  typename Traits::EventClass *Events() { return events; }
+  auto Events() { return events; }
 
   char *FloatTracks() { return nullptr; }
 
@@ -139,16 +142,19 @@ struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed())
+    if (tracks.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     tracks.Fixup(masterBuffer, true);
 
-    for (auto &e : events)
+    for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
+    }
   }
 
   static const size_t *Pointers() {
@@ -171,23 +177,23 @@ REFLECTOR_CREATE(AnimV2Flags, ENUM, 2, CLASS, 32, Events = 0x800000,
 
 template <class AnimTraits>
 struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
-  typedef AnimTraits Traits;
+  using Traits = AnimTraits;
+
+  static constexpr size_t VERSION = 2;
+  static constexpr size_t NUMPOINTERS = 3;
 
   typename Traits::Track_Pointer tracks;
   uint32 numTracks, numFrames;
   int32 loopFrame;
   Vector4A16 endFrameAdditiveScenePosition;
   Vector4A16 endFrameAdditiveSceneRotation;
-  esFlags<uint32, AnimV2Flags> flags;
+  es::Flags<AnimV2Flags> flags;
   typename Traits::EventClass_Pointer eventTable;
   typename Traits::FloatTracks_Pointer floatTracks;
 
-  typename Traits::EventClass *Events() { return eventTable; }
+  auto Events() { return eventTable; }
 
   char *FloatTracks() { return floatTracks; }
-
-  static const uint32 VERSION = 2;
-  static const uint32 NUMPOINTERS = 3;
 
   void SwapEndian() {
     FByteswapper(tracks);
@@ -202,21 +208,25 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed())
+    if (tracks.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     tracks.Fixup(masterBuffer, true);
     eventTable.Fixup(masterBuffer, true);
     floatTracks.Fixup(masterBuffer, true);
 
-    typename Traits::EventClass *dEvents = Events();
+    auto dEvents = Events();
 
-    if (dEvents)
-      for (uint32 e = 0; e < Traits::NUMEVENTGROUPS; e++)
+    if (dEvents) {
+      for (size_t e = 0; e < Traits::NUMEVENTGROUPS; e++) {
         dEvents[e].Fixup(masterBuffer, swapEndian);
+      }
+    }
   }
 
   static const size_t *Pointers() {
@@ -235,7 +245,10 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
 
 template <class AnimTraits>
 struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
-  typedef AnimTraits Traits;
+  using Traits = AnimTraits;
+
+  static constexpr size_t VERSION = 3;
+  static constexpr size_t NUMPOINTERS = 2;
 
   typename Traits::Track_Pointer tracks;
   uint32 numTracks, numFrames;
@@ -246,12 +259,9 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
   typename Traits::Track_Pointer nullPtr[2];
   typename Traits::EventClass_Pointer eventTable;
 
-  typename Traits::EventClass *Events() { return eventTable; }
+  auto Events() { return eventTable; }
 
   char *FloatTracks() { return nullptr; }
-
-  static const uint32 VERSION = 3;
-  static const uint32 NUMPOINTERS = 2;
 
   void SwapEndian() {
     FByteswapper(tracks);
@@ -264,11 +274,13 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed())
+    if (tracks.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     tracks.Fixup(masterBuffer, true);
     eventTable.Fixup(masterBuffer, true);
@@ -282,6 +294,10 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
     return ptrs;
   }
 };
+
+/************************************************************************/
+/************************** ANIM_INTERNAL *******************************/
+/************************************************************************/
 
 void LMTAnimation_internal::FrameRate(uint32 fps) const {
   for (auto &s : storage) {
@@ -305,16 +321,16 @@ template <class C> class AnimShared : public LMTAnimation_internal {
   }
 
 public:
-  typedef C value_type;
-  typedef std::unique_ptr<C, es::deleter_hybrid> AnimationTypePtr;
+  using value_type = C;
 
-  mutable AnimationTypePtr data;
+  mutable uni::Element<value_type> data;
 
   AnimShared() : data(new C) {}
   AnimShared(C *ptr, char *buff, bool swapEndian) : data(ptr, false) {
     if (!buff) {
-      if (swapEndian)
+      if (swapEndian) {
         data->SwapEndian();
+      }
 
       return;
     }
@@ -329,15 +345,12 @@ public:
       props.swappedEndian = swapEndian;
       props.dataStart = data->tracks;
 
-      storage.emplace_back(LMTTrack::Create(props));
-
-      const uint32 trackStride = storage[0]->Stride();
-
-      char *&curData = reinterpret_cast<char *&>(props.dataStart);
-      curData += trackStride;
-
-      for (uint32 t = 1; t < data->numTracks; t++, curData += trackStride)
+      size_t curTrack = 0;
+      do {
         storage.emplace_back(LMTTrack::Create(props));
+        const auto trackStride = storage.back()->Stride();
+        props.dataStart = data->tracks + trackStride;
+      } while (++curTrack < data->numTracks);
     }
 
     LMTConstructorProperties eventProps;
@@ -353,21 +366,22 @@ public:
       eventProps.version = LMTVersion::V_66;
     }
 
-    events = LMTEventsPtr(LMTAnimationEvent::Create(eventProps));
+    events = LMTAnimationEvent::Create(eventProps);
 
     eventProps.dataStart = data->FloatTracks();
     eventProps.version = LMTVersion::Auto;
 
-    if (eventProps.dataStart)
-      floatTracks = LMTFloatTrackPtr(LMTFloatTrack::Create(eventProps));
+    if (eventProps.dataStart) {
+      floatTracks = LMTFloatTrack::Create(eventProps);
+    }
   }
 
-  void _ToXML(pugi::xml_node &node) const override {
+  void ReflectToXML(pugi::xml_node &node) const override {
     ReflectorWrapConst<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
-  void _FromXML(pugi::xml_node &node) override {
+  void ReflectFromXML(pugi::xml_node &node) override {
     ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Load(refl, node);
   }
@@ -390,7 +404,7 @@ public:
     props.arch = GetArch();
     props.version = C::Traits::TRACK_VERSION;
 
-    return LMTTrackPtr(LMTTrack::Create(props));
+    return LMTTrack::Create(props);
   }
 
   LMTEventsPtr CreateEvents() const override {
@@ -404,42 +418,44 @@ public:
       props.version = LMTVersion::V_66;
     }
 
-    return LMTEventsPtr(LMTAnimationEvent::Create(props));
+    return LMTAnimationEvent::Create(props);
   }
 
   LMTFloatTrackPtr CreateFloatTracks() const override {
-    if (C::VERSION != 2)
-      return nullptr;
+    if (C::VERSION != 2) {
+      return {};
+    }
 
     LMTConstructorProperties props;
     props.arch = GetArch();
 
-    return LMTFloatTrackPtr(LMTFloatTrack::Create(props));
+    return LMTFloatTrack::Create(props);
   }
 
-  void _Save(BinWritterRef wr, LMTFixupStorage &storage) const override {
+  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
     const size_t cOff = wr.Tell();
     constexpr size_t numPoninters = C::NUMPOINTERS;
     const auto *pointers = C::Pointers();
 
     wr.Write<value_type &>(*data);
 
-    for (size_t p = 0; p < numPoninters; p++)
+    for (size_t p = 0; p < numPoninters; p++) {
       storage.SaveFrom(cOff + pointers[p]);
+    }
   }
 
-  uint32 GetVersion() const override { return C::VERSION; }
+  size_t GetVersion() const override { return C::VERSION; }
 
-  bool _Is64bit() const override {
+  bool Is64bit() const override {
     return sizeof(typename C::Traits::Track_Pointer) == 8;
   }
 
-  uint32 NumFrames() const override { return data->numFrames; }
+  size_t NumFrames() const override { return data->numFrames; }
 
   int32 LoopFrame() const override { return data->loopFrame; }
 
   // finish
-  void Sanitize() const override {
+  void Sanitize() const {
     data->numTracks = static_cast<uint32>(storage.size());
 
     if (!data->numTracks)
@@ -519,25 +535,30 @@ ES_STATIC_ASSERT(
     alignof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) == 16);
 // ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
 
-template <class Derived> static LMTAnimation *_creattorBase() {
-  return new AnimShared<Derived>();
-}
+using ptr_type_ = LMTAnimation::Ptr;
 
-template <class C>
-static LMTAnimation *_creator(void *ptr, char *buff, bool endi) {
-  return new AnimShared<C>(static_cast<C *>(ptr), buff, endi);
-}
+template <class C> struct f_ {
+  static ptr_type_ creatorBase() { return std::make_unique<AnimShared<C>>(); }
+
+  static ptr_type_ creator(void *ptr, char *buff, bool endi) {
+    return std::make_unique<AnimShared<C>>(static_cast<C *>(ptr), buff, endi);
+  }
+};
 
 #define LMTANI_REG(version, ptrSize, ...)                                      \
   {                                                                            \
     {LMTArchType::X##ptrSize, LMTVersion::V_##version},                        \
-        _creattorBase<__VA_ARGS__>                                             \
+        f_<__VA_ARGS__>::creatorBase                                           \
   }
 
 #define LMTANI_REG_LINK(version, ptrSize, ...)                                 \
-  { {LMTArchType::X##ptrSize, LMTVersion::V_##version}, _creator<__VA_ARGS__> }
+  {                                                                            \
+    {LMTArchType::X##ptrSize, LMTVersion::V_##version},                        \
+        f_<__VA_ARGS__>::creator                                               \
+  }
 
-static const std::map<LMTConstructorPropertiesBase, LMTAnimation *(*)()>
+static const std::map<LMTConstructorPropertiesBase,
+                      decltype(&f_<void>::creatorBase)>
     animationRegistry = {
         // clang-format off
         LMTANI_REG(22, 86, AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>),
@@ -565,7 +586,7 @@ static const std::map<LMTConstructorPropertiesBase, LMTAnimation *(*)()>
 };
 
 static const std::map<LMTConstructorPropertiesBase,
-                      LMTAnimation *(*)(void *, char *, bool)>
+                      decltype(&f_<void>::creator)>
     animationLinkRegistry = {
         // clang-format off
         LMTANI_REG_LINK(22, 86, AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>),
@@ -599,23 +620,25 @@ static const std::list<LMTVersion> supportedVersions = {
 };
 
 bool LMTAnimation::SupportedVersion(uint16 version) {
-  for (auto &v : supportedVersions)
-    if (static_cast<uint16>(v) == version)
+  for (auto &v : supportedVersions) {
+    if (static_cast<uint16>(v) == version) {
       return true;
+    }
+  }
 
   return false;
 }
 
-LMTAnimation *LMTAnimation::Create(const LMTConstructorProperties &props) {
-  REFLECTOR_REGISTER(AnimV2Flags);
+ptr_type_ LMTAnimation::Create(const LMTConstructorProperties &props) {
+  RegisterReflectedType<AnimV2Flags>();
+  ptr_type_ cAni;
 
-  LMTAnimation *cAni = nullptr;
-
-  if (props.dataStart)
+  if (props.dataStart) {
     cAni = animationLinkRegistry.at(props)(props.dataStart, props.masterBuffer,
                                            props.swappedEndian);
-  else
+  } else {
     cAni = animationRegistry.at(props)();
+  }
 
   cAni->props = props;
 
@@ -624,24 +647,26 @@ LMTAnimation *LMTAnimation::Create(const LMTConstructorProperties &props) {
 
 bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version) {
   LMTConstructorPropertiesBase props{LMTArchType::X64, version};
+  RegisterReflectedType<AnimV2Flags>();
 
-  REFLECTOR_REGISTER(AnimV2Flags);
-
-  if (!animationRegistry.count(props))
+  if (!animationRegistry.count(props)) {
     return false;
+  }
 
   char buffer[0x100];
 
   rd.ReadBuffer(buffer, 0x100);
 
-  LMTAnimation_internal *cAni = static_cast<LMTAnimation_internal *>(
-      animationLinkRegistry.at(props)(buffer, nullptr, rd.SwappedEndian()));
-
+  auto anim =
+      animationLinkRegistry.at(props)(buffer, nullptr, rd.SwappedEndian());
+  auto cAni = static_cast<LMTAnimation_internal *>(anim.get());
   auto ptrVals = cAni->GetPtrValues();
 
-  for (auto v : ptrVals)
-    if (v & (0xffffffffULL << 32))
+  for (auto v : ptrVals) {
+    if (v & (0xffffffffULL << 32)) {
       return false;
+    }
+  }
 
   return true;
 }

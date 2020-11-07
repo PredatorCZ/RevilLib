@@ -65,14 +65,14 @@ struct RETrackCurve43 {
 };
 
 struct REMotionTrack43 {
-  enum TrackType {
+  enum TrackType : uint16 {
     TrackType_Position,
     TrackType_Rotation,
     TrackType_Scale,
   };
 
   int16 unk;
-  esFlags<uint16, TrackType> usedCurves;
+  es::Flags<TrackType> usedCurves;
   uint32 boneHash;
   esPointerX64<RETrackCurve43> curves;
 

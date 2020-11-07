@@ -29,9 +29,7 @@ struct FloatFrame {
     data |= (input << 8) & 0xffff00;
   }
 
-  uint8 NumComponents() const {
-    return static_cast<uint8>(data);
-  }
+  uint8 NumComponents() const { return static_cast<uint8>(data); }
 
   void NumComponents(int16 input) {
     data &= 0xffffff00;
@@ -43,15 +41,16 @@ struct FloatFrame {
     FByteswapper(value);
   }
 
-  pugi::xml_node ToXML(pugi::xml_node &node) const;
-  int FromXML(pugi::xml_node &node);
+  void Save(pugi::xml_node &node) const;
+  void Load(pugi::xml_node &node);
 };
 
 class LMTFloatTrack_internal : public LMTFloatTrack {
-  virtual void _ToXML(pugi::xml_node &node, uint32 groupID) const = 0;
-  virtual void _FromXML(pugi::xml_node &node, uint32 groupID) = 0;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
-  virtual bool _Is64bit() const = 0;
+  virtual void ReflectToXML(pugi::xml_node &node, size_t groupID) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node &node, size_t groupID) = 0;
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &storage) const = 0;
+  virtual bool Is64bit() const = 0;
 
 public:
   typedef std::vector<FloatFrame, es::allocator_hybrid<FloatFrame>>
@@ -61,23 +60,23 @@ protected:
   FramesCollection frames[4];
 
 public:
-  uint32 GetNumGroups() const override { return 4; }
+  size_t GetNumGroups() const override { return 4; }
 
-  uint32 GetGroupTrackCount(uint32 groupID) const override {
-    return static_cast<uint32>(frames[groupID].size());
+  size_t GetGroupTrackCount(size_t groupID) const override {
+    return frames[groupID].size();
   }
 
-  const FloatFrame *GetFrames(uint32 groupID) const {
+  const FloatFrame *GetFrames(size_t groupID) const {
     return frames[groupID].data();
   }
 
-  FloatFrame *GetFrames(uint32 groupID) { return frames[groupID].data(); }
+  FloatFrame *GetFrames(size_t groupID) { return frames[groupID].data(); }
 
-  virtual void SetNumFrames(uint32 groupID, uint32 newSize) {
+  void SetNumFrames(size_t groupID, size_t newSize) {
     frames[groupID].resize(newSize);
   }
 
-  int ToXML(pugi::xml_node &node, bool standAlone) const override;
-  int FromXML(pugi::xml_node &node) override;
   void Save(BinWritterRef wr) const;
+  void Save(pugi::xml_node &node, bool standAlone) const override;
+  void Load(pugi::xml_node &node) override;
 };

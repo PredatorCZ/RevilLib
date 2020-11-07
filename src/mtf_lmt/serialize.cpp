@@ -30,39 +30,36 @@ static constexpr uint32 TML_ID = CompileFourCC("\0TML");
 
 bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version);
 
-int LMTAnimationEventV1_Internal::SaveBuffer(BinWritterRef wr,
-                                             LMTFixupStorage &fixups) const {
-  const uint32 numGroups = GetNumGroups();
+void LMTAnimationEventV1_Internal::SaveBuffer(BinWritterRef wr,
+                                              LMTFixupStorage &fixups) const {
+  const size_t numGroups = GetNumGroups();
 
-  for (uint32 g = 0; g < numGroups; g++) {
+  for (size_t g = 0; g < numGroups; g++) {
     wr.ApplyPadding();
     fixups.SaveTo(wr);
 
     wr.WriteContainer(GetEvents(g));
   }
-
-  return 0;
 }
 
-int LMTAnimationEventV1_Internal::Save(BinWritterRef wr) const {
+void LMTAnimationEventV1_Internal::Save(BinWritterRef wr) const {
   LMTFixupStorage localStorage;
 
-  _Save(wr, localStorage);
+  SaveInternal(wr, localStorage);
   SaveBuffer(wr, localStorage);
-  localStorage.FixupPointers(wr, _Is64bit());
-
-  return 0;
+  localStorage.FixupPointers(wr, Is64bit());
 }
 
-int LMTAnimationEventV2_Internal::Save(BinWritterRef wr) const {
+void LMTAnimationEventV2_Internal::Save(BinWritterRef wr) const {
   LMTFixupStorage localFixups;
 
-  _Save(wr, localFixups);
+  SaveInternal(wr, localFixups);
   wr.ApplyPadding();
   localFixups.SaveTo(wr);
 
-  for (auto &g : groups)
-    g->_Save(wr, localFixups);
+  for (auto &g : groups) {
+    g->SaveInternal(wr, localFixups);
+  }
 
   for (auto &g : groups) {
     wr.ApplyPadding();
@@ -70,8 +67,9 @@ int LMTAnimationEventV2_Internal::Save(BinWritterRef wr) const {
 
     LMTFixupStorage semilocalFixups;
 
-    for (auto &e : g->events)
-      e->_Save(wr, semilocalFixups);
+    for (auto &e : g->events) {
+      e->SaveInternal(wr, semilocalFixups);
+    }
 
     for (auto &e : g->events) {
       wr.ApplyPadding();
@@ -83,18 +81,17 @@ int LMTAnimationEventV2_Internal::Save(BinWritterRef wr) const {
   }
 
   localFixups.FixupPointers(wr, true);
-
-  return 0;
 }
 
-int LMTTrack_internal::SaveBuffers(BinWritterRef wr,
-                                   LMTFixupStorage &storage) const {
+void LMTTrack_internal::SaveBuffers(BinWritterRef wr,
+                                    LMTFixupStorage &storage) const {
   if (controller->NumFrames()) {
     wr.ApplyPadding();
     storage.SaveTo(wr);
     controller->Save(wr);
-  } else
+  } else {
     storage.SkipTo();
+  }
 
   if (minMax) {
     wr.ApplyPadding();
@@ -102,46 +99,27 @@ int LMTTrack_internal::SaveBuffers(BinWritterRef wr,
     wr.Write<TrackMinMax &>(*minMax);
   }
 
-  if (!minMax && UseTrackExtremes())
+  if (!minMax && UseTrackExtremes()) {
     storage.SkipTo();
-
-  return 0;
+  }
 }
 
 void LMTFloatTrack_internal::Save(BinWritterRef wr) const {
   LMTFixupStorage localStorage;
 
-  _Save(wr, localStorage);
+  SaveInternal(wr, localStorage);
   wr.ApplyPadding();
 
   for (auto &f : frames) {
     if (f.size()) {
       localStorage.SaveTo(wr);
       wr.WriteContainer(f);
-    } else
+    } else {
       localStorage.SkipTo();
-  }
-
-  localStorage.FixupPointers(wr, _Is64bit());
-}
-
-void LMTAnimation_internal::Save(const std::string &fileName,
-                                 bool asXML) const {
-  if (asXML) {
-    ToXML(fileName);
-  } else {
-    BinWritter wr(fileName);
-
-    if (!wr.IsValid()) {
-      throw es::FileInvalidAccessError(fileName);
     }
-    Save(wr);
   }
-}
 
-void LMTAnimation_internal::Save(es::string_view fileName, bool asXML) const {
-  auto sFile = fileName.to_string();
-  Save(sFile);
+  localStorage.FixupPointers(wr, Is64bit());
 }
 
 void LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
@@ -150,103 +128,129 @@ void LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
 
   if (standAlone) {
     wr.Write(MTMI);
-    wr.Write(static_cast<uint16>(props.version));
+    wr.Write(reinterpret_cast<const uint16 &>(props));
     saveposBuffSize = wr.Tell();
     wr.ApplyPadding();
   }
 
-  _Save(wr, fixups);
+  SaveInternal(wr, fixups);
   wr.ApplyPadding();
   fixups.SaveTo(wr);
 
-  for (auto &t : storage)
-    static_cast<LMTTrack_internal *>(t.get())->Save(wr, fixups);
+  for (auto &t : storage) {
+    static_cast<LMTTrack_internal *>(t.get())->SaveInternal(wr, fixups);
+  }
 
-  const uint32 aniVersion = GetVersion();
+  const size_t aniVersion = GetVersion();
 
-  if (aniVersion == 1)
+  if (aniVersion == 1) {
     static_cast<LMTAnimationEventV1_Internal *>(events.get())
         ->SaveBuffer(wr, fixups);
-  else if (aniVersion == 2) {
-    LMTAnimationEventV1_Internal *cEvent =
-        static_cast<LMTAnimationEventV1_Internal *>(events.get());
+  } else if (aniVersion == 2) {
+    auto cEvent = static_cast<LMTAnimationEventV1_Internal *>(events.get());
 
     if (cEvent) {
       wr.ApplyPadding();
       fixups.SaveTo(wr);
       cEvent->Save(wr);
-    } else
+    } else {
       fixups.SkipTo();
+    }
 
-    LMTFloatTrack_internal *cFloatTracks =
+    auto cFloatTracks =
         static_cast<LMTFloatTrack_internal *>(floatTracks.get());
 
     if (cFloatTracks) {
       wr.ApplyPadding();
       fixups.SaveTo(wr);
       cFloatTracks->Save(wr);
-    } else
+    } else {
       fixups.SkipTo();
+    }
   } else {
-    LMTAnimationEventV2_Internal *cEvent =
-        static_cast<LMTAnimationEventV2_Internal *>(events.get());
+    auto cEvent = static_cast<LMTAnimationEventV2_Internal *>(events.get());
 
     if (cEvent) {
       wr.ApplyPadding();
       fixups.SaveTo(wr);
       cEvent->Save(wr);
-    } else
+    } else {
       fixups.SkipTo();
+    }
   }
 
-  for (auto &t : storage)
+  for (auto &t : storage) {
     static_cast<LMTTrack_internal *>(t.get())->SaveBuffers(wr, fixups);
+  }
 
   if (standAlone) {
     fixups.SaveFrom(saveposBuffSize);
     fixups.SaveTo(wr);
   }
 
-  fixups.FixupPointers(wr, _Is64bit());
+  fixups.FixupPointers(wr, Is64bit());
 }
 
-int LMTAnimation_internal::Load(BinReaderRef rd,
-                                LMTConstructorPropertiesBase expected,
-                                LMTAnimation_internal *&out) {
+LMTAnimation::Ptr
+LMTAnimation_internal::Load(BinReaderRef rd,
+                            LMTConstructorPropertiesBase expected) {
   LMTConstructorProperties props;
 
   uint32 magic;
   rd.Read(magic);
 
-  if (magic != MTMI)
-    return 1;
+  if (magic != MTMI) {
+    throw es::InvalidHeaderError(magic);
+  }
 
   uint16 &version = reinterpret_cast<uint16 &>(props);
 
   rd.Read(version);
 
-  if (version != reinterpret_cast<uint16 &>(expected))
-    return version;
+  if (props != expected) {
+    std::string msg;
+
+    if (props.version != expected.version) {
+      msg += "Version mismatch [" +
+             std::to_string(static_cast<int>(props.version)) + "], expected [" +
+             std::to_string(static_cast<int>(expected.version)) + "]. ";
+    }
+
+    if (props.arch != expected.arch) {
+      bool expectedX64Arch = expected.arch == LMTArchType::X64;
+      bool haveX64Arch = props.arch == LMTArchType::X64;
+      msg += "Architecture mismatch [" +
+             std::string(haveX64Arch ? "X64" : "X86") + "], expected [" +
+             std::string(expectedX64Arch ? "X64" : "X86") + "].";
+    }
+
+    throw std::runtime_error(msg);
+  }
 
   uint32 bufferSize;
   rd.Read(bufferSize);
 
-  if (!bufferSize)
-    return 2;
+  if (!bufferSize) {
+    throw std::runtime_error("Empty buffer.");
+  }
 
-  props.masterBuffer = static_cast<char *>(props.dataStart);
-  props.dataStart = props.masterBuffer + rd.Tell();
-  props.swappedEndian = rd.SwappedEndian();
+  auto buff = std::make_unique<std::string>();
+  rd.ApplyPadding();
+  const size_t dataStart = rd.Tell();
   rd.Seek(0);
-  rd.ReadBuffer(props.masterBuffer, bufferSize);
+  rd.ReadContainer(*buff, bufferSize);
 
-  out = static_cast<LMTAnimation_internal *>(LMTAnimation::Create(props));
+  props.masterBuffer = &(*buff.get())[0];
+  props.dataStart = props.masterBuffer + dataStart;
+  props.swappedEndian = rd.SwappedEndian();
 
-  out->masterBuffer = MasterBufferPtr(props.masterBuffer);
+  auto out = LMTAnimation::Create(props);
+  static_cast<LMTAnimation_internal *>(out.get())->masterBuffer =
+      uni::ToElement(buff);
 
   ClearESPointers();
 
-  return 0;
+  return out;
 }
 
 void LMT::Load(BinReaderRef rd) {
@@ -270,20 +274,23 @@ void LMT::Load(BinReaderRef rd) {
   uint16 numBlocks;
   rd.Read(numBlocks);
 
-  if (version == LMTVersion::V_92)
+  if (version == LMTVersion::V_92) {
     rd.Skip(8); // 0x17011700
+  }
 
   size_t calcutatedSizeX64 = numBlocks * 8 + rd.Tell();
   size_t padResult = calcutatedSizeX64 & 0xF;
 
-  if (padResult)
+  if (padResult) {
     calcutatedSizeX64 += size_t(16) - padResult;
+  }
 
   size_t calcutatedSizeX86 = numBlocks * 8 + rd.Tell();
   padResult = calcutatedSizeX86 & 0xF;
 
-  if (padResult)
+  if (padResult) {
     calcutatedSizeX86 += size_t(16) - padResult;
+  }
 
   magic = 0;
 
@@ -304,8 +311,8 @@ void LMT::Load(BinReaderRef rd) {
   rd.Seek(0);
 
   const size_t fleSize = rd.GetSize();
-  const uint32 multiplier = isX64 ? 2 : 1;
-  const uint32 lookupTableOffset =
+  const size_t multiplier = isX64 ? 2 : 1;
+  const size_t lookupTableOffset =
       8 + (version == LMTVersion::V_92 ? (4 * multiplier) : 0);
 
   Version(version, isX64 ? LMTArchType::X64 : LMTArchType::X86);
@@ -326,31 +333,23 @@ void LMT::Load(BinReaderRef rd) {
     uint32 &cOffset = *(lookupTable + (a * multiplier));
 
     if (rd.SwappedEndian()) {
-      if (isX64)
+      if (isX64) {
         FByteswapper(reinterpret_cast<int64 &>(cOffset));
-      else
+      } else {
         FByteswapper(cOffset);
+      }
     }
 
-    if (!cOffset)
+    if (!cOffset) {
       continue;
+    }
 
     cProps.dataStart = buffer + cOffset;
 
-    storage[a] = class_type(LMTAnimation::Create(cProps));
+    storage[a] = uni::ToElement(LMTAnimation::Create(cProps));
   }
 
   ClearESPointers();
-}
-
-void LMT::Load(es::string_view fileName, LMTImportOverrides overrides) {
-  auto sFile = fileName.to_string();
-  Load(sFile, overrides);
-}
-
-void LMT::Save(es::string_view fileName, LMTExportSettings settings) const {
-  auto sFile = fileName.to_string();
-  Save(sFile, settings);
 }
 
 void LMT::Save(BinWritterRef wr) const {

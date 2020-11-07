@@ -31,7 +31,7 @@ struct RETrackCurve78 {
 
 struct REMotionTrack78 {
   uint16 unk;
-  esFlags<uint16, REMotionTrack43::TrackType> usedCurves;
+  es::Flags<REMotionTrack43::TrackType> usedCurves;
   uint32 boneHash;
   esPointerX86<RETrackCurve78> curves;
 

@@ -19,8 +19,8 @@
 #include "internal.hpp"
 
 class LMTTrack_internal : public LMTTrack {
-  virtual void _FromXML(pugi::xml_node &node) = 0;
-  virtual void _ToXML(pugi::xml_node &node) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node &node) = 0;
+  virtual void ReflectToXML(pugi::xml_node &node) const = 0;
   virtual bool UseTrackExtremes() const = 0;
   virtual bool CreateController() = 0;
   virtual void SetTrackType(TrackType_e type) noexcept = 0;
@@ -28,8 +28,8 @@ class LMTTrack_internal : public LMTTrack {
   virtual const Vector4 *GetRefData() const = 0;
 
 public:
-  typedef std::unique_ptr<TrackMinMax, es::deleter_hybrid> MinMaxPtr;
-  typedef std::unique_ptr<LMTTrackController> LMTTrackControllerPtr;
+  using MinMaxPtr = uni::Element<TrackMinMax>;
+  using LMTTrackControllerPtr = std::unique_ptr<LMTTrackController>;
 
   int useRefFrame = 1;
   mutable float frameRate = 60.f;
@@ -37,21 +37,21 @@ public:
   MinMaxPtr minMax;
   LMTTrackControllerPtr controller;
 
-  uint32 NumFrames() const override;
+  size_t NumFrames() const override;
   bool IsCubic() const override;
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                   uint32 frame) const override;
-  void Evaluate(Vector4A16 &out, uint32 frame) const override;
+                   size_t frame) const override;
+  void Evaluate(Vector4A16 &out, size_t frame) const override;
   void GetValue(Vector4A16 &output, float time) const override;
-  int32 GetFrame(uint32 frame) const override;
+  int32 GetFrame(size_t frame) const override;
 
   MotionTrack::TrackType_e TrackType() const override;
 
-  int FromXML(pugi::xml_node &node) override;
-  int ToXML(pugi::xml_node &node, bool standAlone) const override;
+  void Load(pugi::xml_node &node) override;
+  void Save(pugi::xml_node &node, bool standAlone) const override;
 
-  int SaveBuffers(BinWritterRef wr, LMTFixupStorage &storage) const;
-  virtual void Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
+  void SaveBuffers(BinWritterRef wr, LMTFixupStorage &storage) const;
+  virtual void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
 
   LMTTrack_internal();
 };

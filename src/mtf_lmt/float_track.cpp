@@ -37,11 +37,13 @@ struct FloatTrack : ReflectorInterface<FloatTrack<PtrType>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (frames.Fixed())
+    if (frames.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     frames.Fixup(masterBuffer, swapEndian);
   }
@@ -55,46 +57,45 @@ REFLECTOR_CREATE((FloatTrack<esPointerX64>), 2, VARNAMES, TEMPLATE,
 
 template <class C> class FloatTracks_shared : public LMTFloatTrack_internal {
 public:
-  typedef std::array<C, 4> GroupArray;
-  typedef std::unique_ptr<GroupArray, es::deleter_hybrid> GroupsPtr;
+  using GroupArray = std::array<C, 4>;
 
 private:
-  GroupsPtr groups;
+  uni::Element<GroupArray> groups;
 
 public:
-  FloatTracks_shared() : groups(new typename GroupsPtr::element_type()) {}
+  FloatTracks_shared() : groups(new GroupArray) {}
   FloatTracks_shared(C *fromPtr, char *masterBuffer, bool swapEndian) {
-    groups = GroupsPtr(reinterpret_cast<GroupArray *>(fromPtr), false);
+    groups = {reinterpret_cast<GroupArray *>(fromPtr), false};
 
     GroupArray &groupArray = *groups.get();
-    uint32 currentGroup = 0;
+    size_t currentGroup = 0;
 
     for (auto &g : groupArray) {
       g.Fixup(masterBuffer, swapEndian);
       FloatFrame *groupFrames = g.frames;
 
-      if (!groupFrames)
+      if (!groupFrames) {
         continue;
+      }
 
-      frames[currentGroup++] =
-          FramesCollection(groupFrames, groupFrames + g.numFloats,
-                           FramesCollection::allocator_type(groupFrames));
+      es::allocator_hybrid_base::LinkStorage(frames[currentGroup++],
+                                             groupFrames, g.numFloats);
     }
   }
 
-  void _ToXML(pugi::xml_node &node, uint32 groupID) const override {
+  void ReflectToXML(pugi::xml_node &node, size_t groupID) const override {
     ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 
-  void _FromXML(pugi::xml_node &node, uint32 groupID) override {
+  void ReflectFromXML(pugi::xml_node &node, size_t groupID) override {
     ReflectorWrap<C> reflEvent(&(*groups)[groupID]);
     ReflectorXMLUtil::Load(reflEvent, node);
   }
 
-  void _Save(BinWritterRef wr, LMTFixupStorage &storage) const override {
+  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
     const size_t cOff = wr.Tell();
-    uint32 curGroup = 0;
+    size_t curGroup = 0;
 
     for (auto &g : *groups) {
       wr.Write(g);
@@ -102,43 +103,49 @@ public:
     }
   }
 
-  bool _Is64bit() const override {
+  bool Is64bit() const override {
     return sizeof(std::declval<C>().frames) == 8;
   }
 };
 
-template <class C> static LMTFloatTrack *_creattorBase() {
-  return new FloatTracks_shared<C>;
-}
+using ptr_type_ = std::unique_ptr<LMTFloatTrack>;
 
-template <class C>
-static LMTFloatTrack *_creator(void *ptr, char *buff, bool endi) {
-  return new FloatTracks_shared<C>(static_cast<C *>(ptr), buff, endi);
-}
+template <class C> struct f_ {
+  static ptr_type_ creatorBase() {
+    return std::make_unique<FloatTracks_shared<C>>();
+  }
 
-static const std::map<LMTConstructorPropertiesBase, LMTFloatTrack *(*)()>
-    floatRegistry = {
-        {{LMTArchType::X64, LMTVersion::Auto},
-         _creattorBase<FloatTrack<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::Auto},
-         _creattorBase<FloatTrack<esPointerX86>>},
+  static ptr_type_ creator(void *ptr, char *buff, bool endi) {
+    return std::make_unique<FloatTracks_shared<C>>(static_cast<C *>(ptr), buff,
+                                                   endi);
+  }
 };
 
 static const std::map<LMTConstructorPropertiesBase,
-                      LMTFloatTrack *(*)(void *, char *, bool)>
-    floatRegistryLink = {
+                      decltype(&f_<void>::creatorBase)>
+    floatRegistry = {
         {{LMTArchType::X64, LMTVersion::Auto},
-         _creator<FloatTrack<esPointerX64>>},
+         f_<FloatTrack<esPointerX64>>::creatorBase},
         {{LMTArchType::X86, LMTVersion::Auto},
-         _creator<FloatTrack<esPointerX86>>},
+         f_<FloatTrack<esPointerX86>>::creatorBase},
 };
 
-LMTFloatTrack *LMTFloatTrack::Create(const LMTConstructorProperties &props) {
-  REFLECTOR_REGISTER(FloatTrackComponentRemap)
+static const std::map<LMTConstructorPropertiesBase,
+                      decltype(&f_<void>::creator)>
+    floatRegistryLink = {
+        {{LMTArchType::X64, LMTVersion::Auto},
+         f_<FloatTrack<esPointerX64>>::creator},
+        {{LMTArchType::X86, LMTVersion::Auto},
+         f_<FloatTrack<esPointerX86>>::creator},
+};
 
-  if (props.dataStart)
+ptr_type_ LMTFloatTrack::Create(const LMTConstructorProperties &props) {
+  RegisterReflectedType<FloatTrackComponentRemap>();
+
+  if (props.dataStart) {
     return floatRegistryLink.at(props)(props.dataStart, props.masterBuffer,
                                        props.swappedEndian);
-  else
+  } else {
     return floatRegistry.at(props)();
+  }
 }

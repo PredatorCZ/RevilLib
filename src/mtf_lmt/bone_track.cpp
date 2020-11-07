@@ -43,8 +43,8 @@ REFLECTOR_CREATE(TrackV2BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
 
 template <template <class C> class PtrType>
 struct TrackV0 : ReflectorInterface<TrackV0<PtrType>> {
-  static const uint32 SUBVERSION = 0;
-  static const size_t NUMPOINTERS = 1;
+  static constexpr uint32 SUBVERSION = 0;
+  static constexpr size_t NUMPOINTERS = 1;
 
   TrackV1BufferTypes compression;
   TrackType_er trackType;
@@ -54,8 +54,6 @@ struct TrackV0 : ReflectorInterface<TrackV0<PtrType>> {
   uint32 bufferSize;
   PtrType<char> bufferOffset;
 
-  void noMHBone();
-
   void SwapEndian() {
     FByteswapper(bufferOffset);
     FByteswapper(weight);
@@ -63,11 +61,13 @@ struct TrackV0 : ReflectorInterface<TrackV0<PtrType>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed())
+    if (bufferOffset.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     bufferOffset.Fixup(masterBuffer, true);
   }
@@ -91,8 +91,8 @@ template <> struct BufferVersion<TrackV1_5BufferTypes> {
 
 template <template <class C> class PtrType, class BufferType>
 struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
-  static const uint32 SUBVERSION = BufferVersion<BufferType>::value;
-  static const size_t NUMPOINTERS = 1;
+  static constexpr uint32 SUBVERSION = BufferVersion<BufferType>::value;
+  static constexpr size_t NUMPOINTERS = 1;
 
   BufferType compression;
   TrackType_er trackType;
@@ -103,8 +103,6 @@ struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
   PtrType<char> bufferOffset;
   Vector4 referenceData;
 
-  void noMHBone();
-
   void SwapEndian() {
     FByteswapper(weight);
     FByteswapper(bufferSize);
@@ -113,11 +111,13 @@ struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed())
+    if (bufferOffset.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     bufferOffset.Fixup(masterBuffer, true);
   }
@@ -133,8 +133,8 @@ struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
 
 template <template <class C> class PtrType>
 struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
-  static const uint32 SUBVERSION = 2;
-  static const size_t NUMPOINTERS = 2;
+  static constexpr uint32 SUBVERSION = 2;
+  static constexpr size_t NUMPOINTERS = 2;
 
   TrackV2BufferTypes compression;
   TrackType_er trackType;
@@ -146,8 +146,6 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
   Vector4 referenceData;
   PtrType<TrackMinMax> extremes;
 
-  void noMHBone();
-
   void SwapEndian() {
     FByteswapper(reinterpret_cast<uint32 &>(compression));
     FByteswapper(weight);
@@ -158,11 +156,13 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed())
+    if (bufferOffset.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     bufferOffset.Fixup(masterBuffer, true);
     extremes.Fixup(masterBuffer, true);
@@ -179,8 +179,8 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
 
 template <template <class C> class PtrType>
 struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
-  static const uint32 SUBVERSION = 2;
-  static const size_t NUMPOINTERS = 2;
+  static constexpr uint32 SUBVERSION = 2;
+  static constexpr size_t NUMPOINTERS = 2;
 
   TrackV2BufferTypes compression;
   TrackType_er trackType;
@@ -204,11 +204,13 @@ struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed())
+    if (bufferOffset.Fixed()) {
       return;
+    }
 
-    if (swapEndian)
+    if (swapEndian) {
       SwapEndian();
+    }
 
     bufferOffset.Fixup(masterBuffer, true);
     extremes.Fixup(masterBuffer, true);
@@ -223,14 +225,16 @@ struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
   }
 };
 
-uint32 LMTTrack_internal::NumFrames() const {
+size_t LMTTrack_internal::NumFrames() const {
   return controller->NumFrames() + useRefFrame;
 }
+
 bool LMTTrack_internal::LMTTrack_internal::IsCubic() const {
   return controller->IsCubic();
 }
+
 void LMTTrack_internal::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                                    uint32 frame) const {
+                                    size_t frame) const {
   if (useRefFrame && !frame) {
     inTangs = Vector4A16(*GetRefData());
     outTangs = inTangs;
@@ -239,7 +243,8 @@ void LMTTrack_internal::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
 
   controller->GetTangents(inTangs, outTangs, frame);
 }
-void LMTTrack_internal::Evaluate(Vector4A16 &out, uint32 frame) const {
+
+void LMTTrack_internal::Evaluate(Vector4A16 &out, size_t frame) const {
   if (useRefFrame && !frame) {
     out = Vector4A16(*GetRefData());
     return;
@@ -247,10 +252,12 @@ void LMTTrack_internal::Evaluate(Vector4A16 &out, uint32 frame) const {
 
   controller->Evaluate(out, frame - useRefFrame);
 
-  if (minMax)
+  if (minMax) {
     out = minMax->max + minMax->min * out;
+  }
 }
-int32 LMTTrack_internal::GetFrame(uint32 frame) const {
+
+int32 LMTTrack_internal::GetFrame(size_t frame) const {
   if (useRefFrame && !frame) {
     return 0;
   }
@@ -261,10 +268,11 @@ int32 LMTTrack_internal::GetFrame(uint32 frame) const {
 void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
   float frameDelta = time * frameRate;
   const int32 frame = static_cast<int32>(frameDelta);
-  const uint32 numCtrFrames = controller->NumFrames();
+  const size_t numCtrFrames = controller->NumFrames();
 
-  if (!numCtrFrames && !useRefFrame)
+  if (!numCtrFrames && !useRefFrame) {
     return;
+  }
 
   if ((!frame || !numCtrFrames) && useRefFrame) {
     Vector4A16 refFrame(*GetRefData());
@@ -283,7 +291,7 @@ void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
     if (ctrFrame >= maxFrame) {
       Evaluate(out, numCtrFrames - 1);
     } else {
-      for (uint32 f = 1; f < numCtrFrames; f++) {
+      for (size_t f = 1; f < numCtrFrames; f++) {
         int32 cFrame = controller->GetFrame(f);
 
         if (cFrame > ctrFrame) {
@@ -324,67 +332,70 @@ public:
 
   std::unique_ptr<C, es::deleter_hybrid> data;
 
-  LMTTrackShared() : data(new C) { useRefFrame = UseRefFrame(0); }
+  LMTTrackShared() : data(new C) { useRefFrame = UseRefFrame_(0); }
   LMTTrackShared(C *_data, char *masterBuffer, bool swapEndian)
       : data(_data, false) {
-    useRefFrame = UseRefFrame(0);
+    useRefFrame = UseRefFrame_(0);
     data->Fixup(masterBuffer, swapEndian);
 
-    if (CreateController())
+    if (CreateController()) {
       controller->Assign(data->bufferOffset, data->bufferSize, swapEndian);
+    }
 
-    minMax = MinMaxPtr(GetTrackExtremes(0), false);
+    minMax = MinMaxPtr(GetTrackExtremes_(0), false);
   }
 
   // SFINAE ACCESSORS
   template <class SC = C>
-  auto UseTrackExtremes(int) const
+  auto UseTrackExtremes_(int) const
       -> decltype(std::declval<SC>().extremes, true) {
     return true;
   }
 
-  template <class SC = C> bool UseTrackExtremes(...) const { return false; }
+  template <class SC = C> bool UseTrackExtremes_(...) const { return false; }
 
   template <class SC = C>
-  auto GetTrackExtremes(int)
+  auto GetTrackExtremes_(int)
       -> decltype(std::declval<SC>().extremes, (TrackMinMax *)nullptr) {
     return data->extremes;
   }
 
-  template <class SC = C> TrackMinMax *GetTrackExtremes(...) { return nullptr; }
+  template <class SC = C> TrackMinMax *GetTrackExtremes_(...) {
+    return nullptr;
+  }
 
   template <class SC = C>
-  auto UseRefFrame(int) const
+  auto UseRefFrame_(int) const
       -> decltype(std::declval<SC>().referenceData, (int)0) {
     return 1;
   }
 
-  template <class SC = C> int UseRefFrame(...) const { return 0; }
+  template <class SC = C> int UseRefFrame_(...) const { return 0; }
 
   template <class SC = C>
-  auto _RefData(int) const
+  auto RefData_(int) const
       -> decltype(std::declval<SC>().referenceData, (const Vector4 *)nullptr) {
     return &data->referenceData;
   }
 
-  template <class SC = C> const Vector4 *_RefData(...) const { return nullptr; }
+  template <class SC = C> const Vector4 *RefData_(...) const { return nullptr; }
 
   template <class SC = C>
-  auto _BoneID(int) const -> decltype(std::declval<SC>().boneID2, (int32)0) {
+  auto BoneID_(int) const -> decltype(std::declval<SC>().boneID2, (int32)0) {
     return data->boneID;
   }
 
-  template <class SC = C> int32 _BoneID(...) const {
+  template <class SC = C> int32 BoneID_(...) const {
     return data->boneID == 0xff ? -1 : data->boneID;
   }
 
   template <class SC = C>
-  auto _SetBoneID(int32 id, int)
+  auto SetBoneID_(int32 id, int)
       -> decltype(std::declval<SC>().boneID2, void()) {
     data->boneID = id;
   }
 
-  template <class SC = C> void _SetBoneID(int32 id, ...) {
+  template <class SC = C> void SetBoneID_(int32 id, ...) {
     data->boneID = id == -1 ? 0xff : id;
   }
 
@@ -404,15 +415,15 @@ public:
     data->trackType = static_cast<TrackType_er>(type);
   }
 
-  uint32 Stride() const override { return static_cast<uint32>(sizeof(C)); }
+  size_t Stride() const override { return sizeof(C); }
 
-  size_t BoneIndex() const noexcept override { return _BoneID(0); }
+  size_t BoneIndex() const noexcept override { return BoneID_(0); }
 
   uint32 BoneType() const noexcept override { return data->boneType; }
 
-  void BoneID(int32 boneID) noexcept override { _SetBoneID(boneID, 0); }
+  void BoneID(int32 boneID) noexcept override { SetBoneID_(boneID, 0); }
 
-  const Vector4 *GetRefData() const override { return _RefData(0); }
+  const Vector4 *GetRefData() const override { return RefData_(0); }
 
   // research this
   /*enabledFunction(noMHBone, int32) MirroredBoneID() const noexcept {
@@ -429,33 +440,34 @@ public:
 
   disabledFunction(noMHBone, void) MirroredBoneID(int32 boneID) noexcept {}*/
 
-  bool UseTrackExtremes() const override { return UseTrackExtremes(0); }
+  bool UseTrackExtremes() const override { return UseTrackExtremes_(0); }
 
-  void _ToXML(pugi::xml_node &node) const override {
+  void ReflectToXML(pugi::xml_node &node) const override {
     ReflectorWrapConst<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
-  void _FromXML(pugi::xml_node &node) override {
+  void ReflectFromXML(pugi::xml_node &node) override {
     ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Load(refl, node);
   }
 
-  void Save(BinWritterRef wr, LMTFixupStorage &storage) const override {
+  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
     const size_t cOff = wr.Tell();
     constexpr size_t numPointers = C::NUMPOINTERS;
     const auto pointers = C::Pointers();
 
     wr.Write(*data);
 
-    for (size_t p = 0; p < numPointers; p++)
+    for (size_t p = 0; p < numPointers; p++) {
       storage.SaveFrom(cOff + pointers[p]);
+    }
   }
 };
 
 LMTTrack_internal::LMTTrack_internal() : controller(nullptr), minMax(nullptr) {
-  REFLECTOR_REGISTER(TrackV1BufferTypes, TrackV1_5BufferTypes,
-                     TrackV2BufferTypes, TrackType_er);
+  RegisterReflectedTypes<TrackV1BufferTypes, TrackV1_5BufferTypes,
+                         TrackV2BufferTypes, TrackType_er>();
 }
 
 REFLECTOR_CREATE((TrackV0<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
@@ -492,51 +504,58 @@ REFLECTOR_CREATE((TrackV3<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
 REFLECTOR_CREATE((TrackV3<esPointerX64>), 2, VARNAMES, TEMPLATE, compression,
                  trackType, boneType, boneID, boneID2, weight, referenceData);
 
-template <class C> static LMTTrack *_creatorBase() {
-  return new LMTTrackShared<C>;
-}
+using ptr_type_ = std::unique_ptr<LMTTrack>;
 
-template <class C> static LMTTrack *_creator(void *ptr, char *buff, bool endi) {
-  return new LMTTrackShared<C>(static_cast<C *>(ptr), buff, endi);
-}
+template <class C> struct f_ {
+  static ptr_type_ creatorBase() {
+    return std::make_unique<LMTTrackShared<C>>();
+  }
 
-static const std::map<LMTConstructorPropertiesBase, LMTTrack *(*)()>
+  static ptr_type_ creator(void *ptr, char *buff, bool endi) {
+    return std::make_unique<LMTTrackShared<C>>(static_cast<C *>(ptr), buff,
+                                               endi);
+  }
+};
+
+static const std::map<LMTConstructorPropertiesBase,
+                      decltype(&f_<void>::creatorBase)>
     trackRegistry = {
         // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, _creatorBase<TrackV0<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_22}, _creatorBase<TrackV0<esPointerX86>>},
-        {{LMTArchType::X64, LMTVersion::V_40}, _creatorBase<TrackV1<esPointerX64, TrackV1BufferTypes>>},
-        {{LMTArchType::X86, LMTVersion::V_40}, _creatorBase<TrackV1<esPointerX86, TrackV1BufferTypes>>},
-        {{LMTArchType::X64, LMTVersion::V_51}, _creatorBase<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
-        {{LMTArchType::X86, LMTVersion::V_51}, _creatorBase<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
-        {{LMTArchType::X64, LMTVersion::V_56}, _creatorBase<TrackV2<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_56}, _creatorBase<TrackV2<esPointerX86>>},
-        {{LMTArchType::X64, LMTVersion::V_92}, _creatorBase<TrackV3<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_92}, _creatorBase<TrackV3<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_22}, f_<TrackV0<esPointerX64>>::creatorBase},
+        {{LMTArchType::X86, LMTVersion::V_22}, f_<TrackV0<esPointerX86>>::creatorBase},
+        {{LMTArchType::X64, LMTVersion::V_40}, f_<TrackV1<esPointerX64, TrackV1BufferTypes>>::creatorBase},
+        {{LMTArchType::X86, LMTVersion::V_40}, f_<TrackV1<esPointerX86, TrackV1BufferTypes>>::creatorBase},
+        {{LMTArchType::X64, LMTVersion::V_51}, f_<TrackV1<esPointerX64, TrackV1_5BufferTypes>>::creatorBase},
+        {{LMTArchType::X86, LMTVersion::V_51}, f_<TrackV1<esPointerX86, TrackV1_5BufferTypes>>::creatorBase},
+        {{LMTArchType::X64, LMTVersion::V_56}, f_<TrackV2<esPointerX64>>::creatorBase},
+        {{LMTArchType::X86, LMTVersion::V_56}, f_<TrackV2<esPointerX86>>::creatorBase},
+        {{LMTArchType::X64, LMTVersion::V_92}, f_<TrackV3<esPointerX64>>::creatorBase},
+        {{LMTArchType::X86, LMTVersion::V_92}, f_<TrackV3<esPointerX86>>::creatorBase},
         // clang-format on
 };
 
 static const std::map<LMTConstructorPropertiesBase,
-                      LMTTrack *(*)(void *, char *, bool)>
+                      decltype(&f_<void>::creator)>
     trackRegistryLink = {
         // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, _creator<TrackV0<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_22}, _creator<TrackV0<esPointerX86>>},
-        {{LMTArchType::X64, LMTVersion::V_40}, _creator<TrackV1<esPointerX64, TrackV1BufferTypes>>},
-        {{LMTArchType::X86, LMTVersion::V_40}, _creator<TrackV1<esPointerX86, TrackV1BufferTypes>>},
-        {{LMTArchType::X64, LMTVersion::V_51}, _creator<TrackV1<esPointerX64, TrackV1_5BufferTypes>>},
-        {{LMTArchType::X86, LMTVersion::V_51}, _creator<TrackV1<esPointerX86, TrackV1_5BufferTypes>>},
-        {{LMTArchType::X64, LMTVersion::V_56}, _creator<TrackV2<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_56}, _creator<TrackV2<esPointerX86>>},
-        {{LMTArchType::X64, LMTVersion::V_92}, _creator<TrackV3<esPointerX64>>},
-        {{LMTArchType::X86, LMTVersion::V_92}, _creator<TrackV3<esPointerX86>>},
+        {{LMTArchType::X64, LMTVersion::V_22}, f_<TrackV0<esPointerX64>>::creator},
+        {{LMTArchType::X86, LMTVersion::V_22}, f_<TrackV0<esPointerX86>>::creator},
+        {{LMTArchType::X64, LMTVersion::V_40}, f_<TrackV1<esPointerX64, TrackV1BufferTypes>>::creator},
+        {{LMTArchType::X86, LMTVersion::V_40}, f_<TrackV1<esPointerX86, TrackV1BufferTypes>>::creator},
+        {{LMTArchType::X64, LMTVersion::V_51}, f_<TrackV1<esPointerX64, TrackV1_5BufferTypes>>::creator},
+        {{LMTArchType::X86, LMTVersion::V_51}, f_<TrackV1<esPointerX86, TrackV1_5BufferTypes>>::creator},
+        {{LMTArchType::X64, LMTVersion::V_56}, f_<TrackV2<esPointerX64>>::creator},
+        {{LMTArchType::X86, LMTVersion::V_56}, f_<TrackV2<esPointerX86>>::creator},
+        {{LMTArchType::X64, LMTVersion::V_92}, f_<TrackV3<esPointerX64>>::creator},
+        {{LMTArchType::X86, LMTVersion::V_92}, f_<TrackV3<esPointerX86>>::creator},
         // clang-format on
 };
 
-LMTTrack *LMTTrack::Create(const LMTConstructorProperties &props) {
-  if (props.dataStart)
+ptr_type_ LMTTrack::Create(const LMTConstructorProperties &props) {
+  if (props.dataStart) {
     return trackRegistryLink.at(props)(props.dataStart, props.masterBuffer,
-                                      props.swappedEndian);
-  else
+                                       props.swappedEndian);
+  } else {
     return trackRegistry.at(props)();
+  }
 }

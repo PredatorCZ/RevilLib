@@ -23,8 +23,8 @@ public:
   uint32 runEventBit;
   uint32 numFrames;
 
-  pugi::xml_node ToXML(pugi::xml_node &node) const;
-  int FromXML(pugi::xml_node &node);
+  void Save(pugi::xml_node &node) const;
+  void Load(pugi::xml_node &node);
   void SwapEndian();
 };
 
@@ -39,26 +39,27 @@ struct AnimEvents : ReflectorInterface<AnimEvents<PtrType>> {
 };
 
 class LMTAnimationEventV1_Internal : public LMTAnimationEventV1 {
-  virtual void _ToXML(pugi::xml_node &node, uint32 groupID) const = 0;
-  virtual void _FromXML(pugi::xml_node &node, uint32 groupID) = 0;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &fixups) const = 0;
-  virtual bool _Is64bit() const = 0;
+  virtual void ReflectToXML(pugi::xml_node &node, size_t groupID) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node &node, size_t groupID) = 0;
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &fixups) const = 0;
+  virtual bool Is64bit() const = 0;
 
 public:
-  typedef std::vector<AnimEvent, es::allocator_hybrid<AnimEvent>>
-      EventsCollection;
+  using EventsCollection =
+      std::vector<AnimEvent, es::allocator_hybrid<AnimEvent>>;
 
-  virtual const EventsCollection &GetEvents(uint32 groupID) const = 0;
-  virtual EventsCollection &GetEvents(uint32 groupID) = 0;
-  virtual const uint16 *GetRemaps(uint32 groupID) const = 0;
-  virtual void SetNumEvents(uint32 groupID, uint32 newSize) = 0;
+  virtual const EventsCollection &GetEvents(size_t groupID) const = 0;
+  virtual EventsCollection &GetEvents(size_t groupID) = 0;
+  virtual const uint16 *GetRemaps(size_t groupID) const = 0;
+  virtual void SetNumEvents(size_t groupID, size_t newSize) = 0;
 
-  uint32 GetVersion() const override;
-  int ToXML(pugi::xml_node &node, bool standAlone) const override;
-  int FromXML(pugi::xml_node &node) override;
-  int Save(BinWritterRef wr) const;
-  int SaveBuffer(BinWritterRef wr, LMTFixupStorage &fixups) const;
-  EventCollection GetEvents(uint32 groupID, uint32 eventID) const override;
+  size_t GetVersion() const override;
+  void Save(pugi::xml_node &node, bool standAlone) const override;
+  void Load(pugi::xml_node &node) override;
+  void Save(BinWritterRef wr) const;
+  void SaveBuffer(BinWritterRef wr, LMTFixupStorage &fixups) const;
+  EventCollection GetEvents(size_t groupID, size_t eventID) const override;
 };
 
 REFLECTOR_CREATE(EventFrameV2DataType, ENUM, 2, CLASS, 16, Int8, Int32, Float,
@@ -75,62 +76,65 @@ struct AnimEventFrameV2 : ReflectorInterface<AnimEventFrameV2> {
   EventFrameV2Type type;
   EventFrameV2DataType dataType;
 
-  AnimEventFrameV2() : idata(), frame(0.0f) {}
+  AnimEventFrameV2() : idata(), frame() {}
 
-  int ToXML(pugi::xml_node &node) const;
-  int FromXML(pugi::xml_node &node);
+  void Save(pugi::xml_node &node) const;
+  void Load(pugi::xml_node &node);
   void SwapEndian();
 };
 
 class LMTAnimationEventV2Event {
 public:
-  typedef std::vector<AnimEventFrameV2, es::allocator_hybrid<AnimEventFrameV2>>
-      FramesCollection;
+  using FramesCollection =
+      std::vector<AnimEventFrameV2, es::allocator_hybrid<AnimEventFrameV2>>;
+  using Ptr = std::unique_ptr<LMTAnimationEventV2Event>;
 
   FramesCollection frames;
 
   virtual uint32 GetHash() const = 0;
   virtual void SetHash(uint32 nHash) = 0;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
-
-  static LMTAnimationEventV2Event *Create();
-  static LMTAnimationEventV2Event *FromXML(pugi::xml_node &node);
-
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &storage) const = 0;
   virtual ~LMTAnimationEventV2Event() {}
+
+  void Load(pugi::xml_node &node);
+
+  static Ptr Create();
 };
 
 class LMTAnimationEventV2Group {
 public:
-  typedef std::unique_ptr<LMTAnimationEventV2Event> EventPtr;
-  typedef std::vector<EventPtr> EventsCollection;
+  using EventsCollection = std::vector<LMTAnimationEventV2Event::Ptr>;
+  using Ptr = std::unique_ptr<LMTAnimationEventV2Group>;
 
   EventsCollection events;
 
   virtual uint32 GetHash() const = 0;
   virtual void SetHash(uint32 nHash) = 0;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
-
-  static LMTAnimationEventV2Group *Create();
-  static LMTAnimationEventV2Group *FromXML(pugi::xml_node &node);
-
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &storage) const = 0;
   virtual ~LMTAnimationEventV2Group() {}
+
+  void Load(pugi::xml_node &node);
+
+  static Ptr Create();
 };
 
 class LMTAnimationEventV2_Internal : public LMTAnimationEventV2 {
-  int ToXML(pugi::xml_node &node, bool standAlone) const override;
-  int FromXML(pugi::xml_node &node) override;
-  virtual void _Save(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
+  void Save(pugi::xml_node &node, bool standAlone) const override;
+  void Load(pugi::xml_node &node) override;
+  virtual void SaveInternal(BinWritterRef wr,
+                            LMTFixupStorage &storage) const = 0;
 
 public:
-  typedef std::unique_ptr<LMTAnimationEventV2Group> GroupPtr;
-  typedef std::vector<GroupPtr> GroupsCollection;
+  using GroupsCollection = std::vector<LMTAnimationEventV2Group::Ptr>;
 
   GroupsCollection groups;
 
-  uint32 GetVersion() const override;
-  uint32 GetNumGroups() const override;
-  uint32 GetGroupEventCount(uint32 groupID) const override;
-  uint32 GetGroupHash(uint32 groupID) const override;
+  size_t GetVersion() const override;
+  size_t GetNumGroups() const override;
+  size_t GetGroupEventCount(size_t groupID) const override;
+  uint32 GetGroupHash(size_t groupID) const override;
 
-  int Save(BinWritterRef wr) const;
+  void Save(BinWritterRef wr) const;
 };

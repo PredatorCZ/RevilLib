@@ -37,6 +37,11 @@ static const char *idents[] = {
 struct TrackMinMax : ReflectorInterface<TrackMinMax> {
   Vector4A16 min;
   Vector4A16 max;
+
+  void SwapEndian() {
+    FByteswapper(min);
+    FByteswapper(max);
+  }
 };
 
 enum class TrackTypesShared {
@@ -58,28 +63,28 @@ enum class TrackTypesShared {
 };
 
 struct LMTTrackController {
-  virtual uint32 NumFrames() const = 0;
+  virtual size_t NumFrames() const = 0;
   virtual bool IsCubic() const = 0;
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                           uint32 frame) const = 0;
-  virtual void Evaluate(Vector4A16 &out, uint32 frame) const = 0;
-  virtual void Interpolate(Vector4A16 &out, uint32 frame, float delta,
+                           size_t frame) const = 0;
+  virtual void Evaluate(Vector4A16 &out, size_t frame) const = 0;
+  virtual void Interpolate(Vector4A16 &out, size_t frame, float delta,
                            TrackMinMax *bounds = nullptr) const = 0;
-  virtual int32 GetFrame(uint32 frameID) const = 0;
-  virtual void NumFrames(uint32 numItems) = 0;
-  virtual void ToString(std::string &strBuf, uint32 numIdents) const = 0;
+  virtual int32 GetFrame(size_t frameID) const = 0;
+  virtual void NumFrames(size_t numItems) = 0;
+  virtual void ToString(std::string &strBuf, size_t numIdents) const = 0;
 
-  virtual void FromString(std::string &input) = 0;
-  virtual void Assign(char *ptr, uint32 size, bool swapEndian) = 0;
+  virtual void FromString(es::string_view input) = 0;
+  virtual void Assign(char *ptr, size_t size, bool swapEndian) = 0;
   virtual void SwapEndian() = 0;
-  virtual void Devaluate(const Vector4A16 &in, uint32 frame) = 0;
+  virtual void Devaluate(const Vector4A16 &in, size_t frame) = 0;
   virtual void Save(BinWritterRef wr) const = 0;
 
   virtual ~LMTTrackController() {}
 
-  static LMTTrackController *CreateCodec(uint32 type, uint32 subVersion);
+  static LMTTrackController *CreateCodec(size_t type, size_t subVersion);
   static LMTTrackController *CreateCodec(TrackTypesShared type) {
-    return CreateCodec(static_cast<uint32>(type), -1);
+    return CreateCodec(static_cast<size_t>(type), -1);
   }
   static float GetTrackMaxFrac(TrackTypesShared type);
 };

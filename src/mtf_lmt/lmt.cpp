@@ -41,14 +41,13 @@ void LMT::AppendAnimation(LMTAnimation *ani) {
 }
 
 LMTAnimation *LMT::AppendAnimation() {
-  LMTAnimation *cAni = CreateAnimation();
-  storage.emplace_back(cAni);
-  return cAni;
+  storage.emplace_back(uni::ToElement(CreateAnimation()));
+  return storage.back().get();
 }
 
-void LMT::InsertAnimation(LMTAnimation *ani, uint32 at, bool replace) {
+void LMT::InsertAnimation(LMTAnimation *ani, size_t at, bool replace) {
   if (*ani != props) {
-    std::runtime_error("Cannot append animation. Properties mismatch.");
+    throw std::runtime_error("Cannot append animation. Properties mismatch.");
   }
 
   if (at >= storage.size()) {
@@ -57,8 +56,4 @@ void LMT::InsertAnimation(LMTAnimation *ani, uint32 at, bool replace) {
   } else {
     storage[at] = class_type(ani, false);
   }
-}
-
-LMTAnimation *LMT::CreateAnimation() const {
-  return LMTAnimation::Create(props);
 }

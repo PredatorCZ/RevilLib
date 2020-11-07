@@ -25,7 +25,7 @@ struct RETrackCurve65 : RETrackCurve43 {
 
 struct REMotionTrack65 {
   int16 unk;
-  esFlags<uint16, REMotionTrack43::TrackType> usedCurves;
+  es::Flags<REMotionTrack43::TrackType> usedCurves;
   uint32 boneHash;
   float weight;
   esPointerX64<RETrackCurve65> curves;

@@ -18,7 +18,7 @@ project(RevilLib)
 option(USE_PIC "HavokLib target will use PIC." OFF)
 option(BUILD_STATIC "Builds HavokLibStatic as a static library." OFF)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 add_subdirectory(3rd_party/PreCore)
 add_subdirectory(3rd_party/pugixml)
 

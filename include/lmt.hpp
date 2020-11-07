@@ -70,6 +70,13 @@ struct alignas(2) LMTImportOverrides {
     return reinterpret_cast<const uint16 &>(*this) <
            reinterpret_cast<const uint16 &>(o);
   }
+
+  bool operator==(const LMTImportOverrides &o) const {
+    return reinterpret_cast<const uint16 &>(*this) ==
+           reinterpret_cast<const uint16 &>(o);
+  }
+
+  bool operator!=(const LMTImportOverrides &o) const { return !(*this == o); }
 };
 
 using LMTConstructorPropertiesBase = LMTImportOverrides;
@@ -92,40 +99,42 @@ struct LMTConstructorProperties : LMTConstructorPropertiesBase {
 
 class LMTFloatTrack {
 public:
-  virtual uint32 GetNumGroups() const = 0;
-  virtual uint32 GetGroupTrackCount(uint32 groupID) const = 0;
-  virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual int FromXML(pugi::xml_node &node) = 0;
+  virtual size_t GetNumGroups() const = 0;
+  virtual size_t GetGroupTrackCount(size_t groupID) const = 0;
+  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
+  virtual void Load(pugi::xml_node &node) = 0;
   virtual ~LMTFloatTrack() = default;
 
-  static LMTFloatTrack *Create(const LMTConstructorProperties &props);
+  static std::unique_ptr<LMTFloatTrack>
+  Create(const LMTConstructorProperties &props);
 };
 
 class LMTAnimationEvent {
 public:
-  virtual uint32 GetVersion() const = 0;
-  virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual int FromXML(pugi::xml_node &node) = 0;
-  virtual uint32 GetNumGroups() const = 0;
-  virtual uint32 GetGroupEventCount(uint32 groupID) const = 0;
+  virtual size_t GetVersion() const = 0;
+  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
+  virtual void Load(pugi::xml_node &node) = 0;
+  virtual size_t GetNumGroups() const = 0;
+  virtual size_t GetGroupEventCount(size_t groupID) const = 0;
   virtual ~LMTAnimationEvent() = default;
 
-  static LMTAnimationEvent *Create(const LMTConstructorProperties &props);
+  static std::unique_ptr<LMTAnimationEvent>
+  Create(const LMTConstructorProperties &props);
 };
 
 class LMTAnimationEventV1 : public LMTAnimationEvent {
 public:
   typedef std::vector<short> EventCollection;
 
-  virtual EventCollection GetEvents(uint32 groupID, uint32 eventID) const = 0;
-  virtual int32 GetEventFrame(uint32 groupID, uint32 eventID) const = 0;
+  virtual EventCollection GetEvents(size_t groupID, size_t eventID) const = 0;
+  virtual int32 GetEventFrame(size_t groupID, size_t eventID) const = 0;
 };
 
 class LMTAnimationEventV2 : public LMTAnimationEvent {
 public:
   virtual uint32 GetHash() const = 0;
   virtual void SetHash(uint32 nHash) = 0;
-  virtual uint32 GetGroupHash(uint32 groupID) const = 0;
+  virtual uint32 GetGroupHash(size_t groupID) const = 0;
 };
 
 class LMTTrack : public uni::MotionTrack {
@@ -139,41 +148,43 @@ public:
   };
 
   virtual TrackType_e GetTrackType() const = 0;
-  virtual uint32 NumFrames() const = 0;
+  virtual size_t NumFrames() const = 0;
   virtual bool IsCubic() const = 0;
   virtual void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
-                           uint32 frame) const = 0;
-  virtual void Evaluate(Vector4A16 &out, uint32 frame) const = 0;
-  virtual int32 GetFrame(uint32 frame) const = 0;
-  virtual int FromXML(pugi::xml_node &node) = 0;
-  virtual int ToXML(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual uint32 Stride() const = 0;
+                           size_t frame) const = 0;
+  virtual void Evaluate(Vector4A16 &out, size_t frame) const = 0;
+  virtual int32 GetFrame(size_t frame) const = 0;
+  virtual void Load(pugi::xml_node &node) = 0;
+  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
+  virtual size_t Stride() const = 0;
   virtual uint32 BoneType() const = 0;
   virtual ~LMTTrack() = default;
 
-  static LMTTrack *Create(const LMTConstructorProperties &props);
+  static std::unique_ptr<LMTTrack>
+  Create(const LMTConstructorProperties &props);
 };
 
 class LMTAnimation : public uni::Motion {
+public:
+  using Ptr = std::unique_ptr<LMTAnimation>;
+
 protected:
   LMTConstructorPropertiesBase props;
 
 public:
   LMTAnimation() : props{} {}
 
-  virtual uint32 GetVersion() const = 0;
-  virtual uint32 NumFrames() const = 0;
+  virtual size_t GetVersion() const = 0;
+  virtual size_t NumFrames() const = 0;
   virtual int32 LoopFrame() const = 0;
-  virtual void Sanitize() const = 0;
 
-  virtual int FromXML(pugi::xml_node &node) = 0;
+  virtual void Load(pugi::xml_node &node) = 0;
   virtual void Save(pugi::xml_node &node, bool standAlone = false) const = 0;
   virtual void Save(BinWritterRef wr, bool standAlone = true) const = 0;
-  virtual void Save(const std::string &fileName, bool asXML = false) const = 0;
-  virtual void Save(es::string_view fileName, bool asXML = false) const = 0;
+  void Save(const std::string &fileName, bool asXML = false) const;
   virtual ~LMTAnimation() = default;
 
-  static LMTAnimation *Create(const LMTConstructorProperties &props);
+  static Ptr Create(const LMTConstructorProperties &props);
   static bool SupportedVersion(uint16 version);
 
   bool operator==(const LMTConstructorPropertiesBase &input) {
@@ -191,20 +202,17 @@ public:
   LMTVersion Version() const { return props.version; }
   void Version(LMTVersion version, LMTArchType arch);
   LMTArchType Architecture() const { return props.arch; }
+  auto CreateAnimation() const { return LMTAnimation::Create(props); }
 
   LMTAnimation *AppendAnimation();
   void AppendAnimation(LMTAnimation *ani);
-  void InsertAnimation(LMTAnimation *ani, uint32 at, bool replace = false);
-
-  LMTAnimation *CreateAnimation() const;
+  void InsertAnimation(LMTAnimation *ani, size_t at, bool replace = false);
 
   void Load(BinReaderRef rd);
-  void Load(es::string_view fileName, LMTImportOverrides overrides = {});
   void Load(const std::string &fileName, LMTImportOverrides overrides = {});
   void Load(pugi::xml_node &node, es::string_view outPath,
             LMTImportOverrides overrides = {});
   void Save(BinWritterRef wr) const;
-  void Save(es::string_view fileName, LMTExportSettings settings = {}) const;
   void Save(const std::string &fileName, LMTExportSettings settings = {}) const;
   void Save(pugi::xml_node &node, es::string_view outPath,
             LMTExportSettings settings = {}) const;
