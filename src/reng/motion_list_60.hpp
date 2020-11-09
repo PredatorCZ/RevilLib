@@ -29,7 +29,7 @@ struct REMotlist60 : public REAssetBase {
   esPointerX64<char16_t> fileName;
   uint32 numMotions;
 
-  int Fixup();
+  void Fixup();
 };
 
 class REMotionBoneWrap : public uni::Bone {
@@ -42,10 +42,6 @@ public:
   void GetTM(uni::RTSValue &out) const override {
     out.rotation = bone->rotation;
     out.translation = bone->position;
-  }
-
-  void GetTM(esMatrix44 &out) const override {
-    throw std::logic_error("Unsupported call!");
   }
 
   const Bone *Parent() const override { return parent; }
@@ -85,10 +81,10 @@ class REMotlist60Asset : public REAsset_internal,
     return REAssetBase::Get<const REMotlist60>(this->buffer);
   }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mlst");
-  static const uint64 VERSION = 60;
+  static constexpr uint64 ID = CompileFourCC("mlst");
+  static constexpr uint64 VERSION = 60;
 };

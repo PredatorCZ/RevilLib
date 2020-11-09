@@ -19,7 +19,7 @@
 #include "motion_43.hpp"
 
 struct RETrackCurve65 : RETrackCurve43 {
-  RETrackController *GetController();
+  RETrackController::Ptr GetController();
   // operator RETrackCurve43() = delete;
 };
 
@@ -30,7 +30,7 @@ struct REMotionTrack65 {
   float weight;
   esPointerX64<RETrackCurve65> curves;
 
-  int Fixup(char *masterBuffer);
+  void Fixup(char *masterBuffer);
 };
 
 using REMotion65 = REMotion_t<REMotionTrack65>;
@@ -59,10 +59,10 @@ public:
     return uni::Element<const uni::Motion>{this, false};
   }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mot ");
-  static const uint64 VERSION = 65;
+  static constexpr uint64 ID = CompileFourCC("mot ");
+  static constexpr uint64 VERSION = 65;
 };

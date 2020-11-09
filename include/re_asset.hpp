@@ -17,7 +17,7 @@
 
 #pragma once
 #include "datas/binreader_stream.hpp"
-#include "datas/string_view.hpp"
+#include <memory>
 
 /*Castable into:
   uni::Motion
@@ -26,8 +26,8 @@
 */
 class REAsset {
 public:
-  static REAsset *Load(es::string_view fileName);
-  static REAsset *Load(const std::string &fileName);
-  static REAsset *Load(BinReaderRef rd);
-  virtual ~REAsset() {}
+  using Ptr = std::unique_ptr<REAsset>;
+  static Ptr Load(const std::string &fileName);
+  static Ptr Load(BinReaderRef rd);
+  virtual ~REAsset() = default;
 };

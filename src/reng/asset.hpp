@@ -16,8 +16,8 @@
 */
 
 #pragma once
-#include "datas/supercore.hpp"
 #include "datas/pointer.hpp"
+#include "datas/supercore.hpp"
 #include "re_asset.hpp"
 
 #include "datas/allocator_hybrid.hpp"
@@ -39,11 +39,12 @@ struct REAssetBase {
 
 class REAsset_internal : public REAsset {
 public:
-  typedef std::vector<char, es::allocator_hybrid<char>> buffer_type;
+  using Ptr = std::unique_ptr<REAsset_internal>;
+  using buffer_type = std::vector<char, es::allocator_hybrid<char>>;
   buffer_type buffer;
-  int Load(BinReaderRef rd);
-  static REAsset_internal *Create(REAssetBase &base);
+  void Load(BinReaderRef rd);
+  static Ptr Create(REAssetBase base);
   void Assign(REAssetBase *data);
-  virtual int Fixup() = 0;
+  virtual void Fixup() = 0;
   virtual void Build() = 0;
 };

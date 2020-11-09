@@ -21,7 +21,7 @@
 #include "datas/master_printer.hpp"
 #include <map>
 
-REAsset *REAsset::Load(const std::string &fileName) {
+REAsset::Ptr REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);
 
   if (!rd.IsValid()) {
@@ -31,43 +31,27 @@ REAsset *REAsset::Load(const std::string &fileName) {
   return Load(rd);
 }
 
-REAsset *REAsset::Load(es::string_view fileName) {
-  BinReader rd(fileName);
-
-  if (!rd.IsValid()) {
-    throw es::FileNotFoundError(fileName);
-  }
-
-  return Load(rd);
-}
-
-REAsset *REAsset::Load(BinReaderRef rd) {
+REAsset::Ptr REAsset::Load(BinReaderRef rd) {
   rd.Push();
   REAssetBase base;
   rd.Read(base);
   rd.Pop();
 
-  REAsset_internal *ass = REAsset_internal::Create(base);
-
-  if (!ass)
-    throw es::InvalidHeaderError(base.assetFourCC);
+  auto ass = REAsset_internal::Create(base);
 
   ass->Load(rd);
-  return ass;
+  return std::move(ass);
 }
 
-int REAsset_internal::Load(BinReaderRef rd) {
+void REAsset_internal::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   rd.ReadContainer(buffer, fleSize);
   Fixup();
   ClearESPointers();
-
-  return 0;
 }
 
 void REAsset_internal::Assign(REAssetBase *data) {
   char *rawData = reinterpret_cast<char *>(data);
-  buffer =
-      buffer_type(rawData, rawData + 1, buffer_type::allocator_type(rawData));
+  es::allocator_hybrid_base::LinkStorage(buffer, rawData, 1);
   Build();
 }

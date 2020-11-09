@@ -17,7 +17,7 @@
 
 #include "motion_43.hpp"
 
-template <> int REMotion43::Fixup() {
+template <> void REMotion43::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   bones.Fixup(masterBuffer);
@@ -25,51 +25,49 @@ template <> int REMotion43::Fixup() {
   if (bones) {
     bones->ptr.Fixup(masterBuffer);
   }
+
   tracks.Fixup(masterBuffer);
   unkOffset02.Fixup(masterBuffer);
   animationName.Fixup(masterBuffer);
 
-  for (uint32 b = 0; b < numBones; b++)
+  for (size_t b = 0; b < numBones; b++) {
     bones->ptr[b].Fixup(masterBuffer);
+  }
 
-  for (uint32 b = 0; b < numTracks; b++)
+  for (size_t b = 0; b < numTracks; b++) {
     tracks[b].Fixup(masterBuffer);
-
-  return 0;
+  }
 }
 
-int REMotionTrack43::Fixup(char *masterBuffer) {
+void REMotionTrack43::Fixup(char *masterBuffer) {
   curves.Fixup(masterBuffer);
 
   uint32 numUsedCurves = 0;
 
-  for (uint32 t = 0; t < 3; t++)
-    if (usedCurves[static_cast<TrackType>(t)])
+  for (uint32 t = 0; t < 3; t++) {
+    if (usedCurves[static_cast<TrackType>(t)]) {
       curves[numUsedCurves++].Fixup(masterBuffer);
-
-  return 0;
+    }
+  }
 }
 
-int REMotionBone::Fixup(char *masterBuffer) {
+void REMotionBone::Fixup(char *masterBuffer) {
   boneName.Fixup(masterBuffer);
   parentBoneNamePtr.Fixup(masterBuffer);
   firstChildBoneNamePtr.Fixup(masterBuffer);
   lastChildBoneNamePtr.Fixup(masterBuffer);
-
-  return 0;
 }
 
-int RETrackCurve43::Fixup(char *masterBuffer) {
+void RETrackCurve43::Fixup(char *masterBuffer) {
   frames.Fixup(masterBuffer);
   controlPoints.Fixup(masterBuffer);
   minMaxBounds.Fixup(masterBuffer);
-
-  return 0;
 }
 
 void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
-  if (!controller)
+  if (!controller) {
     return;
+  }
 
   if (time <= 0.0f || numFrames == 1) {
     controller->Evaluate(0, output);
@@ -124,7 +122,7 @@ void REMotion43Asset::Build() {
     if (tck->usedCurves[REMotionTrack43::TrackType_Position]) {
       REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.controller = data->GetController();
       wk.cType = REMotionTrackWorker::Position;
       wk.boneHash = tck->boneHash;
       wk.numFrames = data->numFrames;
@@ -134,7 +132,7 @@ void REMotion43Asset::Build() {
     if (tck->usedCurves[REMotionTrack43::TrackType_Rotation]) {
       REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.controller = data->GetController();
       wk.cType = REMotionTrackWorker::Rotation;
       wk.boneHash = tck->boneHash;
       wk.numFrames = data->numFrames;
@@ -144,7 +142,7 @@ void REMotion43Asset::Build() {
     if (tck->usedCurves[REMotionTrack43::TrackType_Scale]) {
       REMotionTrackWorker wk;
       auto data = &tck->curves[curCurve++];
-      wk.controller = std::unique_ptr<RETrackController>(data->GetController());
+      wk.controller = data->GetController();
       wk.cType = REMotionTrackWorker::Scale;
       wk.boneHash = tck->boneHash;
       wk.numFrames = data->numFrames;
@@ -153,9 +151,7 @@ void REMotion43Asset::Build() {
   }
 }
 
-int REMotion43Asset::Fixup() {
-  int retVal = Get().Fixup();
+void REMotion43Asset::Fixup() {
+  Get().Fixup();
   Build();
-
-  return retVal;
 }

@@ -33,9 +33,8 @@ struct REMotionBone {
   Vector4A16 position;
   Vector4A16 rotation;
   uint32 boneID, boneHash;
-  uint64 null;
 
-  int Fixup(char *masterBuffer);
+  void Fixup(char *masterBuffer);
 };
 
 struct REMimMaxBounds {
@@ -44,6 +43,7 @@ struct REMimMaxBounds {
 };
 
 struct RETrackController {
+  using Ptr = std::unique_ptr<RETrackController>;
   virtual void Assign(RETrackCurve43 *iCurve) = 0;
   virtual void Assign(RETrackCurve65 *iCurve) = 0;
   virtual void Assign(RETrackCurve78 *iCurve) = 0;
@@ -60,8 +60,8 @@ struct RETrackCurve43 {
   esPointerX64<char> controlPoints;
   esPointerX64<REMimMaxBounds> minMaxBounds;
 
-  RETrackController *GetController();
-  int Fixup(char *masterBuffer);
+  RETrackController::Ptr GetController();
+  void Fixup(char *masterBuffer);
 };
 
 struct REMotionTrack43 {
@@ -76,7 +76,7 @@ struct REMotionTrack43 {
   uint32 boneHash;
   esPointerX64<RETrackCurve43> curves;
 
-  int Fixup(char *masterBuffer);
+  void Fixup(char *masterBuffer);
 };
 
 template <class trackType> struct REMotion_t : public REAssetBase {
@@ -93,7 +93,7 @@ template <class trackType> struct REMotion_t : public REAssetBase {
   uint16 framesPerSecond;
   uint16 unks00[2];
 
-  int Fixup();
+  void Fixup();
 };
 
 class REMotionTrackWorker : public uni::MotionTrack {
@@ -138,10 +138,10 @@ public:
     return uni::Element<const uni::Motion>{this, false};
   }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mot ");
-  static const uint64 VERSION = 43;
+  static constexpr uint64 ID = CompileFourCC("mot ");
+  static constexpr uint64 VERSION = 43;
 };

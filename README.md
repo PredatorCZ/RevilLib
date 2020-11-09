@@ -5,7 +5,7 @@
 
 RevilLib is an independent library for various formats, used by RE Engine and MT Framework.
 
-Library is compilable under MSVC 2015+, GCC 6+, Clang 4+.
+Library is written for C++14 and compilable under MSVC 2015+, GCC 5+, Clang 3.5+.
 
 ## Supported titles/formats
 

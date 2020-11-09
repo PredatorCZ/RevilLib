@@ -17,7 +17,7 @@
 
 #include "motion_list_85.hpp"
 
-int REMotlist85::Fixup() {
+void REMotlist85::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   motions.Fixup(masterBuffer);
@@ -37,8 +37,6 @@ int REMotlist85::Fixup() {
 
     motions[m]->Fixup();
   }
-
-  return 0;
 }
 
 void REMotlist85Asset::Build() {
@@ -56,7 +54,7 @@ void REMotlist85Asset::Build() {
     }
 
     motionListStorage.emplace_back();
-    std::prev(motionListStorage.end())->Assign(cMot);
+    motionListStorage.back().Assign(cMot);
   }
 
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
@@ -70,13 +68,12 @@ void REMotlist85Asset::Build() {
     }
 
     skeletonStorage.emplace_back();
-    std::prev(skeletonStorage.end())->Assign(cMot->bones->ptr, cMot->numBones);
+    skeletonStorage.back().Assign(cMot->bones->ptr, cMot->numBones);
   }
 }
 
-int REMotlist85Asset::Fixup() {
+void REMotlist85Asset::Fixup() {
   REMotlist85 &data = Get();
-  int rtVal = data.Fixup();
+  data.Fixup();
   Build();
-  return rtVal;
 }

@@ -25,8 +25,8 @@ struct RETrackCurve78 {
   esPointerX86<char> controlPoints;
   esPointerX86<REMimMaxBounds> minMaxBounds;
 
-  RETrackController *GetController();
-  int Fixup(char *masterBuffer);
+  RETrackController::Ptr GetController();
+  void Fixup(char *masterBuffer);
 };
 
 struct REMotionTrack78 {
@@ -35,7 +35,7 @@ struct REMotionTrack78 {
   uint32 boneHash;
   esPointerX86<RETrackCurve78> curves;
 
-  int Fixup(char *masterBuffer);
+  void Fixup(char *masterBuffer);
 };
 
 typedef REMotion_t<REMotionTrack78> REMotion78;
@@ -53,10 +53,10 @@ public:
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mot ");
-  static const uint64 VERSION = 78;
+  static constexpr uint64 ID = CompileFourCC("mot ");
+  static constexpr uint64 VERSION = 78;
 };

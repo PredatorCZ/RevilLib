@@ -27,7 +27,7 @@ struct REMotlist85 : public REAssetBase {
   esPointerX64<char> null;
   uint32 numMotions;
 
-  int Fixup();
+  void Fixup();
 };
 
 typedef uni::VectorList<uni::Motion, REMotion65Asset> MotionList85;
@@ -40,10 +40,10 @@ class REMotlist85Asset : public REAsset_internal,
     return REAssetBase::Get<const REMotlist85>(this->buffer);
   }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mlst");
-  static const uint64 VERSION = 85;
+  static constexpr uint64 ID = CompileFourCC("mlst");
+  static constexpr uint64 VERSION = 85;
 };

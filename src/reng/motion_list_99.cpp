@@ -18,7 +18,7 @@
 #include "motion_list_99.hpp"
 #include "motion_78.hpp"
 
-int REMotlist99::Fixup() {
+void REMotlist99::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
   motions.Fixup(masterBuffer);
@@ -57,8 +57,6 @@ int REMotlist99::Fixup() {
       bonesPtr[b].Fixup(localBuffer);
     }
   }
-
-  return 0;
 }
 
 void REMotlist99Asset::Build() {
@@ -77,21 +75,19 @@ void REMotlist99Asset::Build() {
     }
 
     motionListStorage.emplace_back();
-    std::prev(motionListStorage.end())->Assign(cMot);
+    motionListStorage.back().Assign(cMot);
 
     if (cMot->pad || !cMot->bones || !cMot->bones->ptr) {
       continue;
     }
 
     skeletonStorage.emplace_back();
-    std::prev(skeletonStorage.end())->Assign(cMot->bones->ptr, cMot->numBones);
+    skeletonStorage.back().Assign(cMot->bones->ptr, cMot->numBones);
   }
 }
 
-int REMotlist99Asset::Fixup() {
+void REMotlist99Asset::Fixup() {
   REMotlist99 &data = Get();
-  int rtVal = data.Fixup();
+  data.Fixup();
   Build();
-
-  return rtVal;
 }

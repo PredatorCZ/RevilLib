@@ -15,29 +15,45 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/macroLoop.hpp"
+#include "datas/except.hpp"
 #include "motion_list_99.hpp"
+#include <set>
 #include <unordered_map>
 
-#define EVAL_MASTER(classname)                                                 \
-  {classname::ID | (classname::VERSION << 32), creator<classname>},
+using ptr_type_ = std::unique_ptr<REAsset_internal>;
 
-template <class C> REAsset_internal *creator() { return new C(); }
+template <class C> struct f_ {
+  static ptr_type_ creator() { return std::make_unique<C>(); }
+};
 
-static const std::unordered_map<uint64, REAsset_internal *(*)()> assetRegistry =
-    {StaticFor(EVAL_MASTER, REMotlist60Asset, REMotlist85Asset,
-               REMotlist99Asset, REMotion43Asset, REMotion78Asset,
-               REMotion65Asset)};
+template <class C> static auto make() {
+  return std::make_pair(C::ID | C::VERSION << 32, f_<C>::creator);
+}
 
-REAsset_internal *REAsset_internal::Create(REAssetBase &base) {
+static const std::set<uint64> supAssets = {
+    REMotlist60Asset::ID, REMotion43Asset::ID,
+};
+
+static const std::unordered_map<uint64, decltype(&f_<void>::creator)>
+    assetRegistry = {
+        make<REMotlist60Asset>(), make<REMotlist85Asset>(),
+        make<REMotlist99Asset>(), make<REMotion43Asset>(),
+        make<REMotion78Asset>(),  make<REMotion65Asset>(),
+};
+
+REAsset_internal::Ptr REAsset_internal::Create(REAssetBase base) {
   uint64 key = base.assetFourCC;
   key |= static_cast<uint64>(base.assetID) << 32;
 
   if (assetRegistry.count(key)) {
     return assetRegistry.at(key)();
+  } else {
+    if (supAssets.count(base.assetFourCC)) {
+      throw es::InvalidHeaderError(base.assetFourCC);
+    } else {
+      throw es::InvalidVersionError(base.assetID);
+    }
   }
-
-  return nullptr;
 }
 
 thread_local std::vector<void *> es::usedPts;

@@ -21,7 +21,7 @@
 
 class REMotlist99 : public REMotlist85 {
 public:
-  int Fixup();
+  void Fixup();
 };
 
 typedef uni::VectorList<uni::Motion, REMotion78Asset> MotionList99;
@@ -34,10 +34,10 @@ class REMotlist99Asset : public REAsset_internal,
     return REAssetBase::Get<const REMotlist99>(this->buffer);
   }
 
-  int Fixup() override;
+  void Fixup() override;
   void Build() override;
 
 public:
-  static const uint64 ID = CompileFourCC("mlst");
-  static const uint64 VERSION = 99;
+  static constexpr uint64 ID = CompileFourCC("mlst");
+  static constexpr uint64 VERSION = 99;
 };
