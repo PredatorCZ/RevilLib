@@ -932,9 +932,8 @@ template <class C> void Buff_EvalShared<C>::FromString(es::string_view input) {
 template <class C>
 void Buff_EvalShared<C>::Assign(char *ptr, size_t size, bool swapEndian) {
   if (!C::VARIABLE_SIZE) {
-    data = Store_Type(reinterpret_cast<C *>(ptr),
-                      reinterpret_cast<C *>(ptr + size),
-                      es::allocator_hybrid<C>(reinterpret_cast<C *>(ptr)));
+    es::allocator_hybrid_base::LinkStorage(data, reinterpret_cast<C *>(ptr),
+                                           reinterpret_cast<C *>(ptr + size));
   } else {
     const char *bufferEnd = ptr + size;
 
@@ -1066,7 +1065,7 @@ static const TrackTypesShared buffRemapRegistry[][16] = {
 
 LMTTrackController *LMTTrackController::CreateCodec(size_t type,
                                                     size_t subVersion) {
-  const TrackTypesShared cType = subVersion & 0xffffffff
+  const TrackTypesShared cType = subVersion == -1
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];
   RegisterReflectedType<Buf_HermiteVector3_Flags>();

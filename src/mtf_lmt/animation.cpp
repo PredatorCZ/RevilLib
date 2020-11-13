@@ -191,7 +191,7 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
   typename Traits::EventClass_Pointer eventTable;
   typename Traits::FloatTracks_Pointer floatTracks;
 
-  auto Events() { return eventTable; }
+  typename Traits::EventClass *Events() { return eventTable; }
 
   char *FloatTracks() { return floatTracks; }
 
@@ -259,7 +259,7 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
   typename Traits::Track_Pointer nullPtr[2];
   typename Traits::EventClass_Pointer eventTable;
 
-  auto Events() { return eventTable; }
+  typename Traits::EventClass *Events() { return eventTable; }
 
   char *FloatTracks() { return nullptr; }
 
@@ -348,8 +348,8 @@ public:
       size_t curTrack = 0;
       do {
         storage.emplace_back(LMTTrack::Create(props));
-        const auto trackStride = storage.back()->Stride();
-        props.dataStart = data->tracks + trackStride;
+        auto buffa = static_cast<char*>(props.dataStart);
+        props.dataStart = buffa + storage.back()->Stride();
       } while (++curTrack < data->numTracks);
     }
 

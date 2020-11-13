@@ -1,11 +1,11 @@
 # RevilLib
 
-[![Build Status](https://travis-ci.org/PredatorCZ/RevilLib.svg?branch=master)](https://travis-ci.org/PredatorCZ/RevilLib)
+[![Build Status](https://travis-ci.com/PredatorCZ/RevilLib.svg?branch=master)](https://travis-ci.com/PredatorCZ/RevilLib)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 RevilLib is an independent library for various formats, used by RE Engine and MT Framework.
 
-Library is written for C++14 and compilable under MSVC 2015+, GCC 5+, Clang 3.5+.
+Library is written for C++14 and compilable under MSVC 2017+, GCC 5+, Clang 3.5+.
 
 ## Supported titles/formats
 
