@@ -500,16 +500,11 @@ void LMTAnimation_internal::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTAnimation::Save(const std::string &fileName,
-                                 bool asXML) const {
+void LMTAnimation::Save(const std::string &fileName, bool asXML) const {
   if (asXML) {
     pugi::xml_document doc = {};
     Save(doc, true);
-
-    if (!doc.save_file(fileName.data(), "\t",
-                       pugi::format_write_bom | pugi::format_indent)) {
-      throw es::FileInvalidAccessError(fileName);
-    }
+    XMLToFile(fileName, doc, {XMLFormatFlag::WriteBOM, XMLFormatFlag::Indent});
   } else {
     BinWritter wr(fileName);
 
@@ -568,11 +563,8 @@ void LMT::Save(pugi::xml_node &node, es::string_view fileName,
         std::string linkedFullName = fleInf.GetFolder();
         linkedFullName += linkedName;
         cAni.append_buffer(linkedName.c_str(), linkedName.size());
-
-        if (!linkAni.save_file(linkedFullName.c_str(), "\t",
-                               pugi::format_write_bom | pugi::format_indent)) {
-          throw es::FileInvalidAccessError(linkedFullName);
-        }
+        XMLToFile(linkedFullName, linkAni,
+                  {XMLFormatFlag::Indent, XMLFormatFlag::WriteBOM});
       } else if (settings.type == LMTExportType::BinaryLinkedXML) {
         std::string linkedName = fleInf.GetFilename();
         linkedName += "_m" + std::to_string(curAniID) + ".mti";
@@ -596,11 +588,7 @@ void LMT::Save(const std::string &fileName, LMTExportSettings settings) const {
 
   pugi::xml_document doc = {};
   Save(doc, fileName, settings);
-
-  if (!doc.save_file(fileName.data(), "\t",
-                     pugi::format_write_bom | pugi::format_indent)) {
-    throw es::FileInvalidAccessError(fileName);
-  }
+  XMLToFile(fileName, doc, {XMLFormatFlag::Indent, XMLFormatFlag::WriteBOM});
 }
 
 void LMT::Load(const std::string &fileName, LMTImportOverrides overrides) {
