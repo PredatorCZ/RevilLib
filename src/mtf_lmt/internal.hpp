@@ -19,10 +19,8 @@
 #include "datas/allocator_hybrid.hpp"
 #include "datas/deleter_hybrid.hpp"
 #include "datas/endian.hpp"
-#include "datas/reflector.hpp"
-
-#include "datas/binwritter_stream.hpp"
 #include "datas/pointer.hpp"
+#include "datas/reflector.hpp"
 #include "lmt.hpp"
 
 #include <memory>
@@ -80,7 +78,7 @@ struct LMTTrackController {
   virtual void Devaluate(const Vector4A16 &in, size_t frame) = 0;
   virtual void Save(BinWritterRef wr) const = 0;
 
-  virtual ~LMTTrackController() {}
+  virtual ~LMTTrackController() = default;
 
   static LMTTrackController *CreateCodec(size_t type, size_t subVersion);
   static LMTTrackController *CreateCodec(TrackTypesShared type) {

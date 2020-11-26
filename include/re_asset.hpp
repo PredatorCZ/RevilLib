@@ -16,8 +16,9 @@
 */
 
 #pragma once
-#include "datas/binreader_stream.hpp"
+#include "datas/bincore_fwd.hpp"
 #include <memory>
+#include <string>
 
 /*Castable into:
   uni::Motion

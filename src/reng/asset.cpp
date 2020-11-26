@@ -23,11 +23,6 @@
 
 REAsset::Ptr REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);
-
-  if (!rd.IsValid()) {
-    throw es::FileNotFoundError(fileName);
-  }
-
   return Load(rd);
 }
 

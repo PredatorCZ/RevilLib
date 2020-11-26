@@ -17,11 +17,9 @@
 
 #pragma once
 #include "datas/pointer.hpp"
-#include "datas/supercore.hpp"
 #include "re_asset.hpp"
 
 #include "datas/allocator_hybrid.hpp"
-#include "datas/binreader_stream.hpp"
 #include <vector>
 
 template <class C> struct REArray {

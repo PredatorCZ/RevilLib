@@ -26,7 +26,6 @@
 #include "datas/reflector_xml.hpp"
 #include "event.hpp"
 #include "float_track.hpp"
-#include <algorithm>
 
 #define _xml_comp_offset(_node)                                                \
   (_node.name() - (*_node.root().children().begin()).name() + 25)
@@ -34,7 +33,7 @@
 #define XML_WARNING(node, ...)                                                 \
   printwarning("[LMT XML: " << _xml_comp_offset(node) << "] " __VA_ARGS__);
 
-void FloatFrame::Save(pugi::xml_node &node) const {
+void FloatFrame::Save(pugi::xml_node node) const {
   pugi::xml_node currentNode = node.append_child("track");
   const size_t numComponents = NumComponents();
   std::string resVal;
@@ -52,7 +51,7 @@ void FloatFrame::Save(pugi::xml_node &node) const {
   currentNode.append_attribute("frame").set_value(Frame());
 }
 
-void FloatFrame::Load(pugi::xml_node &node) {
+void FloatFrame::Load(pugi::xml_node node) {
   pugi::xml_attribute cFrame = node.attribute("frame");
 
   if (cFrame.empty()) {
@@ -86,7 +85,7 @@ void FloatFrame::Load(pugi::xml_node &node) {
   NumComponents(numItems);
 }
 
-void LMTFloatTrack_internal::Save(pugi::xml_node &node, bool standAlone) const {
+void LMTFloatTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
   pugi::xml_node evGroupsNode = node.append_child("floatTracks");
 
   for (size_t g = 0; g < GetNumGroups(); g++) {
@@ -106,7 +105,7 @@ void LMTFloatTrack_internal::Save(pugi::xml_node &node, bool standAlone) const {
   }
 }
 
-void LMTFloatTrack_internal::Load(pugi::xml_node &floatTracksNode) {
+void LMTFloatTrack_internal::Load(pugi::xml_node floatTracksNode) {
   auto floatTrackNodes = XMLCollectChildren(floatTracksNode, "floatTrack");
   const size_t numGroups = GetNumGroups();
 
@@ -146,7 +145,7 @@ void LMTFloatTrack_internal::Load(pugi::xml_node &floatTracksNode) {
   }
 }
 
-void AnimEvent::Save(pugi::xml_node &node) const {
+void AnimEvent::Save(pugi::xml_node node) const {
   size_t numItems = 0;
   pugi::xml_node currentNode = node.append_child("event");
 
@@ -170,7 +169,7 @@ void AnimEvent::Save(pugi::xml_node &node) const {
   currentNode.append_attribute("additiveFrames").set_value(numFrames);
 }
 
-void AnimEvent::Load(pugi::xml_node &node) {
+void AnimEvent::Load(pugi::xml_node node) {
   pugi::xml_attribute addFrames = node.attribute("additiveFrames");
 
   if (addFrames.empty()) {
@@ -201,7 +200,7 @@ void AnimEvent::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTAnimationEventV1_Internal::Save(pugi::xml_node &node,
+void LMTAnimationEventV1_Internal::Save(pugi::xml_node node,
                                         bool standAlone) const {
   pugi::xml_node evGroupsNode = node.append_child("eventGroups");
 
@@ -220,7 +219,7 @@ void LMTAnimationEventV1_Internal::Save(pugi::xml_node &node,
   }
 }
 
-void LMTAnimationEventV1_Internal::Load(pugi::xml_node &node) {
+void LMTAnimationEventV1_Internal::Load(pugi::xml_node node) {
   pugi::xml_node eventGroupsNode = node.child("eventGroups");
 
   if (eventGroupsNode.empty()) {
@@ -267,7 +266,7 @@ void LMTAnimationEventV1_Internal::Load(pugi::xml_node &node) {
   return;
 }
 
-void AnimEventFrameV2::Save(pugi::xml_node &node) const {
+void AnimEventFrameV2::Save(pugi::xml_node node) const {
   ReflectorWrapConst<AnimEventFrameV2> reflFrame(this);
   ReflectorXMLUtil::Save(reflFrame, node);
 
@@ -290,7 +289,7 @@ void AnimEventFrameV2::Save(pugi::xml_node &node) const {
   dNode.append_buffer(obuff.c_str(), obuff.size());
 }
 
-void AnimEventFrameV2::Load(pugi::xml_node &node) {
+void AnimEventFrameV2::Load(pugi::xml_node node) {
   ReflectorWrap<AnimEventFrameV2> reflFrame(this);
   ReflectorXMLUtil::Load(reflFrame, node);
 
@@ -326,7 +325,7 @@ void AnimEventFrameV2::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTAnimationEventV2Event::Load(pugi::xml_node &node) {
+void LMTAnimationEventV2Event::Load(pugi::xml_node node) {
   pugi::xml_attribute eHashAttr = node.attribute("hash");
   pugi::xml_attribute eNumFrames = node.attribute("numFrames");
 
@@ -350,7 +349,7 @@ void LMTAnimationEventV2Event::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTAnimationEventV2Group::Load(pugi::xml_node &node) {
+void LMTAnimationEventV2Group::Load(pugi::xml_node node) {
   pugi::xml_attribute cHashAttr = node.attribute("hash");
   pugi::xml_attribute cNumEvents = node.attribute("numEvents");
 
@@ -373,7 +372,7 @@ void LMTAnimationEventV2Group::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTAnimationEventV2_Internal::Save(pugi::xml_node &node,
+void LMTAnimationEventV2_Internal::Save(pugi::xml_node node,
                                         bool standAlone) const {
   pugi::xml_node evGroupsNode = node.append_child("eventGroups");
   evGroupsNode.append_attribute("hash").set_value(GetHash());
@@ -396,7 +395,7 @@ void LMTAnimationEventV2_Internal::Save(pugi::xml_node &node,
   }
 }
 
-void LMTAnimationEventV2_Internal::Load(pugi::xml_node &node) {
+void LMTAnimationEventV2_Internal::Load(pugi::xml_node node) {
 
   pugi::xml_node eventGroupsNode = node.child("eventGroups");
 
@@ -420,7 +419,7 @@ void LMTAnimationEventV2_Internal::Load(pugi::xml_node &node) {
   }
 }
 
-void LMTTrack_internal::Load(pugi::xml_node &node) {
+void LMTTrack_internal::Load(pugi::xml_node node) {
   ReflectFromXML(node);
 
   if (UseTrackExtremes()) {
@@ -452,7 +451,7 @@ void LMTTrack_internal::Load(pugi::xml_node &node) {
   controller->FromString(strBuff);
 }
 
-void LMTTrack_internal::Save(pugi::xml_node &node, bool standAlone) const {
+void LMTTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
   ReflectToXML(node);
 
   if (minMax) {
@@ -468,7 +467,7 @@ void LMTTrack_internal::Save(pugi::xml_node &node, bool standAlone) const {
   dataNode.append_attribute("numItems").set_value(controller->NumFrames());
 }
 
-void LMTAnimation_internal::Load(pugi::xml_node &node) {
+void LMTAnimation_internal::Load(pugi::xml_node node) {
   ReflectFromXML(node);
 
   events = CreateEvents();
@@ -507,15 +506,11 @@ void LMTAnimation::Save(const std::string &fileName, bool asXML) const {
     XMLToFile(fileName, doc, {XMLFormatFlag::WriteBOM, XMLFormatFlag::Indent});
   } else {
     BinWritter wr(fileName);
-
-    if (!wr.IsValid()) {
-      throw es::FileInvalidAccessError(fileName);
-    }
     Save(wr);
   }
 }
 
-void LMTAnimation_internal::Save(pugi::xml_node &node, bool standAlone) const {
+void LMTAnimation_internal::Save(pugi::xml_node node, bool standAlone) const {
   ReflectToXML(node);
 
   if (events) {
@@ -534,7 +529,7 @@ void LMTAnimation_internal::Save(pugi::xml_node &node, bool standAlone) const {
   }
 }
 
-void LMT::Save(pugi::xml_node &node, es::string_view fileName,
+void LMT::Save(pugi::xml_node node, es::string_view fileName,
                LMTExportSettings settings) const {
   pugi::xml_node master = node.append_child("LMT");
   master.append_attribute("version").set_value(static_cast<int>(Version()));
@@ -594,10 +589,6 @@ void LMT::Save(const std::string &fileName, LMTExportSettings settings) const {
 void LMT::Load(const std::string &fileName, LMTImportOverrides overrides) {
   BinReader rd(fileName);
 
-  if (!rd.IsValid()) {
-    throw es::FileNotFoundError(fileName);
-  }
-
   try {
     Load(rd);
   } catch (const es::InvalidHeaderError &) {
@@ -607,7 +598,7 @@ void LMT::Load(const std::string &fileName, LMTImportOverrides overrides) {
   }
 }
 
-void LMT::Load(pugi::xml_node &node, es::string_view outPath,
+void LMT::Load(pugi::xml_node node, es::string_view outPath,
                LMTImportOverrides overrides) {
   auto mainNodes = XMLCollectChildren(node, "LMT");
 
@@ -663,16 +654,14 @@ void LMT::Load(pugi::xml_node &node, es::string_view outPath,
     } else {
       const char *path = nodeBuffer.get();
       std::string absolutePath = path;
-      BinReader rd(absolutePath);
+      BinReader rd;
 
-      if (!rd.IsValid()) {
+      try {
+        rd.Open(absolutePath);
+      } catch (const es::FileNotFoundError &) {
         absolutePath = fleInf.GetFilename();
         absolutePath += path;
         rd.Open(absolutePath);
-
-        if (!rd.IsValid()) {
-          throw es::FileNotFoundError(path);
-        }
       }
 
       LMTAnimation::Ptr cAni;

@@ -16,6 +16,7 @@
 */
 
 #include "codecs.hpp"
+#include "datas/binwritter_stream.hpp"
 #include "datas/macroLoop.hpp"
 #include "datas/master_printer.hpp"
 #include "datas/reflector_xml.hpp"

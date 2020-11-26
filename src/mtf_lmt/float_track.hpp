@@ -41,13 +41,13 @@ struct FloatFrame {
     FByteswapper(value);
   }
 
-  void Save(pugi::xml_node &node) const;
-  void Load(pugi::xml_node &node);
+  void Save(pugi::xml_node node) const;
+  void Load(pugi::xml_node node);
 };
 
 class LMTFloatTrack_internal : public LMTFloatTrack {
-  virtual void ReflectToXML(pugi::xml_node &node, size_t groupID) const = 0;
-  virtual void ReflectFromXML(pugi::xml_node &node, size_t groupID) = 0;
+  virtual void ReflectToXML(pugi::xml_node node, size_t groupID) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node node, size_t groupID) = 0;
   virtual void SaveInternal(BinWritterRef wr,
                             LMTFixupStorage &storage) const = 0;
   virtual bool Is64bit() const = 0;
@@ -77,6 +77,6 @@ public:
   }
 
   void Save(BinWritterRef wr) const;
-  void Save(pugi::xml_node &node, bool standAlone) const override;
-  void Load(pugi::xml_node &node) override;
+  void Save(pugi::xml_node node, bool standAlone) const override;
+  void Load(pugi::xml_node node) override;
 };

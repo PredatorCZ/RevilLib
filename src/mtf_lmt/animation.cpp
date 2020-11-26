@@ -23,7 +23,6 @@
 #include "event.hpp"
 #include "fixup_storage.hpp"
 
-#include <list>
 #include <map>
 
 /************************************************************************/
@@ -91,7 +90,7 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
       SwapEndian();
     }
 
-    tracks.Fixup(masterBuffer, true);
+    tracks.Fixup(masterBuffer);
 
     for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
@@ -150,7 +149,7 @@ struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
       SwapEndian();
     }
 
-    tracks.Fixup(masterBuffer, true);
+    tracks.Fixup(masterBuffer);
 
     for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
@@ -216,9 +215,9 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
       SwapEndian();
     }
 
-    tracks.Fixup(masterBuffer, true);
-    eventTable.Fixup(masterBuffer, true);
-    floatTracks.Fixup(masterBuffer, true);
+    tracks.Fixup(masterBuffer);
+    eventTable.Fixup(masterBuffer);
+    floatTracks.Fixup(masterBuffer);
 
     auto dEvents = Events();
 
@@ -282,8 +281,8 @@ struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
       SwapEndian();
     }
 
-    tracks.Fixup(masterBuffer, true);
-    eventTable.Fixup(masterBuffer, true);
+    tracks.Fixup(masterBuffer);
+    eventTable.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -376,12 +375,12 @@ public:
     }
   }
 
-  void ReflectToXML(pugi::xml_node &node) const override {
+  void ReflectToXML(pugi::xml_node node) const override {
     ReflectorWrapConst<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
-  void ReflectFromXML(pugi::xml_node &node) override {
+  void ReflectFromXML(pugi::xml_node node) override {
     ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Load(refl, node);
   }
@@ -613,7 +612,7 @@ static const std::map<LMTConstructorPropertiesBase,
         // clang-format on
 };
 
-static const std::list<LMTVersion> supportedVersions = {
+static const LMTVersion supportedVersions[] = {
     LMTVersion::V_22, LMTVersion::V_40, LMTVersion::V_49, LMTVersion::V_50,
     LMTVersion::V_51, LMTVersion::V_56, LMTVersion::V_57, LMTVersion::V_66,
     LMTVersion::V_67, LMTVersion::V_92,

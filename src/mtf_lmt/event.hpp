@@ -23,8 +23,8 @@ public:
   uint32 runEventBit;
   uint32 numFrames;
 
-  void Save(pugi::xml_node &node) const;
-  void Load(pugi::xml_node &node);
+  void Save(pugi::xml_node node) const;
+  void Load(pugi::xml_node node);
   void SwapEndian();
 };
 
@@ -39,8 +39,8 @@ struct AnimEvents : ReflectorInterface<AnimEvents<PtrType>> {
 };
 
 class LMTAnimationEventV1_Internal : public LMTAnimationEventV1 {
-  virtual void ReflectToXML(pugi::xml_node &node, size_t groupID) const = 0;
-  virtual void ReflectFromXML(pugi::xml_node &node, size_t groupID) = 0;
+  virtual void ReflectToXML(pugi::xml_node node, size_t groupID) const = 0;
+  virtual void ReflectFromXML(pugi::xml_node node, size_t groupID) = 0;
   virtual void SaveInternal(BinWritterRef wr,
                             LMTFixupStorage &fixups) const = 0;
   virtual bool Is64bit() const = 0;
@@ -55,8 +55,8 @@ public:
   virtual void SetNumEvents(size_t groupID, size_t newSize) = 0;
 
   size_t GetVersion() const override;
-  void Save(pugi::xml_node &node, bool standAlone) const override;
-  void Load(pugi::xml_node &node) override;
+  void Save(pugi::xml_node node, bool standAlone) const override;
+  void Load(pugi::xml_node node) override;
   void Save(BinWritterRef wr) const;
   void SaveBuffer(BinWritterRef wr, LMTFixupStorage &fixups) const;
   EventCollection GetEvents(size_t groupID, size_t eventID) const override;
@@ -78,8 +78,8 @@ struct AnimEventFrameV2 : ReflectorInterface<AnimEventFrameV2> {
 
   AnimEventFrameV2() : idata(), frame() {}
 
-  void Save(pugi::xml_node &node) const;
-  void Load(pugi::xml_node &node);
+  void Save(pugi::xml_node node) const;
+  void Load(pugi::xml_node node);
   void SwapEndian();
 };
 
@@ -97,7 +97,7 @@ public:
                             LMTFixupStorage &storage) const = 0;
   virtual ~LMTAnimationEventV2Event() {}
 
-  void Load(pugi::xml_node &node);
+  void Load(pugi::xml_node node);
 
   static Ptr Create();
 };
@@ -115,14 +115,14 @@ public:
                             LMTFixupStorage &storage) const = 0;
   virtual ~LMTAnimationEventV2Group() {}
 
-  void Load(pugi::xml_node &node);
+  void Load(pugi::xml_node node);
 
   static Ptr Create();
 };
 
 class LMTAnimationEventV2_Internal : public LMTAnimationEventV2 {
-  void Save(pugi::xml_node &node, bool standAlone) const override;
-  void Load(pugi::xml_node &node) override;
+  void Save(pugi::xml_node node, bool standAlone) const override;
+  void Load(pugi::xml_node node) override;
   virtual void SaveInternal(BinWritterRef wr,
                             LMTFixupStorage &storage) const = 0;
 

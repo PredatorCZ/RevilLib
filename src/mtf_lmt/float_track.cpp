@@ -45,7 +45,7 @@ struct FloatTrack : ReflectorInterface<FloatTrack<PtrType>> {
       SwapEndian();
     }
 
-    frames.Fixup(masterBuffer, swapEndian);
+    frames.Fixup(masterBuffer);
   }
 };
 
@@ -83,12 +83,12 @@ public:
     }
   }
 
-  void ReflectToXML(pugi::xml_node &node, size_t groupID) const override {
+  void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
     ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 
-  void ReflectFromXML(pugi::xml_node &node, size_t groupID) override {
+  void ReflectFromXML(pugi::xml_node node, size_t groupID) override {
     ReflectorWrap<C> reflEvent(&(*groups)[groupID]);
     ReflectorXMLUtil::Load(reflEvent, node);
   }

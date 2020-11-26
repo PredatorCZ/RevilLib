@@ -69,7 +69,7 @@ struct TrackV0 : ReflectorInterface<TrackV0<PtrType>> {
       SwapEndian();
     }
 
-    bufferOffset.Fixup(masterBuffer, true);
+    bufferOffset.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -119,7 +119,7 @@ struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
       SwapEndian();
     }
 
-    bufferOffset.Fixup(masterBuffer, true);
+    bufferOffset.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -164,8 +164,8 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
       SwapEndian();
     }
 
-    bufferOffset.Fixup(masterBuffer, true);
-    extremes.Fixup(masterBuffer, true);
+    bufferOffset.Fixup(masterBuffer);
+    extremes.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -212,8 +212,8 @@ struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
       SwapEndian();
     }
 
-    bufferOffset.Fixup(masterBuffer, true);
-    extremes.Fixup(masterBuffer, true);
+    bufferOffset.Fixup(masterBuffer);
+    extremes.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -442,12 +442,12 @@ public:
 
   bool UseTrackExtremes() const override { return UseTrackExtremes_(0); }
 
-  void ReflectToXML(pugi::xml_node &node) const override {
+  void ReflectToXML(pugi::xml_node node) const override {
     ReflectorWrapConst<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
-  void ReflectFromXML(pugi::xml_node &node) override {
+  void ReflectFromXML(pugi::xml_node node) override {
     ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Load(refl, node);
   }

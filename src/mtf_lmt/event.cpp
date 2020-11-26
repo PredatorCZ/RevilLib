@@ -70,12 +70,12 @@ public:
     }
   }
 
-  void ReflectToXML(pugi::xml_node &node, size_t groupID) const override {
+  void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
     ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 
-  void ReflectFromXML(pugi::xml_node &node, size_t groupID) override {
+  void ReflectFromXML(pugi::xml_node node, size_t groupID) override {
     ReflectorWrap<C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Load(reflEvent, node);
   }
@@ -147,7 +147,7 @@ void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
     SwapEndian();
   }
 
-  events.Fixup(masterBuffer, true);
+  events.Fixup(masterBuffer);
 
   if (!swapEndian) {
     return;
@@ -213,7 +213,7 @@ struct AnimEventV2 {
       SwapEndian();
     }
 
-    frames.Fixup(masterBuffer, true);
+    frames.Fixup(masterBuffer);
 
     if (!swapEndian) {
       return;
@@ -249,7 +249,7 @@ struct AnimEventGroupV2 {
       SwapEndian();
     }
 
-    events.Fixup(masterBuffer, true);
+    events.Fixup(masterBuffer);
 
     AnimEventV2 *events_ = events;
 
@@ -286,7 +286,7 @@ struct AnimEventsHeaderV2 {
       SwapEndian();
     }
 
-    eventGroups.Fixup(masterBuffer, true);
+    eventGroups.Fixup(masterBuffer);
 
     AnimEventGroupV2 *groups = eventGroups;
 

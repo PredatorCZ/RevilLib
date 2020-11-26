@@ -274,29 +274,25 @@ void LMT::Load(BinReaderRef rd) {
   uint16 numBlocks;
   rd.Read(numBlocks);
 
+  if (!numBlocks) {
+    return;
+  }
+
   if (version == LMTVersion::V_92) {
     rd.Skip(8); // 0x17011700
   }
 
-  size_t calcutatedSizeX64 = numBlocks * 8 + rd.Tell();
-  size_t padResult = calcutatedSizeX64 & 0xF;
+  size_t calcutatedSizeX64 = numBlocks * sizeof(uint64) + rd.Tell();
+  calcutatedSizeX64 += GetPadding(calcutatedSizeX64, 16);
 
-  if (padResult) {
-    calcutatedSizeX64 += size_t(16) - padResult;
-  }
-
-  size_t calcutatedSizeX86 = numBlocks * 8 + rd.Tell();
-  padResult = calcutatedSizeX86 & 0xF;
-
-  if (padResult) {
-    calcutatedSizeX86 += size_t(16) - padResult;
-  }
+  size_t calcutatedSizeX86 = numBlocks * sizeof(uint32) + rd.Tell();
+  calcutatedSizeX86 += GetPadding(calcutatedSizeX86, 16);
 
   magic = 0;
 
   while (!magic) {
     if (rd.IsEOF()) {
-      throw es::UnexpectedEOS();
+      return;
     }
 
     rd.Read(magic);

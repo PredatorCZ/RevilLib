@@ -16,18 +16,14 @@
 */
 
 #pragma once
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
+#include "datas/bincore_fwd.hpp"
+#include "datas/pugi_fwd.hpp"
 #include "datas/string_view.hpp"
 #include "datas/vectors_simd.hpp"
 #include "uni/list_vector.hpp"
 #include "uni/motion.hpp"
 
 class AnimEvent;
-
-namespace pugi {
-class xml_node;
-}
 
 enum class LMTExportType : uint8 {
   FullBinary,      // Propper LMT format
@@ -101,8 +97,8 @@ class LMTFloatTrack {
 public:
   virtual size_t GetNumGroups() const = 0;
   virtual size_t GetGroupTrackCount(size_t groupID) const = 0;
-  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual void Load(pugi::xml_node &node) = 0;
+  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
+  virtual void Load(pugi::xml_node node) = 0;
   virtual ~LMTFloatTrack() = default;
 
   static std::unique_ptr<LMTFloatTrack>
@@ -112,8 +108,8 @@ public:
 class LMTAnimationEvent {
 public:
   virtual size_t GetVersion() const = 0;
-  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
-  virtual void Load(pugi::xml_node &node) = 0;
+  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
+  virtual void Load(pugi::xml_node node) = 0;
   virtual size_t GetNumGroups() const = 0;
   virtual size_t GetGroupEventCount(size_t groupID) const = 0;
   virtual ~LMTAnimationEvent() = default;
@@ -154,8 +150,8 @@ public:
                            size_t frame) const = 0;
   virtual void Evaluate(Vector4A16 &out, size_t frame) const = 0;
   virtual int32 GetFrame(size_t frame) const = 0;
-  virtual void Load(pugi::xml_node &node) = 0;
-  virtual void Save(pugi::xml_node &node, bool standAlone) const = 0;
+  virtual void Load(pugi::xml_node node) = 0;
+  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
   virtual size_t Stride() const = 0;
   virtual uint32 BoneType() const = 0;
   virtual ~LMTTrack() = default;
@@ -178,8 +174,8 @@ public:
   virtual size_t NumFrames() const = 0;
   virtual int32 LoopFrame() const = 0;
 
-  virtual void Load(pugi::xml_node &node) = 0;
-  virtual void Save(pugi::xml_node &node, bool standAlone = false) const = 0;
+  virtual void Load(pugi::xml_node node) = 0;
+  virtual void Save(pugi::xml_node node, bool standAlone = false) const = 0;
   virtual void Save(BinWritterRef wr, bool standAlone = true) const = 0;
   void Save(const std::string &fileName, bool asXML = false) const;
   virtual ~LMTAnimation() = default;
@@ -210,11 +206,11 @@ public:
 
   void Load(BinReaderRef rd);
   void Load(const std::string &fileName, LMTImportOverrides overrides = {});
-  void Load(pugi::xml_node &node, es::string_view outPath,
+  void Load(pugi::xml_node node, es::string_view outPath,
             LMTImportOverrides overrides = {});
   void Save(BinWritterRef wr) const;
   void Save(const std::string &fileName, LMTExportSettings settings = {}) const;
-  void Save(pugi::xml_node &node, es::string_view outPath,
+  void Save(pugi::xml_node node, es::string_view outPath,
             LMTExportSettings settings = {}) const;
 
 private:
