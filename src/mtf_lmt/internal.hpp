@@ -67,7 +67,7 @@ struct LMTTrackController {
                            size_t frame) const = 0;
   virtual void Evaluate(Vector4A16 &out, size_t frame) const = 0;
   virtual void Interpolate(Vector4A16 &out, size_t frame, float delta,
-                           TrackMinMax *bounds = nullptr) const = 0;
+                           const TrackMinMax &bounds) const = 0;
   virtual int32 GetFrame(size_t frameID) const = 0;
   virtual void NumFrames(size_t numItems) = 0;
   virtual void ToString(std::string &strBuf, size_t numIdents) const = 0;

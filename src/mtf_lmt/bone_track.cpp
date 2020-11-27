@@ -252,8 +252,8 @@ void LMTTrack_internal::Evaluate(Vector4A16 &out, size_t frame) const {
 
   controller->Evaluate(out, frame - useRefFrame);
 
-  if (minMax) {
-    out = minMax->max + minMax->min * out;
+  if (useMinMax) {
+    out = minMax.max + minMax.min * out;
   }
 }
 
@@ -301,7 +301,7 @@ void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
 
           frameDelta = (prevFrame - frameDelta) / (prevFrame - boundFrame);
 
-          controller->Interpolate(out, f - 1, frameDelta, minMax.get());
+          controller->Interpolate(out, f - 1, frameDelta, minMax);
           break;
         }
       }
@@ -342,7 +342,12 @@ public:
       controller->Assign(data->bufferOffset, data->bufferSize, swapEndian);
     }
 
-    minMax = MinMaxPtr(GetTrackExtremes_(0), false);
+    auto rExtremes = GetTrackExtremes_(0);
+    useMinMax = rExtremes;
+
+    if (useMinMax) {
+      memcpy(&minMax, rExtremes, sizeof(TrackMinMax));
+    }
   }
 
   // SFINAE ACCESSORS
@@ -465,7 +470,7 @@ public:
   }
 };
 
-LMTTrack_internal::LMTTrack_internal() : controller(nullptr), minMax(nullptr) {
+LMTTrack_internal::LMTTrack_internal() : controller(nullptr) {
   RegisterReflectedTypes<TrackV1BufferTypes, TrackV1_5BufferTypes,
                          TrackV2BufferTypes, TrackType_er>();
 }

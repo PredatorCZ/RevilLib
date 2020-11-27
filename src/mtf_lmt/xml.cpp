@@ -423,13 +423,8 @@ void LMTTrack_internal::Load(pugi::xml_node node) {
   ReflectFromXML(node);
 
   if (UseTrackExtremes()) {
-    auto localMinMax = std::make_unique<TrackMinMax>();
-    ReflectorWrap<TrackMinMax> minMaxRelfl(localMinMax.get());
+    ReflectorWrap<TrackMinMax> minMaxRelfl(minMax);
     pugi::xml_node minMaxNode = ReflectorXMLUtil::Load(minMaxRelfl, node);
-
-    if (!minMaxNode.empty()) {
-      minMax = uni::ToElement(localMinMax);
-    }
   }
 
   if (!CreateController()) {
@@ -454,8 +449,8 @@ void LMTTrack_internal::Load(pugi::xml_node node) {
 void LMTTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
   ReflectToXML(node);
 
-  if (minMax) {
-    ReflectorWrapConst<TrackMinMax> refl(minMax.get());
+  if (useMinMax) {
+    ReflectorWrapConst<TrackMinMax> refl(minMax);
     ReflectorXMLUtil::Save(refl, node);
   }
 

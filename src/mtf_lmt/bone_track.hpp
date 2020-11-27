@@ -28,13 +28,13 @@ class LMTTrack_internal : public LMTTrack {
   virtual const Vector4 *GetRefData() const = 0;
 
 public:
-  using MinMaxPtr = uni::Element<TrackMinMax>;
   using LMTTrackControllerPtr = std::unique_ptr<LMTTrackController>;
 
-  int useRefFrame = 1;
+  TrackMinMax minMax;
   mutable float frameRate = 60.f;
-  mutable uint32 numIdents = 5;
-  MinMaxPtr minMax;
+  mutable uint8 numIdents = 5;
+  uint8 useRefFrame = 1;
+  bool useMinMax = false;
   LMTTrackControllerPtr controller;
 
   size_t NumFrames() const override;

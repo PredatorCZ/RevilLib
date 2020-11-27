@@ -93,13 +93,13 @@ void LMTTrack_internal::SaveBuffers(BinWritterRef wr,
     storage.SkipTo();
   }
 
-  if (minMax) {
+  if (useMinMax) {
     wr.ApplyPadding();
     storage.SaveTo(wr);
-    wr.Write<TrackMinMax &>(*minMax);
+    wr.Write(minMax);
   }
 
-  if (!minMax && UseTrackExtremes()) {
+  if (!useMinMax && UseTrackExtremes()) {
     storage.SkipTo();
   }
 }
