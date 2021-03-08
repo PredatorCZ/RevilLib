@@ -64,6 +64,37 @@ void RETrackCurve43::Fixup(char *masterBuffer) {
   minMaxBounds.Fixup(masterBuffer);
 }
 
+// https://en.wikipedia.org/wiki/Slerp
+static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
+  Vector4A16 v1 = _v1;
+  float dot = v0.Dot(v1);
+
+  // If the dot product is negative, slerp won't take
+  // the shorter path. Fix by reversing one quaternion.
+  if (dot < 0.0f) {
+    v1 *= -1;
+    dot *= -1;
+  }
+
+  static const float DOT_THRESHOLD = 0.9995f;
+  if (dot > DOT_THRESHOLD) {
+    // If the inputs are too close for comfort, linearly interpolate
+    // and normalize the result.
+
+    Vector4A16 result = v0 + (v1 - v0) * t;
+    return result.Normalize();
+  }
+
+  const float theta00 = acos(dot);   // theta00 = angle between input vectors
+  const float theta01 = theta00 * t; // theta01 = angle between v0 and result
+  const float theta02 = sin(theta01);
+  const float theta03 = 1.0f / sin(theta00);
+  const float s0 = cos(theta01) - dot * theta02 * theta03;
+  const float s1 = theta02 * theta03;
+
+  return (v0 * s0) + (v1 * s1);
+}
+
 void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
   if (!controller) {
     return;
@@ -75,10 +106,10 @@ void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
   }
 
   float frameDelta = time * 60.f;
-  uint32 frame = static_cast<uint32>(frameDelta);
+  int32 frame = static_cast<int32>(frameDelta);
   uint32 foundFrameID = 0;
-  uint32 frameBegin = 0;
-  uint32 frameEnd = 0;
+  int32 frameBegin = 0;
+  int32 frameEnd = 0;
 
   for (; foundFrameID < numFrames; foundFrameID++) {
     frameBegin = frameEnd;
@@ -108,7 +139,12 @@ void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
   if (frameDelta > FLT_EPSILON) {
     Vector4A16 nextValue;
     controller->Evaluate(foundFrameID + 1, nextValue);
-    output = output + (nextValue - output) * frameDelta;
+
+    if (cType == TrackType_e::Rotation) {
+      output = slerp(output, nextValue, frameDelta);
+    } else {
+      output = output + (nextValue - output) * frameDelta;
+    }
   }
 }
 

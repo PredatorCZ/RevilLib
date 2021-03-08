@@ -389,8 +389,8 @@ struct BiLinearSCVector3_16bitController : RETrackController_internal {
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
     const uint16 &retreived = dataStorage[id];
-    float decompVal = minMaxBounds.min[0] +
-                      (minMaxBounds.min[(componentID % 3) + 1] *
+    float decompVal = minMaxBounds.min[(componentID % 3) + 1] +
+                      (minMaxBounds.min[0] *
                        (static_cast<float>(retreived) * componentMultiplier));
     if (componentID == 3) {
       out = Vector4A16(decompVal);
