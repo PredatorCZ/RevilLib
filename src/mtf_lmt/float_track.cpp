@@ -26,7 +26,7 @@ REFLECTOR_CREATE(FloatTrackComponentRemap, ENUM, 2, CLASS, 8, NONE, X_COMP,
                  Y_COMP, Z_COMP);
 
 template <template <class C> class PtrType>
-struct FloatTrack : ReflectorInterface<FloatTrack<PtrType>> {
+struct FloatTrack {
   FloatTrackComponentRemap componentRemaps[4];
   uint32 numFloats;
   PtrType<FloatFrame> frames;
@@ -84,7 +84,7 @@ public:
   }
 
   void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
-    ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
+    ReflectorWrap<const C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 

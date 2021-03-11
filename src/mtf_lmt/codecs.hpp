@@ -16,14 +16,14 @@
 */
 
 #pragma once
-#include "internal.hpp"
-
 #include "datas/flags.hpp"
+#include "datas/reflector.hpp"
+#include "internal.hpp"
 
 static constexpr float fPI = 3.14159265f;
 static constexpr float fPI2 = 0.5 * fPI;
 
-struct Buf_SingleVector3 : ReflectorInterface<Buf_SingleVector3> {
+struct Buf_SingleVector3 {
   Vector data;
 
   static constexpr size_t NEWLINEMOD = 1;
@@ -57,7 +57,7 @@ struct Buf_StepRotationQuat3 : Buf_SingleVector3 {
                    float delta, const TrackMinMax &) const;
 };
 
-struct Buf_LinearVector3 : ReflectorInterface<Buf_LinearVector3> {
+struct Buf_LinearVector3 {
   Vector data;
   uint32 additiveFrames;
 
@@ -89,7 +89,7 @@ struct Buf_LinearVector3 : ReflectorInterface<Buf_LinearVector3> {
 REFLECTOR_CREATE(Buf_HermiteVector3_Flags, ENUM, 2, CLASS, 8, InTangentX,
                  InTangentY, InTangentZ, OutTangentX, OutTangentY, OutTangentZ)
 
-struct Buf_HermiteVector3 : ReflectorInterface<Buf_HermiteVector3> {
+struct Buf_HermiteVector3 {
   uint8 size;
   es::Flags<Buf_HermiteVector3_Flags> flags;
   uint16 additiveFrames;

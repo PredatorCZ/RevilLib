@@ -20,11 +20,13 @@
 #include "datas/deleter_hybrid.hpp"
 #include "datas/endian.hpp"
 #include "datas/pointer.hpp"
-#include "datas/reflector.hpp"
-#include "lmt.hpp"
-
+#include "datas/vectors_simd.hpp"
+#include "revil/lmt.hpp"
+#include "uni/list_vector.hpp"
 #include <memory>
 #include <vector>
+
+using namespace revil;
 
 struct LMTFixupStorage;
 
@@ -32,7 +34,7 @@ static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
 };
 
-struct TrackMinMax : ReflectorInterface<TrackMinMax> {
+struct TrackMinMax {
   Vector4A16 min;
   Vector4A16 max;
 
@@ -86,3 +88,29 @@ struct LMTTrackController {
   }
   static float GetTrackMaxFrac(TrackTypesShared type);
 };
+
+namespace revil {
+
+struct LMTConstructorProperties : LMTConstructorPropertiesBase {
+  bool swappedEndian; // optional, assign only
+  void *dataStart;
+  char *masterBuffer;
+
+  LMTConstructorProperties() : dataStart(nullptr), masterBuffer(nullptr) {}
+  LMTConstructorProperties(const LMTConstructorPropertiesBase &base)
+      : LMTConstructorProperties() {
+    operator=(base);
+  }
+
+  void operator=(const LMTConstructorPropertiesBase &input) {
+    static_cast<LMTConstructorPropertiesBase &>(*this) = input;
+  }
+};
+
+class LMTImpl
+    : public uni::PolyVectorList<uni::Motion, LMTAnimation, uni::Element> {
+public:
+  std::string masterBuffer;
+  LMTConstructorPropertiesBase props;
+};
+} // namespace revil

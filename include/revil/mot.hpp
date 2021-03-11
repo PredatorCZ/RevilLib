@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2021 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,21 +16,13 @@
 */
 
 #pragma once
-#include "datas/bincore_fwd.hpp"
 #include "datas/pugi_fwd.hpp"
-#include "datas/string_view.hpp"
-#include "datas/vectors_simd.hpp"
-#include "uni/list_vector.hpp"
+#include "datas/bincore_fwd.hpp"
 #include "uni/motion.hpp"
+#include "settings.hpp"
+#include <vector>
 
-class AnimEvent;
-
-enum class LMTExportType : uint8 {
-  FullBinary,      // Propper LMT format
-  FullXML,         // Single XML format
-  LinkedXML,       // XML format with linked XML files per animation
-  BinaryLinkedXML, // XML format with linked binary files per animation
-};
+namespace revil {
 
 enum class LMTArchType : uint8 { Auto, X64, X86 };
 
@@ -46,13 +38,7 @@ enum class LMTVersion : uint8 {
   V_66 = 66, // DD, DD:DA
   V_67 = 67, // Other, generic MTF v2 format
   V_92 = 92, // MH:W
-};
-
-struct LMTExportSettings {
-  LMTExportType type = LMTExportType::FullBinary;
-  LMTArchType arch = LMTArchType::Auto;
-  LMTVersion version = LMTVersion::Auto;
-  bool swapEndian = false;
+  V_95 = 95, // Iceborne
 };
 
 struct alignas(2) LMTImportOverrides {
@@ -76,22 +62,7 @@ struct alignas(2) LMTImportOverrides {
 };
 
 using LMTConstructorPropertiesBase = LMTImportOverrides;
-
-struct LMTConstructorProperties : LMTConstructorPropertiesBase {
-  bool swappedEndian; // optional, assign only
-  void *dataStart;
-  char *masterBuffer;
-
-  LMTConstructorProperties() : dataStart(nullptr), masterBuffer(nullptr) {}
-  LMTConstructorProperties(const LMTConstructorPropertiesBase &base)
-      : LMTConstructorProperties() {
-    operator=(base);
-  }
-
-  void operator=(const LMTConstructorPropertiesBase &input) {
-    static_cast<LMTConstructorPropertiesBase &>(*this) = input;
-  }
-};
+struct LMTConstructorProperties;
 
 class LMTFloatTrack {
 public:
@@ -101,7 +72,7 @@ public:
   virtual void Load(pugi::xml_node node) = 0;
   virtual ~LMTFloatTrack() = default;
 
-  static std::unique_ptr<LMTFloatTrack>
+  static RE_EXTERN std::unique_ptr<LMTFloatTrack> 
   Create(const LMTConstructorProperties &props);
 };
 
@@ -114,13 +85,13 @@ public:
   virtual size_t GetGroupEventCount(size_t groupID) const = 0;
   virtual ~LMTAnimationEvent() = default;
 
-  static std::unique_ptr<LMTAnimationEvent>
+  static RE_EXTERN std::unique_ptr<LMTAnimationEvent>
   Create(const LMTConstructorProperties &props);
 };
 
 class LMTAnimationEventV1 : public LMTAnimationEvent {
 public:
-  typedef std::vector<short> EventCollection;
+  using EventCollection = std::vector<short>;
 
   virtual EventCollection GetEvents(size_t groupID, size_t eventID) const = 0;
   virtual int32 GetEventFrame(size_t groupID, size_t eventID) const = 0;
@@ -154,13 +125,12 @@ public:
   virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
   virtual size_t Stride() const = 0;
   virtual uint32 BoneType() const = 0;
-  virtual ~LMTTrack() = default;
 
-  static std::unique_ptr<LMTTrack>
+  static RE_EXTERN std::unique_ptr<LMTTrack>
   Create(const LMTConstructorProperties &props);
 };
 
-class LMTAnimation : public uni::Motion {
+class RE_EXTERN LMTAnimation : public uni::Motion {
 public:
   using Ptr = std::unique_ptr<LMTAnimation>;
 
@@ -191,38 +161,4 @@ public:
     return !operator==(input);
   }
 };
-
-class LMT
-    : public uni::PolyVectorList<uni::Motion, LMTAnimation, uni::Element> {
-public:
-  LMTVersion Version() const { return props.version; }
-  void Version(LMTVersion version, LMTArchType arch);
-  LMTArchType Architecture() const { return props.arch; }
-  auto CreateAnimation() const { return LMTAnimation::Create(props); }
-
-  LMTAnimation *AppendAnimation();
-  void AppendAnimation(LMTAnimation *ani);
-  void InsertAnimation(LMTAnimation *ani, size_t at, bool replace = false);
-
-  void Load(BinReaderRef rd);
-  void Load(const std::string &fileName, LMTImportOverrides overrides = {});
-  void Load(pugi::xml_node node, es::string_view outPath,
-            LMTImportOverrides overrides = {});
-  void Save(BinWritterRef wr) const;
-  void Save(const std::string &fileName, LMTExportSettings settings = {}) const;
-  void Save(pugi::xml_node node, es::string_view outPath,
-            LMTExportSettings settings = {}) const;
-
-private:
-  std::string masterBuffer;
-  LMTConstructorPropertiesBase props;
-};
-
-// TODO:
-/*
-add header sanitizers
-
-low priority:
-conversion system << super low
-encoder, exporting utility
-*/
+} // namespace revil

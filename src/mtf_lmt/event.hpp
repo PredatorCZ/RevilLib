@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include "datas/reflector.hpp"
 #include "internal.hpp"
 
 class AnimEvent {
@@ -28,8 +29,7 @@ public:
   void SwapEndian();
 };
 
-template <template <class C> class PtrType>
-struct AnimEvents : ReflectorInterface<AnimEvents<PtrType>> {
+template <template <class C> class PtrType> struct AnimEvents {
   uint16 eventRemaps[32];
   uint32 numEvents;
   PtrType<AnimEvent> events;
@@ -67,7 +67,7 @@ REFLECTOR_CREATE(EventFrameV2DataType, ENUM, 2, CLASS, 16, Int8, Int32, Float,
 REFLECTOR_CREATE(EventFrameV2Type, ENUM, 2, CLASS, 16, Scalar, Scalar2, Scalar3,
                  PackedFloat, PackedBitFlags = 5, PackedInt);
 
-struct AnimEventFrameV2 : ReflectorInterface<AnimEventFrameV2> {
+struct AnimEventFrameV2 {
   union {
     Vector fdata;
     IVector idata;

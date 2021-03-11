@@ -42,7 +42,7 @@ REFLECTOR_CREATE(TrackV2BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
                  BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)
 
 template <template <class C> class PtrType>
-struct TrackV0 : ReflectorInterface<TrackV0<PtrType>> {
+struct TrackV0 {
   static constexpr uint32 SUBVERSION = 0;
   static constexpr size_t NUMPOINTERS = 1;
 
@@ -90,7 +90,7 @@ template <> struct BufferVersion<TrackV1_5BufferTypes> {
 };
 
 template <template <class C> class PtrType, class BufferType>
-struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
+struct TrackV1 {
   static constexpr uint32 SUBVERSION = BufferVersion<BufferType>::value;
   static constexpr size_t NUMPOINTERS = 1;
 
@@ -132,7 +132,7 @@ struct TrackV1 : ReflectorInterface<TrackV1<PtrType, BufferType>> {
 };
 
 template <template <class C> class PtrType>
-struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
+struct TrackV2 {
   static constexpr uint32 SUBVERSION = 2;
   static constexpr size_t NUMPOINTERS = 2;
 
@@ -178,7 +178,7 @@ struct TrackV2 : ReflectorInterface<TrackV2<PtrType>> {
 };
 
 template <template <class C> class PtrType>
-struct TrackV3 : ReflectorInterface<TrackV3<PtrType>> {
+struct TrackV3 {
   static constexpr uint32 SUBVERSION = 2;
   static constexpr size_t NUMPOINTERS = 2;
 
@@ -448,7 +448,7 @@ public:
   bool UseTrackExtremes() const override { return UseTrackExtremes_(0); }
 
   void ReflectToXML(pugi::xml_node node) const override {
-    ReflectorWrapConst<C> refl(data.get());
+    ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 

@@ -1,10 +1,9 @@
-#include "lmt.hpp"
 #include "datas/matrix44.hpp"
-
+#include "revil/mot.hpp"
 
 struct LMTRawTrack {
   typedef std::vector<esMatrix44> InputRaw;
-  
+
   const InputRaw &data;
   int32 boneID;
   uint8 boneType;
@@ -14,9 +13,8 @@ struct LMTRawTrack {
       : data(inputData), boneID(boneIndex), boneType(0), weight(1.0f) {}
 };
 
-struct LMTOutputTracks
-{
-    LMTTrack *position, *rotation, *scale;
+struct LMTOutputTracks {
+  LMTTrack *position, *rotation, *scale;
 };
 
 LMTOutputTracks CreateTrackFromRaw(const LMTRawTrack &rawData);

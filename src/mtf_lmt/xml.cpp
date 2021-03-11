@@ -267,7 +267,7 @@ void LMTAnimationEventV1_Internal::Load(pugi::xml_node node) {
 }
 
 void AnimEventFrameV2::Save(pugi::xml_node node) const {
-  ReflectorWrapConst<AnimEventFrameV2> reflFrame(this);
+  ReflectorWrap<const AnimEventFrameV2> reflFrame(this);
   ReflectorXMLUtil::Save(reflFrame, node);
 
   pugi::xml_node dNode = node.append_child("data");
@@ -450,7 +450,7 @@ void LMTTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
   ReflectToXML(node);
 
   if (useMinMax) {
-    ReflectorWrapConst<TrackMinMax> refl(minMax);
+    ReflectorWrap<const TrackMinMax> refl(minMax);
     ReflectorXMLUtil::Save(refl, node);
   }
 
@@ -535,7 +535,7 @@ void LMT::Save(pugi::xml_node node, es::string_view fileName,
   size_t curAniID = 0;
   AFileInfo fleInf(fileName);
 
-  for (auto &a : storage) {
+  for (auto &a : pi->storage) {
     pugi::xml_node cAni = master.append_child("Animation");
     cAni.append_attribute("ID").set_value(curAniID);
 
@@ -618,17 +618,17 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
     throw XMLMissingNodeAttributeException("X64", masterNode);
   }
 
-  props.version = static_cast<LMTVersion>(versionAttr.as_int());
+  pi->props.version = static_cast<LMTVersion>(versionAttr.as_int());
 
   if (overrides.arch == LMTArchType::Auto) {
-    props.arch = archAttr.as_bool() ? LMTArchType::X64 : LMTArchType::X86;
+    pi->props.arch = archAttr.as_bool() ? LMTArchType::X64 : LMTArchType::X86;
   } else {
-    props.arch = overrides.arch;
+    pi->props.arch = overrides.arch;
   }
 
   auto animationNodes = XMLCollectChildren(masterNode, "Animation");
 
-  storage.reserve(animationNodes.size());
+  pi->storage.reserve(animationNodes.size());
 
   AFileInfo fleInf(outPath);
 
@@ -639,13 +639,13 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
       auto animationSubNodes = XMLCollectChildren(a);
 
       if (!animationSubNodes.size()) {
-        storage.emplace_back();
+        pi->storage.emplace_back();
         continue;
       }
 
-      auto cAni = LMTAnimation::Create(LMTConstructorProperties(props));
+      auto cAni = LMTAnimation::Create(LMTConstructorProperties(pi->props));
       cAni->Load(a);
-      storage.emplace_back(uni::ToElement(cAni));
+      pi->storage.emplace_back(uni::ToElement(cAni));
     } else {
       const char *path = nodeBuffer.get();
       std::string absolutePath = path;
@@ -661,11 +661,11 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
 
       LMTAnimation::Ptr cAni;
       try {
-        cAni = LMTAnimation_internal::Load(rd, props);
-        storage.emplace_back(uni::ToElement(cAni));
+        cAni = LMTAnimation_internal::Load(rd, pi->props);
+        pi->storage.emplace_back(uni::ToElement(cAni));
         continue;
       } catch (const es::InvalidHeaderError &) {
-        cAni = LMTAnimation::Create(props);
+        cAni = LMTAnimation::Create(pi->props);
       }
 
       pugi::xml_document subAnim = XMLFromFile(absolutePath);
@@ -689,7 +689,7 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
       }
 
       cAni->Load(subAniMainNode);
-      storage.emplace_back(uni::ToElement(cAni));
+      pi->storage.emplace_back(uni::ToElement(cAni));
     }
   }
 }

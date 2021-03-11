@@ -144,7 +144,7 @@ static auto SeekTo(es::string_view buffer, const char T = '\n') {
 size_t Buf_SingleVector3::Size() const { return 12; }
 
 void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
-  ReflectorWrapConst<Buf_SingleVector3> tRefl(this);
+  ReflectorWrap<const Buf_SingleVector3> tRefl(this);
 
   buffer << tRefl.GetReflectedValue(0);
 }
@@ -200,7 +200,7 @@ void Buf_StepRotationQuat3::Interpolate(Vector4A16 &out,
 size_t Buf_LinearVector3::Size() const { return 16; }
 
 void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
-  ReflectorWrapConst<Buf_LinearVector3> tRefl(this);
+  ReflectorWrap<const Buf_LinearVector3> tRefl(this);
 
   buffer << "{ " << tRefl.GetReflectedValue(0) << ", "
          << tRefl.GetReflectedValue(1) << " }";
@@ -257,7 +257,7 @@ void Buf_LinearVector3::SwapEndian() {
 size_t Buf_HermiteVector3::Size() const { return size; }
 
 void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
-  ReflectorWrapConst<Buf_HermiteVector3> tRefl(this);
+  ReflectorWrap<const Buf_HermiteVector3> tRefl(this);
 
   buffer << "{ " << tRefl.GetReflectedValue(2) << ", "
          << tRefl.GetReflectedValue(1) << ", " << tRefl.GetReflectedValue(0);

@@ -25,6 +25,9 @@
 REFLECTOR_CREATE((AnimEvents<esPointerX86>), 2, VARNAMES, TEMPLATE, eventRemaps)
 REFLECTOR_CREATE((AnimEvents<esPointerX64>), 2, VARNAMES, TEMPLATE, eventRemaps)
 
+template class AnimEvents<esPointerX64>;
+template class AnimEvents<esPointerX86>;
+
 template <class C, size_t numGroups>
 class AnimEvents_shared : public LMTAnimationEventV1_Internal {
 public:
@@ -71,7 +74,7 @@ public:
   }
 
   void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
-    ReflectorWrapConst<C> reflEvent((*groups)[groupID]);
+    ReflectorWrap<const C> reflEvent((*groups)[groupID]);
     ReflectorXMLUtil::Save(reflEvent, node);
   }
 

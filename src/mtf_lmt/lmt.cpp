@@ -15,45 +15,55 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "datas/reflector.hpp"
 #include "internal.hpp"
 
 REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);
 
+LMT::LMT() : pi(std::make_unique<LMTImpl>()) {}
+LMT::~LMT() = default;
+
+LMTVersion LMT::Version() const { return pi->props.version; }
+LMTArchType LMT::Architecture() const { return pi->props.arch; }
+auto LMT::CreateAnimation() const { return LMTAnimation::Create(pi->props); }
+
+LMT::operator uni::MotionsConst () const { return uni::MotionsConst{pi.get()}; }
+
 void LMT::Version(LMTVersion _version, LMTArchType _arch) {
-  if (!masterBuffer.empty()) {
+  if (!pi->masterBuffer.empty()) {
     throw std::runtime_error("Cannot set version for read only class!");
   }
 
-  if (!storage.empty()) {
+  if (!pi->storage.empty()) {
     throw std::runtime_error("Cannot set version for already used class.");
   }
 
-  props.version = _version;
-  props.arch = _arch;
+  pi->props.version = _version;
+  pi->props.arch = _arch;
 }
 
 void LMT::AppendAnimation(LMTAnimation *ani) {
-  if (ani && *ani != props) {
+  if (ani && *ani != pi->props) {
     throw std::runtime_error("Cannot append animation. Properties mismatch.");
   }
 
-  storage.emplace_back(ani, false);
+  pi->storage.emplace_back(ani, false);
 }
 
 LMTAnimation *LMT::AppendAnimation() {
-  storage.emplace_back(uni::ToElement(CreateAnimation()));
-  return storage.back().get();
+  pi->storage.emplace_back(uni::ToElement(CreateAnimation()));
+  return pi->storage.back().get();
 }
 
 void LMT::InsertAnimation(LMTAnimation *ani, size_t at, bool replace) {
-  if (*ani != props) {
+  if (*ani != pi->props) {
     throw std::runtime_error("Cannot append animation. Properties mismatch.");
   }
 
-  if (at >= storage.size()) {
-    storage.resize(at);
-    storage.emplace_back(ani);
+  if (at >= pi->storage.size()) {
+    pi->storage.resize(at);
+    pi->storage.emplace_back(ani);
   } else {
-    storage[at] = class_type(ani, false);
+    pi->storage[at] = LMTImpl::class_type(ani, false);
   }
 }

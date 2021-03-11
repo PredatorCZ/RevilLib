@@ -268,7 +268,7 @@ void LMT::Load(BinReaderRef rd) {
   LMTVersion version = static_cast<LMTVersion>(iversion);
 
   if (!LMTAnimation::SupportedVersion(iversion)) {
-    throw es::InvalidVersionError(magic);
+    throw es::InvalidVersionError(iversion);
   }
 
   uint16 numBlocks;
@@ -278,8 +278,8 @@ void LMT::Load(BinReaderRef rd) {
     return;
   }
 
-  if (version == LMTVersion::V_92) {
-    rd.Skip(8); // 0x17011700
+  if (version >= LMTVersion::V_92) {
+    rd.Skip(8); // 0x17011700 v92, 0x18020800 v95
   }
 
   size_t calcutatedSizeX64 = numBlocks * sizeof(uint64) + rd.Tell();
@@ -309,19 +309,19 @@ void LMT::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   const size_t multiplier = isX64 ? 2 : 1;
   const size_t lookupTableOffset =
-      8 + (version == LMTVersion::V_92 ? (4 * multiplier) : 0);
+      8 + (version >= LMTVersion::V_92 ? (4 * multiplier) : 0);
 
   Version(version, isX64 ? LMTArchType::X64 : LMTArchType::X86);
 
-  rd.ReadContainer(masterBuffer, fleSize);
-  char *buffer = &masterBuffer[0];
+  rd.ReadContainer(pi->masterBuffer, fleSize);
+  char *buffer = &pi->masterBuffer[0];
 
   uint32 *lookupTable = reinterpret_cast<uint32 *>(buffer + lookupTableOffset);
 
-  storage.resize(numBlocks);
+  pi->storage.resize(numBlocks);
 
   LMTConstructorProperties cProps;
-  cProps = props;
+  cProps = pi->props;
   cProps.masterBuffer = buffer;
   cProps.swappedEndian = rd.SwappedEndian();
 
@@ -342,7 +342,7 @@ void LMT::Load(BinReaderRef rd) {
 
     cProps.dataStart = buffer + cOffset;
 
-    storage[a] = uni::ToElement(LMTAnimation::Create(cProps));
+    pi->storage[a] = uni::ToElement(LMTAnimation::Create(cProps));
   }
 
   ClearESPointers();
@@ -351,7 +351,7 @@ void LMT::Load(BinReaderRef rd) {
 void LMT::Save(BinWritterRef wr) const {
   wr.Write(LMT_ID);
   wr.Write(static_cast<uint16>(Version()));
-  wr.Write(static_cast<uint16>(storage.size()));
+  wr.Write(static_cast<uint16>(pi->storage.size()));
 
   auto eVersion = Version();
   bool isX64 = Architecture() == LMTArchType::X64;
@@ -360,14 +360,17 @@ void LMT::Save(BinWritterRef wr) const {
   if (eVersion == LMTVersion::V_92) {
     wr.Write(0x17011700);
     wr.Write(0);
+  } else if (eVersion == LMTVersion::V_95) {
+    wr.Write(0x18020800);
+    wr.Write(0);
   }
 
-  for (auto &a : storage) {
+  for (auto &a : pi->storage) {
     fixups.SaveFrom(wr.Tell());
     wr.Skip(isX64 ? 8 : 4);
   }
 
-  for (auto &a : storage) {
+  for (auto &a : pi->storage) {
     if (!a) {
       fixups.SkipTo();
       continue;

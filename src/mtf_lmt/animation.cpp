@@ -54,7 +54,7 @@ struct AnimTraitsV2 {
 /************************************************************************/
 
 template <class AnimTraits>
-struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
+struct AnimV0 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 1;
@@ -113,7 +113,7 @@ struct AnimV0 : ReflectorInterface<AnimV0<AnimTraits>> {
 /************************************************************************/
 
 template <class AnimTraits>
-struct AnimV1 : ReflectorInterface<AnimV1<AnimTraits>> {
+struct AnimV1 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 1;
@@ -175,7 +175,7 @@ REFLECTOR_CREATE(AnimV2Flags, ENUM, 2, CLASS, 32, Events = 0x800000,
                  FLoatTracks = 0x40000, Unk00 = 0x1000000, Unk01 = 0x1)
 
 template <class AnimTraits>
-struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
+struct AnimV2 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 2;
@@ -243,7 +243,7 @@ struct AnimV2 : ReflectorInterface<AnimV2<AnimTraits>> {
 /************************************************************************/
 
 template <class AnimTraits>
-struct AnimV3 : ReflectorInterface<AnimV3<AnimTraits>> {
+struct AnimV3 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 3;
@@ -376,7 +376,7 @@ public:
   }
 
   void ReflectToXML(pugi::xml_node node) const override {
-    ReflectorWrapConst<C> refl(data.get());
+    ReflectorWrap<C> refl(data.get());
     ReflectorXMLUtil::Save(refl, node);
   }
 
@@ -570,6 +570,7 @@ static const std::map<LMTConstructorPropertiesBase,
         LMTANI_REG(66, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
         LMTANI_REG(67, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
         LMTANI_REG(92, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
+        LMTANI_REG(95, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
 
         LMTANI_REG(22, 64, AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>),
         LMTANI_REG(40, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
@@ -581,6 +582,7 @@ static const std::map<LMTConstructorPropertiesBase,
         LMTANI_REG(66, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
         LMTANI_REG(67, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
         LMTANI_REG(92, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
+        LMTANI_REG(95, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
         // clang-format on
 };
 
@@ -598,6 +600,7 @@ static const std::map<LMTConstructorPropertiesBase,
         LMTANI_REG_LINK(66, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
         LMTANI_REG_LINK(67, 86, AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
         LMTANI_REG_LINK(92, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
+        LMTANI_REG_LINK(95, 86, AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
 
         LMTANI_REG_LINK(22, 64, AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>),
         LMTANI_REG_LINK(40, 64, AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
@@ -609,13 +612,14 @@ static const std::map<LMTConstructorPropertiesBase,
         LMTANI_REG_LINK(66, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
         LMTANI_REG_LINK(67, 64, AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
         LMTANI_REG_LINK(92, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
+        LMTANI_REG_LINK(95, 64, AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
         // clang-format on
 };
 
 static const LMTVersion supportedVersions[] = {
     LMTVersion::V_22, LMTVersion::V_40, LMTVersion::V_49, LMTVersion::V_50,
     LMTVersion::V_51, LMTVersion::V_56, LMTVersion::V_57, LMTVersion::V_66,
-    LMTVersion::V_67, LMTVersion::V_92,
+    LMTVersion::V_67, LMTVersion::V_92, LMTVersion::V_95,
 };
 
 bool LMTAnimation::SupportedVersion(uint16 version) {
