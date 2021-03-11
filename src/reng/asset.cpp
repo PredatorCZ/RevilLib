@@ -18,34 +18,34 @@
 #include "asset.hpp"
 #include "datas/binreader.hpp"
 #include "datas/except.hpp"
-#include "datas/master_printer.hpp"
 #include <map>
 
-REAsset::Ptr REAsset::Load(const std::string &fileName) {
+REAsset::~REAsset() = default;
+
+void REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);
   return Load(rd);
 }
 
-REAsset::Ptr REAsset::Load(BinReaderRef rd) {
+void REAsset::Load(BinReaderRef rd) {
   rd.Push();
   REAssetBase base;
   rd.Read(base);
   rd.Pop();
 
-  auto ass = REAsset_internal::Create(base);
+  i = REAssetImpl::Create(base);
 
-  ass->Load(rd);
-  return std::move(ass);
+  i->Load(rd);
 }
 
-void REAsset_internal::Load(BinReaderRef rd) {
+void REAssetImpl::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   rd.ReadContainer(buffer, fleSize);
   Fixup();
   ClearESPointers();
 }
 
-void REAsset_internal::Assign(REAssetBase *data) {
+void REAssetImpl::Assign(REAssetBase *data) {
   char *rawData = reinterpret_cast<char *>(data);
   es::allocator_hybrid_base::LinkStorage(buffer, rawData, 1);
   Build();

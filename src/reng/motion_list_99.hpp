@@ -26,12 +26,20 @@ public:
 
 typedef uni::VectorList<uni::Motion, REMotion78Asset> MotionList99;
 
-class REMotlist99Asset : public REAsset_internal,
+class REMotlist99Asset : public REAssetImpl,
                          public MotionList99,
                          public SkeletonList {
   REMotlist99 &Get() { return REAssetBase::Get<REMotlist99>(this->buffer); }
   const REMotlist99 &Get() const {
     return REAssetBase::Get<const REMotlist99>(this->buffer);
+  }
+
+  uni::BaseElementConst AsSkeletons() const override {
+    return {static_cast<const SkeletonList *>(this), false};
+  }
+
+  uni::BaseElementConst AsMotions() const override {
+    return {static_cast<const MotionList99 *>(this), false};
   }
 
   void Fixup() override;

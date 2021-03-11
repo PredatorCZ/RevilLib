@@ -35,10 +35,7 @@ struct REMotionTrack65 {
 
 using REMotion65 = REMotion_t<REMotionTrack65>;
 
-class REMotion65Asset
-    : public REAsset_internal,
-      public uni::Motion,
-      protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
+class REMotion65Asset final : public REMotion43Asset {
 public:
   REMotion65 &Get() { return REAssetBase::Get<REMotion65>(this->buffer); }
   const REMotion65 &Get() const {
@@ -50,14 +47,6 @@ public:
   }
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
-  uni::MotionTracksConst Tracks() const override {
-    return uni::MotionTracksConst(this, false);
-  }
-  MotionType_e MotionType() const override { return MotionType_e::Relative; }
-
-  operator uni::Element<const uni::Motion>() const {
-    return uni::Element<const uni::Motion>{this, false};
-  }
 
   void Fixup() override;
   void Build() override;

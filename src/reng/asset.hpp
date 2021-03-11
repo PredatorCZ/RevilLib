@@ -16,11 +16,14 @@
 */
 
 #pragma once
-#include "datas/pointer.hpp"
-#include "re_asset.hpp"
-
 #include "datas/allocator_hybrid.hpp"
+#include "datas/deleter_hybrid.hpp"
+#include "datas/pointer.hpp"
+#include "revil/re_asset.hpp"
+#include "uni/common.hpp"
 #include <vector>
+
+using namespace revil;
 
 template <class C> struct REArray {
   esPointerX64<C> ptr;
@@ -35,9 +38,9 @@ struct REAssetBase {
   }
 };
 
-class REAsset_internal : public REAsset {
+class revil::REAssetImpl {
 public:
-  using Ptr = std::unique_ptr<REAsset_internal>;
+  using Ptr = std::unique_ptr<REAssetImpl>;
   using buffer_type = std::vector<char, es::allocator_hybrid<char>>;
   buffer_type buffer;
   void Load(BinReaderRef rd);
@@ -45,4 +48,7 @@ public:
   void Assign(REAssetBase *data);
   virtual void Fixup() = 0;
   virtual void Build() = 0;
+  virtual uni::BaseElementConst AsMotion() const { return {}; }
+  virtual uni::BaseElementConst AsMotions() const { return {}; }
+  virtual uni::BaseElementConst AsSkeletons() const { return {}; }
 };

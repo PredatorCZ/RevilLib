@@ -191,3 +191,16 @@ void REMotion43Asset::Fixup() {
   Get().Fixup();
   Build();
 }
+
+namespace revil {
+template <> ES_EXPORT uni::Element<const uni::Motion> REAsset::As<>() const {
+  auto val = i->AsMotion();
+  return {static_cast<const uni::Motion *>(val.release()), false};
+}
+
+template <> ES_EXPORT uni::MotionsConst REAsset::As<>() const {
+  auto val = i->AsMotions();
+  return {static_cast<typename uni::MotionsConst::pointer>(val.release()),
+          false};
+}
+} // namespace revil

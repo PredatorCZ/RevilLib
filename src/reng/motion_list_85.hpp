@@ -16,8 +16,8 @@
 */
 
 #pragma once
-#include "motion_list_60.hpp"
 #include "motion_65.hpp"
+#include "motion_list_60.hpp"
 
 struct REMotlist85 : public REAssetBase {
   uint64 pad;
@@ -32,12 +32,20 @@ struct REMotlist85 : public REAssetBase {
 
 typedef uni::VectorList<uni::Motion, REMotion65Asset> MotionList85;
 
-class REMotlist85Asset : public REAsset_internal,
-                       public MotionList85,
-                       public SkeletonList {
+class REMotlist85Asset : public REAssetImpl,
+                         public MotionList85,
+                         public SkeletonList {
   REMotlist85 &Get() { return REAssetBase::Get<REMotlist85>(this->buffer); }
   const REMotlist85 &Get() const {
     return REAssetBase::Get<const REMotlist85>(this->buffer);
+  }
+
+  uni::BaseElementConst AsSkeletons() const override {
+    return {static_cast<const SkeletonList *>(this), false};
+  }
+
+  uni::BaseElementConst AsMotions() const override {
+    return {static_cast<const MotionList85 *>(this), false};
   }
 
   void Fixup() override;

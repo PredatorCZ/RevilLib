@@ -17,6 +17,7 @@
 
 #include "datas/master_printer.hpp"
 #include "motion_78.hpp"
+#include "datas/vectors_simd.hpp"
 #include <unordered_map>
 
 struct RETrackController_internal : RETrackController {

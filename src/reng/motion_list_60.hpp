@@ -21,6 +21,7 @@
 #include "motion_43.hpp"
 #include "uni/list_vector.hpp"
 #include "uni/skeleton.hpp"
+#include "uni/rts.hpp"
 
 struct REMotlist60 : public REAssetBase {
   uint64 pad;
@@ -73,12 +74,20 @@ public:
 typedef uni::VectorList<uni::Motion, REMotion43Asset> MotionList60;
 typedef uni::VectorList<uni::Skeleton, RESkeletonWrap> SkeletonList;
 
-class REMotlist60Asset : public REAsset_internal,
+class REMotlist60Asset : public REAssetImpl,
                          public MotionList60,
                          public SkeletonList {
   REMotlist60 &Get() { return REAssetBase::Get<REMotlist60>(this->buffer); }
   const REMotlist60 &Get() const {
     return REAssetBase::Get<const REMotlist60>(this->buffer);
+  }
+
+  uni::BaseElementConst AsSkeletons() const override {
+    return {static_cast<const SkeletonList *>(this), false};
+  }
+
+  uni::BaseElementConst AsMotions() const override {
+    return {static_cast<const MotionList60 *>(this), false};
   }
 
   void Fixup() override;

@@ -17,18 +17,29 @@
 
 #pragma once
 #include "datas/bincore_fwd.hpp"
+#include "settings.hpp"
 #include <memory>
 #include <string>
 
-/*Castable into:
-  uni::Motion
-  uni::SkeletonsConst
-  uni::MotionsConst
-*/
-class REAsset {
+namespace revil {
+class REAssetImpl;
+
+class RE_EXTERN REAsset {
 public:
-  using Ptr = std::unique_ptr<REAsset>;
-  static Ptr Load(const std::string &fileName);
-  static Ptr Load(BinReaderRef rd);
-  virtual ~REAsset() = default;
+  ~REAsset();
+  void Load(const std::string &fileName);
+  void Load(BinReaderRef rd);
+
+  /*Castable into:
+    uni::Element<const uni::Motion>
+    uni::SkeletonsConst
+    uni::MotionsConst
+
+    returns nullptr uni::Element on failure
+  */
+  template <class C> C As() const;
+
+private:
+  std::unique_ptr<REAssetImpl> i;
 };
+} // namespace revil

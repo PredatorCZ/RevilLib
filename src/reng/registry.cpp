@@ -20,7 +20,7 @@
 #include <set>
 #include <unordered_map>
 
-using ptr_type_ = std::unique_ptr<REAsset_internal>;
+using ptr_type_ = std::unique_ptr<REAssetImpl>;
 
 template <class C> struct f_ {
   static ptr_type_ creator() { return std::make_unique<C>(); }
@@ -41,7 +41,7 @@ static const std::unordered_map<uint64, decltype(&f_<void>::creator)>
         make<REMotion78Asset>(),  make<REMotion65Asset>(),
 };
 
-REAsset_internal::Ptr REAsset_internal::Create(REAssetBase base) {
+REAssetImpl::Ptr REAssetImpl::Create(REAssetBase base) {
   uint64 key = base.assetFourCC;
   key |= static_cast<uint64>(base.assetID) << 32;
 

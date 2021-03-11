@@ -19,6 +19,7 @@
 #include "asset.hpp"
 #include "datas/flags.hpp"
 #include "datas/unicode.hpp"
+#include "datas/vectors_simd.hpp"
 #include "uni/list_vector.hpp"
 #include "uni/motion.hpp"
 
@@ -112,10 +113,10 @@ public:
   }
 };
 
-typedef REMotion_t<REMotionTrack43> REMotion43;
+using REMotion43 = REMotion_t<REMotionTrack43>;
 
 class REMotion43Asset
-    : public REAsset_internal,
+    : public REAssetImpl,
       public uni::Motion,
       protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
 public:
@@ -133,6 +134,10 @@ public:
     return uni::MotionTracksConst(this, false);
   }
   MotionType_e MotionType() const override { return MotionType_e::Relative; }
+
+  uni::BaseElementConst AsMotion() const override {
+    return this->operator uni::Element<const uni::Motion>();
+  }
 
   operator uni::Element<const uni::Motion>() const {
     return uni::Element<const uni::Motion>{this, false};

@@ -100,3 +100,11 @@ void RESkeletonWrap::Assign(REMotionBone *data, size_t numBones) {
     }
   }
 }
+
+namespace revil {
+template <> ES_EXPORT uni::SkeletonsConst REAsset::As<>() const {
+  auto val = i->AsMotions();
+  return {static_cast<typename uni::SkeletonsConst::pointer>(val.release()),
+          false};
+}
+} // namespace revil
