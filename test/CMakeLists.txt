@@ -17,3 +17,9 @@ set_precore_sources(test_main)
 add_test(test_main test_main)
 
 add_subdirectory(resources_lmt)
+
+if(ODR_TEST)
+  include(${PRECORE_SOURCE_DIR}/cmake/odr_test.cmake)
+  test_odr(PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+  set_precore_sources(test_odr)
+endif()
