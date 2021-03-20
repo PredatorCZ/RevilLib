@@ -22,6 +22,12 @@
 #include "settings.hpp"
 
 namespace revil {
-es::string_view RE_EXTERN GetExtension(uint32 hash, Platform platform = Platform::WinPC);
-es::string_view RE_EXTERN GetClassName(uint32 hash, Platform platform = Platform::WinPC);
+es::string_view RE_EXTERN GetExtension(uint32 hash,
+                                       Platform platform = Platform::WinPC);
+es::string_view RE_EXTERN GetClassName(uint32 hash,
+                                       Platform platform = Platform::WinPC);
+uint32 RE_EXTERN GetHash(es::string_view extension, es::string_view title,
+                         Platform platform = Platform::WinPC);
+using TitleCallback = void (*)(es::string_view);
+void RE_EXTERN GetTitles(TitleCallback cb);
 }; // namespace revil

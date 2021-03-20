@@ -16,6 +16,19 @@
 */
 
 #include "revil/hashreg.hpp"
+#include "ext_dd.hpp"
+#include "ext_dr.hpp"
+#include "ext_lp.hpp"
+#include "ext_lp2.hpp"
+#include "ext_mh3.hpp"
+#include "ext_mh4.hpp"
+#include "ext_mhg.hpp"
+#include "ext_mhs.hpp"
+#include "ext_pwaadd.hpp"
+#include "ext_pwaasoj.hpp"
+#include "ext_re0.hpp"
+#include "ext_re5.hpp"
+#include "ext_re6.hpp"
 #include <map>
 
 using pair_type = std::pair<es::string_view, es::string_view>;
@@ -1117,10 +1130,53 @@ static const std::map<uint32, es::string_view> classNames{
     cAIPlanMoveFSMCommandSet
     cAIPlanMoveJumpControl
     cAIPlanMoveShotEnergy*/
+};
 
+static const std::map<es::string_view, const MtExtensions *> invertedExtensions{
+    {"ace_attorney_dual_destinies", &extPWAADD},     //
+    {"ace_attorney_spirit_of_justice", &extPWAASOJ}, //
+    {"biohazzard_0", &extRE0},                       //
+    {"biohazzard_5", &extRE5},                       //
+    {"biohazzard_6", &extRE6},                       //
+    {"dd", &extDD},                                  //
+    {"dead_rising", &extDR},                         //
+    {"dr", &extDR},                                  //
+    {"dragons_dogma", &extDD},                       //
+    {"lost_planet_2", &extLP2},                      //
+    {"lost_planet", &extLP},                         //
+    {"lp", &extLP},                                  //
+    {"lp2", &extLP2},                                //
+    {"mh3", &extMH3},                                //
+    {"mh4", &extMH4},                                //
+    {"mhg", &extMHG},                                //
+    {"mhs", &extMHS},                                //
+    {"mhx", &extMHG},                                //
+    {"mhxx", &extMHG},                               //
+    {"monster_hunter_3", &extMH3},                   //
+    {"monster_hunter_4", &extMH4},                   //
+    {"monster_hunter_cross", &extMHG},               //
+    {"monster_hunter_double_cross", &extMHG},        //
+    {"monster_hunter_generations", &extMHG},         //
+    {"monster_hunter_stories", &extMHS},             //
+    {"monster_hunter_x", &extMHG},                   //
+    {"monster_hunter_xx", &extMHG},                  //
+    {"pwaadd", &extPWAADD},                          //
+    {"pwaasoj", &extPWAASOJ},                        //
+    {"re0", &extRE0},                                //
+    {"re5", &extRE5},                                //
+    {"re6", &extRE6},                                //
+    {"resident_evil_0", &extRE0},                    //
+    {"resident_evil_5", &extRE5},                    //
+    {"resident_evil_6", &extRE6},                    //
 };
 
 namespace revil {
+void GetTitles(TitleCallback cb) {
+  for (auto &p : invertedExtensions) {
+    cb(p.first);
+  }
+}
+
 es::string_view GetExtension(uint32 hash, Platform platform) {
   auto pair = GetPair(hash, platform);
 
@@ -1145,5 +1201,38 @@ es::string_view GetClassName(uint32 hash, Platform platform) {
   }
 
   return {};
+}
+
+uint32 GetHash(es::string_view extension, es::string_view title,
+               Platform platform) {
+  auto found = invertedExtensions.find(title);
+
+  if (es::IsEnd(invertedExtensions, found)) {
+    throw std::runtime_error("Coundn't find title.");
+  }
+
+  auto foundSec = found->second;
+  uint32 retVal = foundSec->GetHash(extension, platform);
+
+  if (retVal) {
+    return retVal;
+  }
+
+  // for backward compatibility, some extensions might have numerical (hashed)
+  // extension (not found in main registry) if the extension has been added
+  // later, just find it by hash and verify it in inverted registry
+  auto cvted = strtoul(extension.data(), nullptr, 10);
+
+  if (cvted < 0x10000) {
+    return 0;
+  }
+
+  auto extTranslated = revil::GetExtension(cvted, platform);
+
+  if (extTranslated.empty()) {
+    return 0;
+  }
+
+  return foundSec->GetHash(extTranslated, platform);
 }
 }; // namespace revil
