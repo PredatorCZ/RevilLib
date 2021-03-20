@@ -172,4 +172,8 @@ static const MtExtensionsStorage extDDPS3{
     {"rev_ps3", 0x232E228C}, //
 };
 
-static const MtExtensions extDD{&extDDCommon, &extDDPS3, &extDDPS3};
+static const MtExtensions extDD{
+    &extDDCommon,               //
+    Platform::PS3,   &extDDPS3, //
+    Platform::WinPC, &extDDWin,
+};

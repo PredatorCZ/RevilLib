@@ -90,7 +90,7 @@ static const MtExtensionsStorage extLP2Common{
 };
 
 static const MtExtensionsStorage extLP2Win{
-    {"gnd", 0x20FA758C},  //
+    {"gnd", 0x20FA758C},     //
     {"hkm", 0x018735A6},     //
     {"mot", 0x5AF4E4FE},     //
     {"msl", 0x1C635F38},     //
@@ -101,8 +101,12 @@ static const MtExtensionsStorage extLP2Win{
 
 static const MtExtensionsStorage extLP2PS3{
     {"at3", 0x7D1530C2},     //
-    {"gnd", 0x2993EA18},  //
+    {"gnd", 0x2993EA18},     //
     {"rev_ps3", 0x4857FD94}, //
 };
 
-static const MtExtensions extLP2{&extLP2Common, &extLP2PS3, &extLP2Win};
+static const MtExtensions extLP2{
+    &extLP2Common,               //
+    Platform::PS3,   &extLP2PS3, //
+    Platform::WinPC, &extLP2Win,
+};

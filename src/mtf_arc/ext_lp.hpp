@@ -75,4 +75,8 @@ static const MtExtensionsStorage extLPPS3{
     {"msg", 0x10C460E6},     //
 };
 
-static const MtExtensions extLP{&extLPCommon, &extLPPS3, &extLPWin};
+static const MtExtensions extLP{
+    &extLPCommon,               //
+    Platform::PS3,   &extLPPS3, //
+    Platform::WinPC, &extLPWin,
+};

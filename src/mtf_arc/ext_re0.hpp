@@ -76,4 +76,4 @@ static const MtExtensionsStorage extRE0Common{
     {"xsew", 0x724DF879},    //
 };
 
-static const MtExtensions extRE0{&extRE0Common, nullptr, nullptr};
+static const MtExtensions extRE0{&extRE0Common, Platform::WinPC};

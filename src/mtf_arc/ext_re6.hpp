@@ -129,4 +129,8 @@ static const MtExtensionsStorage extRE6PS3{
     {"rev_ps3", 0x232E228C}, //
 };
 
-static const MtExtensions extRE5{&extRE6Common, &extRE6PS3, &extRE6Win};
+static const MtExtensions extRE6{
+    &extRE6Common,               //
+    Platform::PS3,   &extRE6PS3, //
+    Platform::WinPC, &extRE6Win,
+};

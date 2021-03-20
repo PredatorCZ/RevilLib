@@ -86,4 +86,4 @@ static const MtExtensionsStorage extRE5Common{
     {"way", 0x5F36B659},     //
 };
 
-static const MtExtensions extRE5{&extRE5Common, nullptr, nullptr};
+static const MtExtensions extRE5{&extRE5Common, Platform::WinPC};
