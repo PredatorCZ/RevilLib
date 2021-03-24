@@ -17,6 +17,8 @@
 
 #include "revil/hashreg.hpp"
 #include "ext_dd.hpp"
+#include "ext_dgs.hpp"
+#include "ext_dgs2.hpp"
 #include "ext_dr.hpp"
 #include "ext_lp.hpp"
 #include "ext_lp2.hpp"
@@ -29,7 +31,11 @@
 #include "ext_re0.hpp"
 #include "ext_re5.hpp"
 #include "ext_re6.hpp"
+#include "ext_rem.hpp"
+#include "ext_rer.hpp"
 #include <map>
+
+//#define HRG_DEBUG
 
 using pair_type = std::pair<es::string_view, es::string_view>;
 
@@ -68,6 +74,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x04E9EBE9, {"cspp", "rCutScrParam"}},                      //
     {0x05249C19, {"sfcbd", "rSoundFSMCommandBgmData"}},          //
     {0x0525AEE2, {"wfp", "rWeatherFogParam"}},                   //
+    {0x05288748, {"blt", "rBulletParam"}},                       //
     {0x0532063F, {"ast", "rSoundAst"}},                          //
     {0x05332520, {"jnj", "rJinjyaData"}},                        //
     {0x053C8864, {"mps", "rPartsSelector"}},                     //
@@ -95,15 +102,18 @@ static const std::map<uint32, pair_type> extensions{
     {0x07D5909F, {"stq", "rSoundStreamRequest"}},                //
     {0x07F768AF, {"gii", "rGUIIconInfo"}},                       //
     {0x086AEE8E, {"swp", "rShadowParamNative"}},                 //
+    {0x0891AF32, {"ppv", "rPurposeView"}},                       //
     {0x089BEF2C, {"sap", "rAIStageActionParameter"}},            //
     {0x08EF36C1, {"modlayout.xml", "rModelLayout"}},             //
     {0x08F105E6, {"dcm", "rDemoCamera"}},                        //
+    {0x0928F2DD, {"fcm", "rFPSCamera"}},                         //
     {0x0947F3C8, {"areapatrol", "rAreaPatrolData"}},             //
     {0x094973CF, {"scs", "rSoundCurveSet"}},                     //
     {0x0990B835, {"sad", "rSoundArmorData"}},                    //
     {0x09D775FC, {"efcc", "rEffectColorCorrect"}},               //
     {0x0A0E48D4, {"emd", "rEnemyData"}},                         //
     {0x0A164982, {"gmt", "rGeneMatrixTable"}},                   // table??
+    {0x0A3E643B, {"lvt", "rLevelToolTable"}},                    //
     {0x0A3FE3F4, {"fssd", "rFieldSchedulerSetData"}},            //
     {0x0A4280D9, {"shd", "rSoundHitData"}},                      //
     {0x0A74682F, {"rnp", "rRomNoraPawn"}},                       //
@@ -113,6 +123,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x0AF34367, {"dtt", "rDungeonTowerTbl"}},                   //
     {0x0B0B8495, {"smadd.xml", "rSMAdd"}},                       //
     {0x0B1808BE, {"w14d", "rWeapon14LevelData"}},                //
+    {0x0B1E982A, {"tcm", "rTPSCamera"}},                         //
     {0x0B2FACE7, {"bscn", "rSceneInfo"}},                        //
     {0x0B452BD2, {"fed", "rFieldEnemyPathData"}},                //
     {0x0B842B37, {"mrt", "rMonsterRankTable"}},                  //
@@ -154,6 +165,8 @@ static const std::map<uint32, pair_type> extensions{
     {0x134F74D8, {"fpd", "rFieldHuntingData"}},                  //
     {0x136EBC7F, {"sisd", "rSoundIngredientSeData"}},            //
     {0x139EE51D, {"lmt", "rMotionList"}},                        //
+    {0x13AC3D41, {"dpt", "rDuctPoint"}},                         //
+    {0x13CFA2FA, {"swmt", "rSwitchMotion"}},                     //
     {0x141C243A, {"insectabirity", "rInsectAbirity"}},           //
     {0x141C421D, {"stdsc", "rSoundTalkDemoSeControl"}},          //
     {0x1431ED71, {"esc", "rEggSpecialColorData"}},               //
@@ -180,6 +193,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x169B7213, {"irp", "rItemRandParam"}},                     //
     {0x176C3F95, {"los", "rLotSelector"}},                       //
     {0x176FADAB, {"scm", "rStageCamera"}},                       //
+    {0x17917970, {"mcm", "rMotionCamera"}},                      //
     {0x17D654D0, {"w13d", "rWeapon13BaseData"}},                 //
     {0x1800EB37, {"emyure", "rEmSizeYureTbl"}},                  //
     {0x1816EB57, {"bwpt", "rBattleWeaponTbl"}},                  //
@@ -202,6 +216,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x1A273E8B, {"npcSd", "rNpcSubData"}},                      //
     {0x1A2B1A25, {"deep", "rDungeonDeepTbl"}},                   //
     {0x1A3E9CBA, {"ntd", "rNpcTalkData"}},                       //
+    {0x1A5444D9, {"cad", "rCollisionAdjust"}},                   //
     {0x1AADF7B7, {"cms", "rCameraMotionSdl"}},                   //
     {0x1AC7B52D, {"bdd", "rBodyData"}},                          //
     {0x1AE50150, {"vts", "rVertices"}},                          //
@@ -211,10 +226,12 @@ static const std::map<uint32, pair_type> extensions{
     {0x1BBC291E, {"dtp", "rEnemyDtBaseParts"}},                  //
     {0x1BBFD18E, {"quest", "rQuestData"}},                       //
     {0x1BCC4966, {"srq", "rSoundRequest"}},                      //
+    {0x1C0776A9, {"svd", "rScrollVisibility"}},                  //
     {0x1C2B501F, {"atr", "rArmorTable"}},                        //
     {0x1C635F38, {"msl", "rMaterialSkipList"}},                  //
     {0x1C755227, {"w04d", "rWeapon04BaseData"}},                 //
     {0x1C775347, {"sbl", "rSceneBox2"}},                         //
+    {0x1CC22F91, {"epl", "rEffectParamList"}},                   //
     {0x1D35AF2B, {"hit", "rHit"}},                               //
     {0x1D8CC9B7, {"fol", "rFieldObjectList"}},                   //
     {0x1DC202EA, {"stef", "rSceneEffect"}},                      //
@@ -248,6 +265,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x2282360D, {"jex", "rJointEx"}},                           //
     {0x228736BF, {"fsosl", "rFieldSoundOrnamentSeList"}},        //
     {0x22948394, {"gui", "rGUI"}},                               //
+    {0x2298C7AA, {"stp", "rStartPosition"}},                     //
     {0x22B2A2A2, {"PlNeckPos", "rPlNeckPos"}},                   //
     {0x2325C7A0, {"mectd", "rMonsterEnumConversionTable"}},      //
     {0x232E228C, {"rev_win", "rReverb"}},                        //
@@ -255,6 +273,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x233A9F13, {"kcg", "rKitchenListGrillItem"}},              //
     {0x234D7104, {"cdf", "rCloth"}},                             //
     {0x2350E584, {"obc", "rCollisionObj"}},                      //
+    {0x235A4890, {"epm", "rEnemyParam"}},                        //
     {0x236C1AAB, {"lad", "rArchiveLayoutData"}},                 //
     {0x237E6120, {"kc1", "rKitchenListSuccessTable1"}},          //
     {0x238D25D2, {"w07m", "rWeapon07MsgData"}},                  //
@@ -274,6 +293,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x254A0337, {"rvl", "rVramLoadList"}},                      //
     {0x2553701D, {"sem", "rSetEmMain"}},                         //
     {0x2555081D, {"stb", "rStoryTalkBalloon"}},                  //
+    {0x25697144, {"elt", "rEffectListTable"}},                   //
     {0x257D2F7C, {"swm", "rSwingModel"}},                        //
     {0x25A60BC4, {"ssjje", "rSansaijijiExchange"}},              //
     {0x25B4A6B9, {"bgm", "rSoundBGMControl"}},                   //
@@ -282,11 +302,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x25FD693F, {"ipl", "rItemPopList"}},                       //
     {0x2618DE3F, {"srq", "rLtSoundRequest"}},                    //
     {0x264087B8, {"fca", "rFacialAnimation"}},                   //
+    {0x264D1A85, {"amp", "rAttachModelParam"}},                  //
     {0x2662A59D, {"bcmr", "rBattleCommonResource"}},             //
     {0x266E8A91, {"lku", "rLinkUnit"}},                          //
     {0x26BEC21C, {"qdp", "rQuestPlus"}},                         //
     {0x26C299D0, {"hvd.xml", "rHavokVehicleData"}},              //
     {0x271D08FE, {"ssq", "rSoundSequenceSe"}},                   //
+    {0x271E8A8F, {"mcl", "rMapConnectList"}},                    //
     {0x272B80EA, {"prp", "rPropParam"}},                         //
     {0x2739B57C, {"grs", "rGrass"}},                             //
     {0x2749C8A8, {"mrl", "rMaterial"}},                          //
@@ -313,6 +335,8 @@ static const std::map<uint32, pair_type> extensions{
     {0x2A110586, {"slw11", "rEquipShopListW11"}},                //
     {0x2A25AF1B, {"bnt", "rBattleNavirouTable"}},                //
     {0x2A37242D, {"gpl", "rLayoutGroupParamList"}},              //
+    {0x2A3A6196, {"ssl", "rSceneStartList"}},                    //
+    {0x2A3A6664, {"gcd", "rGenesisCollision"}},                  //
     {0x2A4F96A8, {"rbd", "rRigidBody"}},                         //
     {0x2A51D160, {"ems", "rEnemyLayout"}},                       //
     {0x2A68813F, {"mlc", "rMonNyanLotCommon"}},                  //
@@ -362,6 +386,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x30FC745F, {"smx", "rSoundSubMixer"}},                     //
     {0x31095696, {"fmpd", "rFieldMotionPackageData"}},           //
     {0x310C90B8, {"fbd", "rFieldPlayerMotionData"}},             //
+    {0x3121865A, {"lar", "rArrangeList"}},                       //
     {0x312607A4, {"bll", "rBlacklist"}},                         //
     {0x31798063, {"nhap", "rNestHappening"}},                    //
     {0x31AC0B5C, {"swc", "rScrCollisionArea"}},                  //
@@ -374,6 +399,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x32837AA1, {"w06d", "rWeapon06BaseData"}},                 //
     {0x32CA92F8, {"esl", "rEmSetList"}},                         //
     {0x32E2B13B, {"rdp", "rEditPawn"}},                          //
+    {0x32E94AC3, {"scd", "rScaningData"}},                       //
     {0x33046CD5, {"qcm", "rCameraQFPS"}},                        //
     {0x330A34C7, {"slw01", "rEquipShopListW01"}},                //
     {0x3318543C, {"slw12", "rEquipShopListW12"}},                //
@@ -398,6 +424,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x35BDD173, {"poa", "rPosAdjust"}},                         //
     {0x36019854, {"bed", "rBodyEdit"}},                          //
     {0x360737E0, {"w09m", "rWeapon09MsgData"}},                  //
+    {0x361EA2A5, {"msn", "rMission"}},                           //
     {0x3654EBA0, {"sce", "rCallingEncountData"}},                //
     {0x368E9519, {"bgsd", "rBowgunShellData"}},                  //
     {0x36C909FD, {"mre", "rMonNyanRewardEnemy"}},                //
@@ -433,6 +460,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x3B350990, {"qsp", "rQuestSudden"}},                       //
     {0x3B5C7FD3, {"ida", "rIdAnim"}},                            //
     {0x3B764DD4, {"sstr", "rSoundStreamTransition"}},            //
+    {0x3B9C41F1, {"trc", "rTurretCamera"}},                      //
     {0x3BBA4E33, {"qct", "rQuestCtrlTbl"}},                      //
     {0x3BFEDD61, {"emm", "rEnemyMapPos"}},                       //
     {0x3C285CC6, {"otd", "rOtTensionData"}},                     //
@@ -442,6 +470,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x3C51E03C, {"ard", "rArmorResistData"}},                   //
     {0x3C56A1F1, {"ssdc", "rSoundShortDemoControl"}},            //
     {0x3C6F8994, {"fcr", "rFieldCamera"}},                       //
+    {0x3C9269F0, {"svl", "rSurvival"}},                          //
     {0x3CAD8076, {"tex", "rTexture"}},                           //
     {0x3CBBFD41, {"ucp2", "rUpCutPuzzle"}},                      //
     {0x3D007115, {"wed", "rSoundWed"}},                          //
@@ -458,6 +487,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x3EE10653, {"wad", "rWeskerAttackData"}},                  //
     {0x3F13DE3C, {"ots", "rResearchReinforce"}},                 //
     {0x3F1513D0, {"fbd", "rFieldBuddyMotionData"}},              //
+    {0x3F40BDB8, {"glp", "rGoalPoint"}},                         //
     {0x3F53ECC9, {"mpd", "rMonsterPartsDisp"}},                  //
     {0x3F685CCE, {"w09d", "rWeapon09LevelData"}},                //
     {0x3FA5AD6A, {"ict", "rItemCategoryTypeData"}},              //
@@ -519,7 +549,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x48DFD78B, {"msgm", "rMessageData"}},                      //
     {0x48E8AC29, {"dtt", "rEnemyDtTune"}},                       //
     {0x496F8F22, {"fup", "rFreeUseParam"}},                      //
+    {0x49A855DA, {"jul", "rJumpList"}},                          //
     {0x49B5A885, {"ssc", "rSoundSimpleCurve"}},                  //
+    {0x49BDEA0C, {"evm", "rEventManager"}},                      //
     {0x4A31FCD8, {"scoop.xml", "rScoopList"}},                   //
     {0x4A32252D, {"sfcsd", "rSoundFSMCommandSeData"}},           //
     {0x4A4b677C, {"rev_ctr", "rLtSoundReverb"}},                 //
@@ -563,6 +595,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x50F3721F, {"thk", "rThinkScript"}},                       //
     {0x50F3D713, {"skl", "rSkillList"}},                         //
     {0x50F9DB3E, {"bfx", "rShader"}},                            //
+    {0x51120F02, {"swp", "rSwitchParts"}},                       //
     {0x5139901D, {"plbasecmd", "rPlBaseCmd"}},                   //
     {0x5175C242, {"geo2", "rGeometry2"}},                        //
     {0x51FC779F, {"sbc", "rCollision"}},                         //
@@ -590,7 +623,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x54DD639F, {"pvi", "rPartsVisibleInfo"}},                  //
     {0x54E2D1FF, {"rpd", "rPadData"}},                           //
     {0x550D05AA, {"sat", "rSelectAnsText"}},                     //
+    {0x5521BB96, {"rrb", "rRideBoat"}},                          //
     {0x552E1B82, {"asl", "rAreaSetLayout"}},                     //
+    {0x55360EC9, {"sbp", "rSwitchBoardPuzzle"}},                 //
     {0x557ECC08, {"aef", "rAHEffect"}},                          //
     {0x55A8FB34, {"anm", "rSprAnm"}},                            //
     {0x55C30579, {"stdrd", "rSoundTalkDemoRequestData"}},        //
@@ -623,6 +658,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x5A2E573A, {"por", "rPreOcclusion"}},                      //
     {0x5A3CED86, {"rrd", "rSoundRrd"}},                          //
     {0x5A45BA9C, {"xml", "rMapLink"}},                           //
+    {0x5A4767A9, {"tca", "rTPSCameraAttention"}},                //
     {0x5A525C16, {"pel", "rProofEffectList"}},                   //
     {0x5A61A7C8, {"fed", "rFaceEdit"}},                          //
     {0x5A6991F2, {"slw07", "rEquipShopListW07"}},                //
@@ -635,6 +671,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x5B334013, {"bap", "rBowActParamList"}},                   //
     {0x5B3C302D, {"rem", "rRem"}},                               //
     {0x5B8E6BF3, {"itp", "rItemPreData"}},                       //
+    {0x5C0B0996, {"csl", "rCutStartList"}},                      //
     {0x5CA6DB93, {"sla00", "rEquipShopListA00"}},                //
     {0x5CC5C1E2, {"ips", "rInitPosSet"}},                        //
     {0x5CF33CD6, {"rnd", "rRiderNoteData"}},                     //
@@ -650,6 +687,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x5EA6AA68, {"oxpb", "rOtQuestExpBias"}},                   //
     {0x5EA7A3E9, {"sky", "rSky"}},                               //
     {0x5EF1FB52, {"lcm", "rCameraList"}},                        //
+    {0x5F03BE0B, {"pfp", "rPlayerFixParam"}},                    //
     {0x5F12110E, {"wpt", "rWeskerParamTable"}},                  //
     {0x5F36B659, {"way", "rAIWayPoint"}},                        //
     {0x5F6A387F, {"cms", "rCommonScript"}},                      //
@@ -668,6 +706,8 @@ static const std::map<uint32, pair_type> extensions{
     {0x617B0C47, {"dspw", "rSoundSourceDSPADPCM"}},              //
     {0x6186627D, {"wep", "rWeatherEffectParam"}},                //
     {0x619D23DF, {"shp", "rShopList"}},                          //
+    {0x61A3CCB0, {"rrh", "rRideHeli"}},                          //
+    {0x61BC4073, {"fls", "rFilterSet"}},                         //
     {0x61C203A4, {"fms", "rFueMusicScData"}},                    //
     {0x61CF79AF, {"qsg", "rQuestGroup"}},                        //
     {0x62220853, {"vfp", "rVillageFirstPos"}},                   // MovePos?
@@ -678,6 +718,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x62A68441, {"ttb", "rThinkTable"}},                        //
     {0x630ED7BB, {"nan", "rEnemyNandoData"}},                    //
     {0x63747AA7, {"rpi", "rRomPawnInfo"}},                       //
+    {0x637908D0, {"rmm", "rRankManager"}},                       //
     {0x63B524A7, {"ltg", "rLockOnTarget"}},                      //
     {0x63F2D70D, {"apd", "rArmorProcessData"}},                  //
     {0x63F62424, {"ipt", "rItemPreTypeData"}},                   //
@@ -689,6 +730,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x64BFE66D, {"bta", "rBtnAct"}},                            //
     {0x652071B0, {"rsl", "rScrList"}},                           //
     {0x65B275E5, {"sce", "rScenario"}},                          //
+    {0x65D3AC8E, {"resmap", "rResourceMap"}},                    //
     {0x65E22C55, {"w01m", "rWeapon01MsgData"}},                  //
     {0x6622AB2D, {"smkd", "rSoundMonsterKizunaData"}},           //
     {0x663D73B2, {"tdmd", "rTalkDemoData"}},                     //
@@ -721,6 +763,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x6C1D2073, {"srq", "rSoundRequest"}},                      //
     {0x6C3B4904, {"hlc", "rHavokLinkCollisionLayout"}},          //
     {0x6C980E22, {"des", "rDungeonEnemySet"}},                   //
+    {0x6CA1D49A, {"scm", "rScopeCamera"}},                       //
     {0x6CACB310, {"mcd", "rMiniChatData"}},                      //
     {0x6CC8C051, {"acd", "rAccessoryData"}},                     //
     {0x6D0115ED, {"prt", "rAIPriorityThink"}},                   //
@@ -763,6 +806,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x71D6A0D4, {"osf", "rObjSet"}},                            //
     {0x720EF393, {"fmd", "rFieldMotionData"}},                   //
     {0x724DF879, {"xsew", "rSoundSourceMSADPCM"}},               //
+    {0x72763DAF, {"dim", "rDrawItemModel"}},                     //
     {0x72821C38, {"stm", "rPlStamina"}},                         //
     {0x7284DAF5, {"list", "rQuestList"}},                        //
     {0x72993816, {"w11m", "rWeapon11MsgData"}},                  //
@@ -804,9 +848,12 @@ static const std::map<uint32, pair_type> extensions{
     {0x78956684, {"fppgr", "rFldPlParam_GR"}},                   //
     {0x7896B60A, {"asd", "rArmorSeriesData"}},                   //
     {0x790203B0, {"angryprm", "rAngryParam"}},                   //
+    {0x791DA5C9, {"tbl", "rTable"}},                             //
     {0x79C47B59, {"mca", "rSoundSourceADPCM"}},                  //
     {0x79FF11C9, {"olos", "rOtLotOwnSupport"}},                  //
     {0x7A038F4C, {"rev_win", "rReverb"}},                        //
+    {0x7A098625, {"cwc", "rCnsWaistControl"}},                   //
+    {0x7A1F334C, {"itp", "rItemParam"}},                         //
     {0x7A23F10F, {"mdl", "rMedalDataList"}},                     //
     {0x7A395CB7, {"sab", "rOtSupportActionBase"}},               //
     {0x7A41A133, {"w08d", "rWeapon08BaseData"}},                 //
@@ -840,10 +887,10 @@ static const std::map<uint32, pair_type> extensions{
 };
 
 static decltype(extensions) extensionsPS3{
-    {0x7A038F4C, {"rev_ps3", "rReverb"}},       //
-    {0x4857FD94, {"rev_ps3", "rReverb"}},       //
     {0x232E228C, {"rev_ps3", "rReverb"}},       //
     {0x3821B94D, {"at3", "rSoundSourceMusic"}}, //
+    {0x4857FD94, {"rev_ps3", "rReverb"}},       //
+    {0x7A038F4C, {"rev_ps3", "rReverb"}},       //
     {0x7D1530C2, {"at3", "rSoundSourceMusic"}}, //
 };
 
@@ -852,18 +899,20 @@ static decltype(extensions) extensionsCAFE{
 };
 
 static decltype(extensions) extensionsN3DS{
+    {0x059BC928, {"arg", "rArrange"}},          // rem
     {0x15302EF4, {"lyt", "rLayout"}},           // mh4, mhs
     {0x232E228C, {"revr_ctr", "rSoundReverb"}}, // mhg
-    {0x5204D557, {"slt", "rShopList"}},         // mhg
-    {0x3FB52996, {"mix", "rItemMix"}},          // mhs
     {0x2B40AE8F, {"equr", "rSoundEQ"}},         // mhs
+    {0x3FB52996, {"mix", "rItemMix"}},          // mhs
+    {0x5204D557, {"slt", "rShopList"}},         // mhg
+    {0x6E45FABB, {"atp", "rAttackParam"}},      // rem
 };
 
 static decltype(extensions) extensionsNSW{
+    {0x167DBBFF, {"stqr", "rSoundStreamRequest"}}, // mhg
+    {0x1BCC4966, {"srqr", "rSoundRequest"}},       // mhg
     {0x232E228C, {"revr", "rSoundReverb"}},        // mhg
     {0x79C47B59, {"adpcm", "rSoundSourceADPCM"}},  // mhg
-    {0x1BCC4966, {"srqr", "rSoundRequest"}},       // mhg
-    {0x167DBBFF, {"stqr", "rSoundStreamRequest"}}, // mhg
 };
 
 static const std::map<Platform, decltype(extensions) *> extensionSlots{
@@ -1138,8 +1187,12 @@ static const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"biohazzard_0", &extRE0},                       //
     {"biohazzard_5", &extRE5},                       //
     {"biohazzard_6", &extRE6},                       //
+    {"dai_gyakuten_saiban_2", &extDGS2},             //
+    {"dai_gyakuten_saiban", &extDGS},                //
     {"dd", &extDD},                                  //
     {"dead_rising", &extDR},                         //
+    {"dgs", &extDGS},                                //
+    {"dgs2", &extDGS2},                              //
     {"dr", &extDR},                                  //
     {"dragons_dogma", &extDD},                       //
     {"lost_planet_2", &extLP2},                      //
@@ -1165,9 +1218,13 @@ static const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"re0", &extRE0},                                //
     {"re5", &extRE5},                                //
     {"re6", &extRE6},                                //
+    {"rem", &extREM},                                //
+    {"rer", &extRER},                                //
     {"resident_evil_0", &extRE0},                    //
     {"resident_evil_5", &extRE5},                    //
     {"resident_evil_6", &extRE6},                    //
+    {"resident_evil_mercenaries", &extREM},          //
+    {"resident_evil_revelations", &extRER},          //
 };
 
 namespace revil {
@@ -1236,3 +1293,41 @@ uint32 GetHash(es::string_view extension, es::string_view title,
   return foundSec->GetHash(extTranslated, platform);
 }
 }; // namespace revil
+
+#ifdef HRG_DEBUG
+#include "datas/master_printer.hpp"
+
+static const char *shortNames[]{
+    "dd",  "dgs",    "dgs2",    "dr",  "lp",  "lp2", "mh3", "mh4", "mhg",
+    "mhs", "pwaadd", "pwaasoj", "re0", "re5", "re6", "rem", "rer",
+};
+
+void CheckCollisions() {
+  for (auto n : shortNames) {
+    auto &registry = invertedExtensions.at(n);
+    for (size_t p = 1; p < registry->NUMSLOTS; p++) {
+      auto ptStore = registry->data[p];
+      if (!ptStore) {
+        continue;
+      }
+
+      auto check = [&](auto reg) {
+        for (auto i : *reg) {
+          auto name = GetExtension(i.second, Platform(p));
+          if (name != i.first) {
+            printerror("Found collision for " << n << ": " << i.first << " vs "
+                                              << name);
+          }
+        }
+      };
+
+      if (ptStore != registry->Base()) {
+        check(registry->Base());
+      }
+
+      check(ptStore);
+    }
+  }
+}
+
+#endif
