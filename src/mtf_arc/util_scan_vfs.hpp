@@ -36,7 +36,9 @@ void ScanVFS(const std::string &path, const registry &reg, Platform platform) {
     es::string_view sw(f);
     BinReader rd(f);
     try {
-      auto items = ReadARC(rd);
+      ARC hdr;
+      ARCFiles items;
+      std::tie(hdr, items) = ReadARC(rd);
 
       for (auto &i : items) {
         auto found = GetExtension(i.typeHash, platform);

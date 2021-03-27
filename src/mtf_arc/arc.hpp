@@ -19,6 +19,7 @@
 #include "datas/bitfield.hpp"
 #include "datas/binreader_stream.hpp"
 #include "datas/except.hpp"
+#include <tuple>
 
 struct ARCFileSize {
   using Size = BitMemberDecl<0, 29>;
@@ -60,6 +61,7 @@ struct ARC {
   uint32 id = ARCID;
   uint16 version = 7;
   uint16 numFiles;
+  uint32 LZXTag = 0;
 
   void SwapEndian() {
     FByteswapper(id);
@@ -81,12 +83,12 @@ auto ReadARC(BinReaderRef rd) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
-  if (hdr.version >= 0x10) {
-    rd.Skip(4);
+  if (hdr.LZXTag) {
+    rd.Skip(-4);
   }
 
   ARCFiles files;
   rd.ReadContainer(files, hdr.numFiles);
 
-  return files;
+  return std::make_tuple(hdr, files);
 }
