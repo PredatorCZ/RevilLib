@@ -6,10 +6,9 @@ build_target(
   SOURCES
   test.cpp
   LINKS
-  RevilLibStatic
+  revil-objects
   INCLUDES
   ../src
-  ../include
   NO_PROJECT_H
   NO_VERINFO)
 
