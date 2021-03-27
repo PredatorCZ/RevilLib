@@ -19,6 +19,7 @@
 #include "ext_dd.hpp"
 #include "ext_dgs.hpp"
 #include "ext_dgs2.hpp"
+#include "ext_dmc4.hpp"
 #include "ext_dr.hpp"
 #include "ext_lp.hpp"
 #include "ext_lp2.hpp"
@@ -135,8 +136,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x0C6C4DBF, {"kcr", "rKitchenListSkillRandom"}},            //
     {0x0C6D4399, {"sid", "rSetItemData"}},                       //
     {0x0C7468EA, {"kcm", "rKitchenListMenu"}},                   //
+    {0x0C88D5D1, {"ase", "rAttributeSe"}},                       //
+    {0x0CA6AED4, {"msse", "rMotionSe"}},                         //
     {0x0D06BE6B, {"tmn", "rTargetMotion"}},                      //
     {0x0D3BE7B5, {"sbl", "rSceneBoxLayout"}},                    //
+    {0x0D7DA737, {"vib", "rVibration"}},                         //
     {0x0DADAB62, {"oba", "rObjAdj"}},                            //
     {0x0DD0E47A, {"AngleLimit", "rAngleLimitData"}},             //
     {0x0DE13237, {"pai", "rThinkPlanAI"}},                       //
@@ -189,6 +193,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x162E07FB, {"lacd", "rArchiveLayoutCmnData"}},             //
     {0x164F60FF, {"nld", "rNpcLocateData"}},                     //
     {0x1657A2D0, {"sptl", "rSoundPronounceList"}},               //
+    {0x16640CD4, {"eng", "rSoundEngine"}},                       //
     {0x167DBBFF, {"stq", "rSoundStreamRequest"}},                //
     {0x169B7213, {"irp", "rItemRandParam"}},                     //
     {0x176C3F95, {"los", "rLotSelector"}},                       //
@@ -210,6 +215,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x199C56C0, {"ocl", "rObjCollision"}},                      //
     {0x19A59A91, {"llk", "sLightLinker::rLightLinker"}},         //
     {0x19C994C4, {"mex", "rMonNyanExp"}},                        //
+    {0x19DDF06A, {"bin", "rCharTbl"}},                           //
     {0x19F2AB31, {"tpil", "rTradePointItemList"}},               //
     {0x19F6EFCE, {"sep", "rSoundEnemyParam"}},                   //
     {0x1A032CE2, {"dmem", "rDemoEnemy"}},                        //
@@ -232,6 +238,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x1C755227, {"w04d", "rWeapon04BaseData"}},                 //
     {0x1C775347, {"sbl", "rSceneBox2"}},                         //
     {0x1CC22F91, {"epl", "rEffectParamList"}},                   //
+    {0x1D076492, {"engv", "rSoundEngineValue"}},                 //
     {0x1D35AF2B, {"hit", "rHit"}},                               //
     {0x1D8CC9B7, {"fol", "rFieldObjectList"}},                   //
     {0x1DC202EA, {"stef", "rSceneEffect"}},                      //
@@ -317,11 +324,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x27C72B28, {"w03m", "rWeapon03MsgData"}},                  //
     {0x27CE98F6, {"rtex", "rRenderTargetTexture"}},              //
     {0x27D81C81, {"fes", "rFieldSet"}},                          //
+    {0x27F3C33D, {"dfd", "rDefendStatusData"}},                  //
     {0x284ACC07, {"w03d", "rWeapon03LevelData"}},                //
     {0x284FCD6E, {"ebc", "rEggBaseColorData"}},                  //
     {0x285A13D9, {"vzo", "rFxZone"}},                            //
     {0x28BAE197, {"sed", "rStEpiData"}},                         //
     {0x28C32975, {"tdms", "rTalkDemoScript"}},                   //
+    {0x294488A8, {"efl", "rEffectList"}},                        //
     {0x29482CCB, {"w00m", "rWeapon00MsgData"}},                  //
     {0x294A5E8D, {"hta", "rHunterArtsData"}},                    //
     {0x2957DDCD, {"fppnr", "rFldPlParam_NR"}},                   //
@@ -347,7 +356,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x2B303957, {"gop", "rAIGoalPlanning"}},                    //
     {0x2B399B97, {"evc2", "rEventCollision"}},                   //
     {0x2B40AE8F, {"equ", "rSoundEQ"}},                           //
-    {0x2B93C4AD, {"route", "rRouteNode"}},                       //
+    {0x2B93C4AD, {"route", "rRouteNode"}},                       // dmc4: rut
     {0x2BCFB893, {"otil", "rOtIniLot"}},                         //
     {0x2C14D261, {"ahl", "rAreaHitLayout"}},                     //
     {0x2C2DE8CA, {"adh", "rAdh"}},                               //
@@ -377,6 +386,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x2F4E7041, {"sgt", "rSoundGunTool"}},                      //
     {0x2FC0C6C5, {"tucyl", "rTutorialCylinderData"}},            //
     {0x2FE088C0, {"dpd", "rDollPartsDisp"}},                     //
+    {0x3001BEC4, {"ssd", "rStreamScheduler"}},                   //
     {0x300DB281, {"igf", "rInsectGrowFeed"}},                    //
     {0x306945DB, {"ghlt", "rGatherLevelTable"}},                 //
     {0x3077D00E, {"dmd", "rDemoData"}},                          //
@@ -446,6 +456,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x39A0D1D6, {"sms", "rSoundSubMixerSet"}},                  //
     {0x39C52040, {"lcm", "rCameraList"}},                        //
     {0x39C8DC68, {"skd", "rSkillData"}},                         //
+    {0x39F8A71D, {"equ", "rSoundEQ"}},                           //
     {0x3A244568, {"nhapp", "rNestHappeningProb"}},               //
     {0x3A298CCF, {"btat", "rBattleAtk"}},                        //
     {0x3A6A5A4D, {"stq", "rLtSoundStreamRequest"}},              //
@@ -489,6 +500,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x3F1513D0, {"fbd", "rFieldBuddyMotionData"}},              //
     {0x3F40BDB8, {"glp", "rGoalPoint"}},                         //
     {0x3F53ECC9, {"mpd", "rMonsterPartsDisp"}},                  //
+    {0x3F5955F1, {"pla", "rPlacement"}},                         //
     {0x3F685CCE, {"w09d", "rWeapon09LevelData"}},                //
     {0x3FA5AD6A, {"ict", "rItemCategoryTypeData"}},              //
     {0x3FB52996, {"imx", "rItemMix"}},                           //
@@ -528,9 +540,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x45E867D7, {"mll", "rMotionListList"}},                    //
     {0x45F753E8, {"igs", "rInGameSound"}},                       //
     {0x4601A201, {"bnm", "rBattleNavirouMes"}},                  //
+    {0x46771E81, {"rla", "rLeafAnim"}},                          //
     {0x46810940, {"egv", "rSoundEngineValue"}},                  //
     {0x46AADC49, {"swd", "rSoundWeaponData"}},                   //
     {0x46FB08BA, {"bmt", "rBioModelMontage"}},                   //
+    {0x470745CB, {"idx", "rCollisionIdxData"}},                  //
     {0x47165A39, {"fnmd", "rFieldNpcMotion"}},                   //
     {0x472022DF, {"AIPlActParam", "rAIPlayerActionParameter"}},  //
     {0x4788A739, {"w02d", "rWeapon02LevelData"}},                //
@@ -570,9 +584,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x4C3942E3, {"skt", "rSkillTypeData"}},                     //
     {0x4CA26828, {"mse", "rSoundMotionSe"}},                     //
     {0x4CDF60E9, {"msg", "rMessage"}},                           //
+    {0x4D52E593, {"rdf", "rRoomDefault"}},                       //
     {0x4D70000C, {"kc3", "rKitchenListSuccessTable3"}},          //
     {0x4D87AEBA, {"bef", "rBattleEnemyFile"}},                   //
     {0x4D894D5D, {"cmi", "sCubeMapInterp::rCubeMapInterp"}},     //
+    {0x4D990996, {"clt", "rCnsChain"}},                          //
     {0x4DEE8265, {"ems", "rEnemyStatus"}},                       //
     {0x4DEF5367, {"bdy", "rBuddyPathData"}},                     //
     {0x4E2EF008, {"hdp", "rHitDataPlayer"}},                     //
@@ -582,6 +598,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x4E399FFE, {"spkg", "rEmulationShaderPackage"}},           //
     {0x4E44FB6D, {"fpe", "rFacePartsEdit"}},                     //
     {0x4E630743, {"w06d", "rWeapon06LevelData"}},                //
+    {0x4EA4E09A, {"col", "rCollisionShape"}},                    //
     {0x4EB68CEE, {"hds", "rHitDataShell"}},                      //
     {0x4ED7C110, {"sqd", "rSubQuestData"}},                      //
     {0x4EF19843, {"nav", "rNavigationMesh"}},                    //
@@ -679,11 +696,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x5D163510, {"slw10", "rEquipShopListW10"}},                //
     {0x5D2E4199, {"ane", "rAcNyanterEquip"}},                    //
     {0x5D4F7DBF, {"sosd", "rSoundOrnamentSeData"}},              //
+    {0x5D5CBBCE, {"sif", "rSndIf"}},                             //
     {0x5E1A909B, {"ged", "rGeneEdit"}},                          //
     {0x5E3DC9F3, {"lge", "rGridEnvLight"}},                      //
     {0x5E4C723C, {"nls", "rNulls"}},                             //
     {0x5E5B44C8, {"sls", "rShopListSale"}},                      //
     {0x5E640ACC, {"itm", "rItemAngle"}},                         //
+    {0x5E7D6A45, {"ean", "rEffectAnim"}},                        //
     {0x5EA6AA68, {"oxpb", "rOtQuestExpBias"}},                   //
     {0x5EA7A3E9, {"sky", "rSky"}},                               //
     {0x5EF1FB52, {"lcm", "rCameraList"}},                        //
@@ -702,6 +721,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x60BB6A09, {"hed", "rHumanEdit"}},                         //
     {0x60DD1B16, {"lsp", "rLayoutSpr"}},                         //
     {0x60EEAE69, {"sfd", "rSoundFootstepData"}},                 //
+    {0x6125D9CD, {"evh", "rEventHit"}},                          //
     {0x61382649, {"fisd", "rFieldIngredientSetData"}},           //
     {0x617B0C47, {"dspw", "rSoundSourceDSPADPCM"}},              //
     {0x6186627D, {"wep", "rWeatherEffectParam"}},                //
@@ -729,6 +749,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x64BBEAA6, {"d.l", "rFieldDestMarkerList"}},               //
     {0x64BFE66D, {"bta", "rBtnAct"}},                            //
     {0x652071B0, {"rsl", "rScrList"}},                           //
+    {0x652A93A4, {"atk", "rAttackStatusData"}},                  //
     {0x65B275E5, {"sce", "rScenario"}},                          //
     {0x65D3AC8E, {"resmap", "rResourceMap"}},                    //
     {0x65E22C55, {"w01m", "rWeapon01MsgData"}},                  //
@@ -815,6 +836,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x737234F5, {"acd", "rArmorColorData"}},                    //
     {0x73850D05, {"arc", "rArchive"}},                           //
     {0x73B73919, {"w14d", "rWeapon14BaseData"}},                 //
+    {0x743FE170, {"cam", "rDevilCamera"}},                       //
     {0x745DAB77, {"pvb", "rPlanetVibration"}},                   //
     {0x7470D7E9, {"tex2", "r2Texture"}},                         //
     {0x7494F854, {"hcl", "rHavokConstraintLayout"}},             //
@@ -838,6 +860,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x766F00AC, {"bnt", "rBattleNpcTbl"}},                      //
     {0x76820D81, {"lmt", "rMotionList"}},                        //
     {0x76A1D9A2, {"isp", "rInsectParam"}},                       //
+    {0x76AA6987, {"e2d", "rEffect2D"}},                          //
     {0x76DE35F6, {"rpn", "rRomPawnName"}},                       //
     {0x77044C04, {"vibpl", "rVibrationPlayerList"}},             //
     {0x77A69893, {"bnu", "rBattleNavirouUnique"}},               //
@@ -857,6 +880,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x7A23F10F, {"mdl", "rMedalDataList"}},                     //
     {0x7A395CB7, {"sab", "rOtSupportActionBase"}},               //
     {0x7A41A133, {"w08d", "rWeapon08BaseData"}},                 //
+    {0x7A5DCF86, {"bin", "rPlParamTbl"}},                        //
     {0x7AA81CAB, {"eap", "rAIEnemyActionParameter"}},            //
     {0x7AAD377E, {"w08m", "rWeapon08MsgData"}},                  //
     {0x7AF36DC1, {"nstmsg", "rNestMessage"}},                    //
@@ -1191,8 +1215,10 @@ static const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"dai_gyakuten_saiban", &extDGS},                //
     {"dd", &extDD},                                  //
     {"dead_rising", &extDR},                         //
+    {"devil_may_cry_4", &extDMC4},                   //
     {"dgs", &extDGS},                                //
     {"dgs2", &extDGS2},                              //
+    {"dmc4", &extDMC4},                              //
     {"dr", &extDR},                                  //
     {"dragons_dogma", &extDD},                       //
     {"lost_planet_2", &extLP2},                      //
