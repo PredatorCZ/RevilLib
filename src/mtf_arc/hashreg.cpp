@@ -17,6 +17,7 @@
 
 #include "revil/hashreg.hpp"
 #include "ext_dd.hpp"
+#include "ext_ddon.hpp"
 #include "ext_dgs.hpp"
 #include "ext_dgs2.hpp"
 #include "ext_dmc4.hpp"
@@ -41,12 +42,16 @@
 using pair_type = std::pair<es::string_view, es::string_view>;
 
 static const std::map<uint32, pair_type> extensions{
+    /*                                                        */ //
     {0x000692F5, {"amskl", "rAmuletSkillData"}},                 //
     {0x0022FA09, {"hpe", "rHumanPartsEdit"}},                    //
     {0x0026E7FF, {"ccl", "rChainCol"}},                          //
+    {0x006FD872, {"esi", "rEndContentsSortieInfo"}},             //
     {0x0086B80F, {"plexp", "rPlExp"}},                           //
     {0x00AD4093, {"w12d", "rWeapon12BaseData"}},                 //
+    {0x00D156C3, {"jmp", "rJumpParamTbl"}},                      //
     {0x00E0BB1C, {"qdl", "rQuestLink"}},                         //
+    {0x00E36E23, {"lai", "rLandInfo"}},                          //
     {0x00FDA99B, {"ntr", "rArmorTableNpc"}},                     //
     {0x01337721, {"tstd", "rTalkSelectData"}},                   //
     {0x017A550D, {"lom", "rLotSelectorMove"}},                   //
@@ -58,13 +63,19 @@ static const std::map<uint32, pair_type> extensions{
     {0x02358E1A, {"spkg", "rShaderPackage"}},                    //
     {0x02373BA7, {"spn", "rStagePlaceName"}},                    //
     {0x0253F147, {"hit", "rHit"}},                               //
+    {0x027BC061, {"fni", "rFurnitureItem"}},                     //
     {0x02833703, {"efs", "rEffectStrip"}},                       //
     {0x02929600, {"qdm", "rQuestDaily"}},                        //
     {0x02A80E1F, {"lrd", "rLinkRagdoll"}},                       //
+    {0x02C13F1D, {"edt_tex_pal", "rCharacterEditTexturePalette"}},
     {0x02DD067F, {"kod", "rKowareObjData"}},                     //
     {0x02F3A8C4, {"w10d", "rWeapon10LevelData"}},                //
     {0x0315E81F, {"sds", "rSoundDirectionalSet"}},               //
+    {0x032417B3, {"fnl", "rFurnitureLayout"}},                   //
+    {0x03576E7E, {"tqg", "rTutorialQuestGroup"}},                //
+    {0x03993372, {"mdr", "rMandraReaction"}},                    //
     {0x039D71F2, {"rvt", "rSoundReverbTable"}},                  //
+    {0x03C9DB4E, {"cpe", "rCharParamEnemy"}},                    //
     {0x03FAE282, {"efa", "rEffectAnimation"}},                   //
     {0x041925D7, {"mvp", "rMonNyanVillagePoint"}},               //
     {0x0430075D, {"nis", "rNpcInitScript"}},                     //
@@ -73,6 +84,8 @@ static const std::map<uint32, pair_type> extensions{
     {0x049F01BD, {"wgi", "rWeaponGimmickInfo"}},                 //
     {0x04B4BE62, {"tmd", "rTalkMotion"}},                        //
     {0x04E9EBE9, {"cspp", "rCutScrParam"}},                      //
+    {0x04FC5716, {"rag", "rRageTable"}},                         //
+    {0x05092448, {"ect", "rEmblemColorTable"}},                  //
     {0x05249C19, {"sfcbd", "rSoundFSMCommandBgmData"}},          //
     {0x0525AEE2, {"wfp", "rWeatherFogParam"}},                   //
     {0x05288748, {"blt", "rBulletParam"}},                       //
@@ -85,6 +98,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x059BC928, {"loc2", "rArrange"}},                          //
     {0x059CD219, {"mmk", "rMapMarker"}},                         //
     {0x05A36D08, {"qif", "rQuestInfinity"}},                     //
+    {0x05BCDC9D, {"chant", "rMagicChantParam"}},                 //
     {0x05C89DEE, {"dptra", "rDungeonPassRareTbl"}},              //
     {0x05D0CAD3, {"fas", "rFieldAISetAct"}},                     //
     {0x060678F9, {"w12d", "rWeapon12LevelData"}},                //
@@ -92,6 +106,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x065375D5, {"sis", "rStageInfoSet"}},                      //
     {0x069A1911, {"olp", "rOutlineParamList"}},                  //
     {0x069D4A3E, {"tdvs", "rTalkDemoViewSpriteData"}},           //
+    {0x06B6711A, {"fedt_jntpreset", "rFacialEditJointPreset"}},  //
     {0x06C7327B, {"fmt", "rFueMusicData"}},                      //
     {0x06E58760, {"wet", "rWeatherData"}},                       //
     {0x0707698C, {"fas", "rFieldAISetKind"}},                    //
@@ -103,6 +118,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x07D5909F, {"stq", "rSoundStreamRequest"}},                //
     {0x07F768AF, {"gii", "rGUIIconInfo"}},                       //
     {0x086AEE8E, {"swp", "rShadowParamNative"}},                 //
+    {0x0875D1C5, {"ppr", "rPartnerReactParam"}},                 //
     {0x0891AF32, {"ppv", "rPurposeView"}},                       //
     {0x089BEF2C, {"sap", "rAIStageActionParameter"}},            //
     {0x08EF36C1, {"modlayout.xml", "rModelLayout"}},             //
@@ -112,6 +128,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x094973CF, {"scs", "rSoundCurveSet"}},                     //
     {0x0990B835, {"sad", "rSoundArmorData"}},                    //
     {0x09D775FC, {"efcc", "rEffectColorCorrect"}},               //
+    {0x09EC0F2E, {"sal", "rStageAdjoinList"}},                   //
     {0x0A0E48D4, {"emd", "rEnemyData"}},                         //
     {0x0A164982, {"gmt", "rGeneMatrixTable"}},                   // table??
     {0x0A3E643B, {"lvt", "rLevelToolTable"}},                    //
@@ -121,6 +138,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x0A7DB17E, {"deco", "rDecoData"}},                         //
     {0x0AAF2DB2, {"rtl", "rTexLayout"}},                         //
     {0x0AB54515, {"bui", "rBui"}},                               //
+    {0x0AE885C2, {"wp2", "rWaypoint2"}},                         //
     {0x0AF34367, {"dtt", "rDungeonTowerTbl"}},                   //
     {0x0B0B8495, {"smadd.xml", "rSMAdd"}},                       //
     {0x0B1808BE, {"w14d", "rWeapon14LevelData"}},                //
@@ -144,20 +162,28 @@ static const std::map<uint32, pair_type> extensions{
     {0x0DADAB62, {"oba", "rObjAdj"}},                            //
     {0x0DD0E47A, {"AngleLimit", "rAngleLimitData"}},             //
     {0x0DE13237, {"pai", "rThinkPlanAI"}},                       //
+    {0x0E0B53B4, {"nms", "rNPCMotionSet"}},                      //
     {0x0E16DFBA, {"cit", "rItemCurseCnv"}},                      //
+    {0x0E17EDEB, {"cdl_pawn", "rDmLvPawnAdjParam"}},             //
+    {0x0E3C5CFA, {"pc_ptkc", "rAIPawnCulPrioThinkCategory"}},    //
     {0x0ECD7DF4, {"scs", "rSoundCurveSet"}},                     //
+    {0x0EE4ABCD, {"psi", "rPlPartsInfo"}},                       //
     {0x0F86C052, {"oskl", "rOtSkill"}},                          //
+    {0x0F985E6B, {"sdt", "rStaminaDecTbl"}},                     //
     {0x0F9F3E69, {"pmtt", "rPlayerMotionTimeTable"}},            //
+    {0x1001DC34, {"ptc", "rPawnThinkControl"}},                  //
     {0x1041BD9E, {"mod", "rModel"}},                             //
     {0x10C460E6, {"msg", "rMessage"}},                           //
     {0x10CEDAEA, {"pcl", "rPieceCreateList"}},                   //
     {0x10EBE843, {"mss", "rFestaSoundSequence"}},                //
+    {0x11349EA6, {"smc", "rSituationMsgCtrl"}},                  //
     {0x117D7CD0, {"mcm", "rMonNyanCommonMaterial"}},             //
     {0x11AFA688, {"sdl.xml", "rScheduler"}},                     //
     {0x11B6FD48, {"tdmact", "rTalkDemoActorData"}},              //
     {0x11C35522, {"gr2", "rGrass2"}},                            //
     {0x11C82587, {"oba", "rObjAdj"}},                            //
     {0x11DE9EF6, {"isd", "rInsectData"}},                        //
+    {0x11E53B6B, {"hmpre", "rHumanEnemyPreset"}},                //
     {0x12191BA1, {"epv", "rEffectProvider"}},                    //
     {0x122CA603, {"fnbd", "rFieldNestBossData"}},                //
     {0x124597FE, {"xml", "rEventTimeSchedule"}},                 //
@@ -166,26 +192,34 @@ static const std::map<uint32, pair_type> extensions{
     {0x12A794D8, {"ain", "rAinpc"}},                             //
     {0x12C3BFA7, {"cpl", "rCameraParamList"}},                   //
     {0x133917BA, {"mss", "rMsgSet"}},                            //
+    {0x1346AB64, {"qtd", "rQuestTextData"}},                     //
     {0x134F74D8, {"fpd", "rFieldHuntingData"}},                  //
     {0x136EBC7F, {"sisd", "rSoundIngredientSeData"}},            //
     {0x139EE51D, {"lmt", "rMotionList"}},                        //
     {0x13AC3D41, {"dpt", "rDuctPoint"}},                         //
     {0x13CFA2FA, {"swmt", "rSwitchMotion"}},                     //
+    {0x1408B040, {"sal2", "rStageAdjoinList2"}},                 //
     {0x141C243A, {"insectabirity", "rInsectAbirity"}},           //
     {0x141C421D, {"stdsc", "rSoundTalkDemoSeControl"}},          //
+    {0x1424C8EF, {"edv", "rEmDamageDirInfo"}},                   //
     {0x1431ED71, {"esc", "rEggSpecialColorData"}},               //
     {0x14428EAE, {"gce", "rCharacterEditPreset"}},               //
     {0x14483CFB, {"bplt", "rBattlePlayerTbl"}},                  //
     {0x1479E09D, {"ftd", "rFieldTagData"}},                      //
+    {0x1484A7FB, {"ppt", "rPartnerPawnTalk"}},                   //
     {0x148B6F89, {"mef", "rMhMotionEffect"}},                    //
     {0x148FA98A, {"gcd", "rGatherCommentData"}},                 //
+    {0x14A7B5C9, {"wsi", "rWeatherInfoTbl"}},                    //
     {0x14B5C8E6, {"sbkr", "rLtSoundBank"}},                      //
+    {0x14C27357, {"ccd", "rSimpleCom::rChatComData"}},           //
     {0x14EA8095, {"cos", "rCnsOffsetSet"}},                      //
     {0x15155F8A, {"smh", "rSMHiding"}},                          //
+    {0x151B711A, {"oce", "rOccluderEx"}},                        //
     {0x15302EF4, {"lot", "rLayout"}},                            //
     {0x156A8085, {"fmi", "rFueMusicInfData"}},                   //
     {0x157388D3, {"itl", "rItemList"}},                          //
     {0x15773620, {"nmr", "rArmorModelNpc"}},                     //
+    {0x15CEFEC6, {"ps_info", "rAIPawnSpecialityInfo"}},          //
     {0x15D782FB, {"sbkr", "rSoundBank"}},                        //
     {0x15E98D21, {"areaseldat", "rAreaSelectData"}},             //
     {0x15FCE6C6, {"wpd", "rWeaponProcessData"}},                 //
@@ -194,8 +228,10 @@ static const std::map<uint32, pair_type> extensions{
     {0x164F60FF, {"nld", "rNpcLocateData"}},                     //
     {0x1657A2D0, {"sptl", "rSoundPronounceList"}},               //
     {0x16640CD4, {"eng", "rSoundEngine"}},                       //
+    {0x1668FAF1, {"dvw", "rDmVecWeightParam"}},                  //
     {0x167DBBFF, {"stq", "rSoundStreamRequest"}},                //
     {0x169B7213, {"irp", "rItemRandParam"}},                     //
+    {0x170FEB3E, {"scc", "rStageConnect"}},                      //
     {0x176C3F95, {"los", "rLotSelector"}},                       //
     {0x176FADAB, {"scm", "rStageCamera"}},                       //
     {0x17917970, {"mcm", "rMotionCamera"}},                      //
@@ -203,7 +239,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x1800EB37, {"emyure", "rEmSizeYureTbl"}},                  //
     {0x1816EB57, {"bwpt", "rBattleWeaponTbl"}},                  //
     {0x1823137D, {"mlm", "rMapLndMarkPos"}},                     //
+    {0x184C83F1, {"counter_Adj", "rDamageCounterInfo"}},         //
+    {0x1855D631, {"nsp", "rNpcIsNo"}},                           //
     {0x18A9225C, {"pma", "rPlayerManyAttacks"}},                 //
+    {0x18AAF296, {"dja", "rDmJobAdjParam"}},                     //
+    {0x18B8FB84, {"tmo", "rTblMenuOption"}},                     //
     {0x18C80D7A, {"fntl", "rFieldNpcNekoTaxiList"}},             //
     {0x18D25FEC, {"ccinfo", "rConditionChangeInfo"}},            //
     {0x19054795, {"nnl", "rNpcLedgerList"}},                     //
@@ -211,6 +251,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x19278D07, {"skst", "rSwkbdMessageStyleTable"}},           //
     {0x193175EA, {"gfx", "rGeneFix"}},                           //
     {0x194BE415, {"chr", "rCharacter"}},                         //
+    {0x19581AB6, {"edt_color_def", "rCharacterEditColorDef"}},   //
     {0x197E4D7A, {"maptime", "rMapTimeData"}},                   //
     {0x199C56C0, {"ocl", "rObjCollision"}},                      //
     {0x19A59A91, {"llk", "sLightLinker::rLightLinker"}},         //
@@ -223,11 +264,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x1A2B1A25, {"deep", "rDungeonDeepTbl"}},                   //
     {0x1A3E9CBA, {"ntd", "rNpcTalkData"}},                       //
     {0x1A5444D9, {"cad", "rCollisionAdjust"}},                   //
+    {0x1AA9CD93, {"fmi", "rFieldAreaMarkerInfo"}},               //
     {0x1AADF7B7, {"cms", "rCameraMotionSdl"}},                   //
     {0x1AC7B52D, {"bdd", "rBodyData"}},                          //
     {0x1AE50150, {"vts", "rVertices"}},                          //
     {0x1AEB54D1, {"hvl.xml", "rHavokVertexLayout"}},             //
     {0x1B520B68, {"zon", "rZone"}},                              //
+    {0x1B5D77FD, {"mcm", "rMandraCharaMake"}},                   //
     {0x1BA81D3C, {"nck", "rNeck"}},                              //
     {0x1BBC291E, {"dtp", "rEnemyDtBaseParts"}},                  //
     {0x1BBFD18E, {"quest", "rQuestData"}},                       //
@@ -237,10 +280,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x1C635F38, {"msl", "rMaterialSkipList"}},                  //
     {0x1C755227, {"w04d", "rWeapon04BaseData"}},                 //
     {0x1C775347, {"sbl", "rSceneBox2"}},                         //
+    {0x1C8557A3, {"evtr", "rWeaponResTable"}},                   //
     {0x1CC22F91, {"epl", "rEffectParamList"}},                   //
     {0x1D076492, {"engv", "rSoundEngineValue"}},                 //
     {0x1D35AF2B, {"hit", "rHit"}},                               //
+    {0x1D572FED, {"nci", "rNpcConstItem"}},                      //
     {0x1D8CC9B7, {"fol", "rFieldObjectList"}},                   //
+    {0x1DA085FE, {"eli", "rVfxLightInfluence"}},                 //
     {0x1DC202EA, {"stef", "rSceneEffect"}},                      //
     {0x1E01F870, {"poom", "rPreOcclusionOneModel"}},             //
     {0x1E329EFC, {"rlt", "rRelationData"}},                      //
@@ -250,6 +296,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x1EE1ED64, {"arealinkdat", "rAreaLinkData"}},              //
     {0x1EFB1B67, {"adh", "rAdhesion"}},                          //
     {0x1F149AEC, {"mdd", "rEmDouMouKaData"}},                    //
+    {0x1F296EC9, {"pkt", "rPriorityThink"}},                     //
+    {0x1F533DF3, {"hmeq", "rHumanEnemyEquip"}},                  //
+    {0x1F789EEC, {"dme", "rDDOModelMontageEm"}},                 //
     {0x1F8BAD22, {"snd", "rSoundNpcData"}},                      //
     {0x1F9FA62C, {"rbl2", "rRumble"}},                           //
     {0x1FA3FF7A, {"nasl", "rNpcAirouSetResourceLogDataNative"}}, //
@@ -258,22 +307,26 @@ static const std::map<uint32, pair_type> extensions{
     {0x2052D67E, {"sn2", "rAISensorExt"}},                       //
     {0x2074FB1F, {"srcd", "rStaffRollCutData"}},                 //
     {0x20A81BF0, {"pef", "rAIPositionEvaluationFuncList"}},      //
+    {0x20BA8E3C, {"esp", "rEditStageParam"}},                    //
     {0x20E0A843, {"dptev", "rDungeonPassEventTbl"}},             //
     {0x20ED9750, {"pep", "rProofEffectParamScript"}},            //
     {0x20FA758C, {"gnd", "rFlashFontConfig"}},                   //
     {0x21034C90, {"arc", "rArchive"}},                           //
     {0x2141D3A9, {"wpp", "rWeaponParam"}},                       //
+    {0x21502841, {"slt", "rStageList"}},                         //
     {0x215896C2, {"statusparam", "rStatusParam"}},               //
     {0x215E5305, {"vjr", "rVirtualJoint"}},                      //
     {0x21684FE4, {"clc", "rColorLinkColor"}},                    //
     {0x21A16C7D, {"w07d", "rWeapon07LevelData"}},                //
     {0x21F33E01, {"amslt", "rAmuletSlotData"}},                  //
     {0x2229D051, {"dcd", "rDecoCreateData"}},                    //
+    {0x2243C1DC, {"sar", "rSoundAreaInfo"}},                     //
     {0x2282360D, {"jex", "rJointEx"}},                           //
     {0x228736BF, {"fsosl", "rFieldSoundOrnamentSeList"}},        //
     {0x22948394, {"gui", "rGUI"}},                               //
     {0x2298C7AA, {"stp", "rStartPosition"}},                     //
     {0x22B2A2A2, {"PlNeckPos", "rPlNeckPos"}},                   //
+    {0x231009FD, {"slm", "rShlLimit"}},                          //
     {0x2325C7A0, {"mectd", "rMonsterEnumConversionTable"}},      //
     {0x232E228C, {"rev_win", "rReverb"}},                        //
     {0x233A2C4D, {"plweplist", "rPlayerWeaponList"}},            //
@@ -284,6 +337,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x236C1AAB, {"lad", "rArchiveLayoutData"}},                 //
     {0x237E6120, {"kc1", "rKitchenListSuccessTable1"}},          //
     {0x238D25D2, {"w07m", "rWeapon07MsgData"}},                  //
+    {0x239A4D3F, {"wsi", "rWeatherStageInfo"}},                  //
     {0x23AC90FB, {"sod", "rSoundObjectData"}},                   //
     {0x23C997E4, {"bft", "rBuddyFlagTable"}},                    //
     {0x24080FFF, {"fht", "rFreeHuntData"}},                      //
@@ -291,8 +345,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x242BB29A, {"gmd", "rGUIMessage"}},                        //
     {0x2447D742, {"idm", "sId::rIdMapList"}},                    //
     {0x245133D9, {"cmr", "rCameraRail"}},                        //
+    {0x24A96715, {"eef", "rEmEffectTable"}},                     //
+    {0x24EDCC30, {"amsd", "rAreaMasterSpotDetailData"}},         //
     {0x24F0A487, {"kcs", "rKitchenListSkillSet"}},               //
     {0x24F56BC0, {"smd", "rSoundMonsterData"}},                  //
+    {0x25169B11, {"dmi", "rDungeonMarker"}},                     //
     {0x252BD342, {"ebcd", "rEquipBaseColorData"}},               //
     {0x25334DDE, {"trdl", "rTradeDeliveryList"}},                //
     {0x254309C9, {"psl", "rProofEffectMotSequenceList"}},        //
@@ -302,9 +359,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x2555081D, {"stb", "rStoryTalkBalloon"}},                  //
     {0x25697144, {"elt", "rEffectListTable"}},                   //
     {0x257D2F7C, {"swm", "rSwingModel"}},                        //
+    {0x25A425FF, {"pssc", "rPawnSpSkillCategoryUI"}},            // Level??
     {0x25A60BC4, {"ssjje", "rSansaijijiExchange"}},              //
     {0x25B4A6B9, {"bgm", "rSoundBGMControl"}},                   //
     {0x25E98D8C, {"rclp", "rRoomCutList"}},                      //
+    {0x25F75ACF, {"prs", "rParentRegionStatusParam"}},           //
     {0x25F86EE2, {"w07d", "rWeapon07BaseData"}},                 //
     {0x25FD693F, {"ipl", "rItemPopList"}},                       //
     {0x2618DE3F, {"srq", "rLtSoundRequest"}},                    //
@@ -321,6 +380,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x2749C8A8, {"mrl", "rMaterial"}},                          //
     {0x2754877D, {"trll", "rTradeLotList"}},                     //
     {0x276DE8B7, {"e2d", "rEffect2D"}},                          //
+    {0x278F97C6, {"cqi", "rCycleQuestInfo"}},                    //
     {0x27C72B28, {"w03m", "rWeapon03MsgData"}},                  //
     {0x27CE98F6, {"rtex", "rRenderTargetTexture"}},              //
     {0x27D81C81, {"fes", "rFieldSet"}},                          //
@@ -336,6 +396,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x2957DDCD, {"fppnr", "rFldPlParam_NR"}},                   //
     {0x296BD0A6, {"hgm", "rHitGeometry"}},                       //
     {0x29751294, {"tril", "rTradeItemList"}},                    //
+    {0x2979FF46, {"sbv", "rShrinkBlowValue"}},                   //
     {0x2993EA18, {"gnd", "rFlashFontConfig"}},                   //
     {0x29948FBA, {"srd", "rSoundRandom"}},                       //
     {0x29A5C1D1, {"rdp", "rRideParamNative"}},                   //
@@ -346,12 +407,16 @@ static const std::map<uint32, pair_type> extensions{
     {0x2A37242D, {"gpl", "rLayoutGroupParamList"}},              //
     {0x2A3A6196, {"ssl", "rSceneStartList"}},                    //
     {0x2A3A6664, {"gcd", "rGenesisCollision"}},                  //
+    {0x2A4169E6, {"ero_addTime", "rErosionShakeConvert"}},       //
     {0x2A4F96A8, {"rbd", "rRigidBody"}},                         //
     {0x2A51D160, {"ems", "rEnemyLayout"}},                       //
     {0x2A68813F, {"mlc", "rMonNyanLotCommon"}},                  //
     {0x2A8800EE, {"sai", "rStageAreaInfo"}},                     //
+    {0x2A8E3F37, {"cee", "rCraftElementExp"}},                   //
     {0x2A9FBCEC, {"hmg", "rHmGenerator"}},                       //
     {0x2AC7B904, {"dpttr", "rDungeonPassRoomMaxTbl"}},           //
+    {0x2AD9E88A, {"tmc", "rTblMenuComm"}},                       //
+    {0x2AF779F8, {"ir_adj_pl", "rOcdIrAdjPL"}},                  //
     {0x2B0670A5, {"map", "rMagicActParamList"}},                 //
     {0x2B303957, {"gop", "rAIGoalPlanning"}},                    //
     {0x2B399B97, {"evc2", "rEventCollision"}},                   //
@@ -361,7 +426,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x2C14D261, {"ahl", "rAreaHitLayout"}},                     //
     {0x2C2DE8CA, {"adh", "rAdh"}},                               //
     {0x2C4666D1, {"srh", "rScrHiding"}},                         // (RE5: smh)
+    {0x2C526DA6, {"opp", "rOcdPriorityParam"}},                  //
     {0x2C59EEA9, {"sksg", "rSwkbdSubGroup"}},                    //
+    {0x2C7463B8, {"dscp", "rDragonSkillColorParam"}},            //
     {0x2C97686F, {"mhd", "rMovieHitData"}},                      //
     {0x2CBF1C3A, {"w01d", "rWeapon01LevelData"}},                //
     {0x2CC70A66, {"grd", "rFlashDef"}},                          //
@@ -373,25 +440,34 @@ static const std::map<uint32, pair_type> extensions{
     {0x2D4CF80A, {"cli", "rColorLinkInfo"}},                     //
     {0x2D6455B1, {"tde", "rTexDetailEdit"}},                     //
     {0x2D6EA164, {"slw06", "rEquipShopListW06"}},                //
+    {0x2D9C1B10, {"kcm", "rKeyCommand"}},                        //
     {0x2DC54131, {"cdf", "rCloth"}},                             //
+    {0x2DCFBA48, {"gmp", "rGUIMapSetting"}},                     //
+    {0x2DE19F3E, {"dmt", "rDDOModelMontage"}},                   //
     {0x2DECBCA6, {"fpd", "rFieldPredatorData"}},                 //
+    {0x2E11E10E, {"sti", "rStageInfo"}},                         //
+    {0x2E244717, {"sts", "rStageToSpot"}},                       //
     {0x2E47C723, {"seg", "rSoundSeg"}},                          //
     {0x2E590330, {"rsl", "rScrList"}},                           //
     {0x2E5B6815, {"w10d", "rWeapon10BaseData"}},                 //
     {0x2E897056, {"ear", "rEnemyAreaRoute"}},                    //
+    {0x2EC2E88A, {"cdrr", "rCaughtDamageRateRefTbl"}},           //
     {0x2EC99875, {"fned", "rFieldNestEggData"}},                 //
     {0x2ECFC102, {"fppar", "rFldPlParam_AR"}},                   //
     {0x2EF9EEAF, {"fnd", "rFieldNestData"}},                     //
     {0x2F1C6767, {"saou", "rOtSupportActionOtUnique"}},          //
     {0x2F4E7041, {"sgt", "rSoundGunTool"}},                      //
     {0x2FC0C6C5, {"tucyl", "rTutorialCylinderData"}},            //
+    {0x2FC59F45, {"wtf", "rWeatherFogInfo"}},                    //
     {0x2FE088C0, {"dpd", "rDollPartsDisp"}},                     //
     {0x3001BEC4, {"ssd", "rStreamScheduler"}},                   //
     {0x300DB281, {"igf", "rInsectGrowFeed"}},                    //
     {0x306945DB, {"ghlt", "rGatherLevelTable"}},                 //
+    {0x30770B3D, {"planet", "rPlanetariumItem"}},                //
     {0x3077D00E, {"dmd", "rDemoData"}},                          //
     {0x30991F46, {"frl", "rFestaResourceList"}},                 //
     {0x30BC3F6B, {"w13m", "rWeapon13MsgData"}},                  //
+    {0x30E3BE3A, {"wpn_ofs", "rWeaponOffset"}},                  //
     {0x30ED4060, {"pth", "rPath"}},                              //
     {0x30FC745F, {"smx", "rSoundSubMixer"}},                     //
     {0x31095696, {"fmpd", "rFieldMotionPackageData"}},           //
@@ -399,10 +475,12 @@ static const std::map<uint32, pair_type> extensions{
     {0x3121865A, {"lar", "rArrangeList"}},                       //
     {0x312607A4, {"bll", "rBlacklist"}},                         //
     {0x31798063, {"nhap", "rNestHappening"}},                    //
+    {0x317BA376, {"qsq", "rQuestSequenceList"}},                 //
     {0x31AC0B5C, {"swc", "rScrCollisionArea"}},                  //
     {0x31B81AA5, {"qr", "rQuestReward"}},                        //
     {0x31EDC625, {"spj", "rSoundPhysicsJoint"}},                 //
     {0x32231BD1, {"esd", "rEffectSetData"}},                     //
+    {0x32328D7F, {"jmc", "rJobMasterCtrl"}},                     //
     {0x325774D5, {"fppwr", "rFldPlParam_WR"}},                   //
     {0x325AACA5, {"shl", "rShlParamList"}},                      //
     {0x327E327E, {"abd", "rArmorBuildData"}},                    //
@@ -413,7 +491,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x33046CD5, {"qcm", "rCameraQFPS"}},                        //
     {0x330A34C7, {"slw01", "rEquipShopListW01"}},                //
     {0x3318543C, {"slw12", "rEquipShopListW12"}},                //
+    {0x331F8048, {"evl", "rEvaluationTable"}},                   //
     {0x332CF371, {"ssjjp", "rSansaijijiPresent"}},               //
+    {0x334F284D, {"wal", "rWarpLocation"}},                      //
     {0x336D826C, {"ext", "rSkillTable"}},                        //
     {0x338C1FEC, {"asl", "rAreaSetLayout"}},                     //
     {0x33A84E14, {"hgi", "rHagi"}},                              //
@@ -421,15 +501,21 @@ static const std::map<uint32, pair_type> extensions{
     {0x33B21191, {"esp", "rEmShaderParam"}},                     //
     {0x33B68E3E, {"xml", "rItemLayout"}},                        //
     {0x340F49F9, {"sds", "rSoundDirectionalSet"}},               //
+    {0x34297BB5, {"emparam", "rEmparam"}},                       //
     {0x3443F314, {"iaf", "rInsectAttrFeed"}},                    //
     {0x344FD684, {"dqt", "rDungeonQuestData"}},                  //
     {0x3464995E, {"ots", "rOtodokeSetList"}},                    //
+    {0x346DC495, {"epi", "rEquipPartsInfo"}},                    //
     {0x3488527B, {"npcMd", "rNpcMoveData"}},                     //
     {0x34886F87, {"plt", "rPlayerTitle"}},                       //
     {0x34A8C353, {"sprmap", "rSprLayout"}},                      //
     {0x34BDFC5B, {"fas", "rFieldAISet"}},                        //
+    {0x34CE45C5, {"smp", "rStageMap"}},                          //
+    {0x34FF7212, {"fmd", "rFieldMapData"}},                      //
     {0x3516C3D2, {"lfd", "rLayoutFont"}},                        //
+    {0x353BB82B, {"damage_spAdj", "rDamageSpecialAdj"}},         //
     {0x354284E7, {"lvl", "rPlLevel"}},                           //
+    {0x357C803F, {"nvc", "rNavConnect"}},                        //
     {0x358012E8, {"vib", "rVibration"}},                         //
     {0x35BDD173, {"poa", "rPosAdjust"}},                         //
     {0x36019854, {"bed", "rBodyEdit"}},                          //
@@ -437,28 +523,37 @@ static const std::map<uint32, pair_type> extensions{
     {0x361EA2A5, {"msn", "rMission"}},                           //
     {0x3654EBA0, {"sce", "rCallingEncountData"}},                //
     {0x368E9519, {"bgsd", "rBowgunShellData"}},                  //
+    {0x369BC4B5, {"aps", "rAIPawnSkillParamTbl"}},               //
     {0x36C909FD, {"mre", "rMonNyanRewardEnemy"}},                //
     {0x36C92C9A, {"fed", "rFieldEnemyPlanData"}},                //
     {0x36E29465, {"hkx", "rHkCollision"}},                       //
     {0x370AD68B, {"tdd", "rTalkDemoDialogData"}},                //
     {0x3718238F, {"fgi", "rFieldGridInfo"}},                     //
     {0x3718B9C7, {"dptch", "rDungeonPassChallengeTbl"}},         //
+    {0x37336731, {"ach", "rAchievement"}},                       //
     {0x3756EE15, {"ptex", "rLtProceduralTexture"}},              //
     {0x3759B207, {"sbsd", "rSoundBattleStageData"}},             //
+    {0x376AA0C6, {"rwr", "rRoomWearParam"}},                     //
+    {0x37A666ED, {"mmc", "rMandraMotCombine"}},                  //
     {0x37B53731, {"ibl", "rIntelligenceBox"}},                   //
+    {0x37DBF969, {"cecp", "rCharacterEditCameraParam"}},         //
     {0x3821B94D, {"sngw", "rSoundSourceMusic"}},                 //
     {0x38534E81, {"isa", "rInsectAttr"}},                        //
     {0x3876D6FA, {"npsl", "rNpcSetResourceLogDataNative"}},      //
+    {0x3886A3ED, {"dsl", "rDragonSkillLevelParam"}},             //
     {0x38F66FC3, {"seg", "rSoundSeGenerator"}},                  //
     {0x3900DAD0, {"sbc", "rCollision"}},                         //
     {0x39207C56, {"w11d", "rWeapon11BaseData"}},                 //
+    {0x39283CC0, {"epp", "rEquipPresetPalette"}},                //
     {0x3991981E, {"msd", "rMirrorSetData"}},                     //
     {0x39A0D1D6, {"sms", "rSoundSubMixerSet"}},                  //
     {0x39C52040, {"lcm", "rCameraList"}},                        //
+    {0x39C5F515, {"jtq", "rJobTutorialQuestList"}},              //
     {0x39C8DC68, {"skd", "rSkillData"}},                         //
     {0x39F8A71D, {"equ", "rSoundEQ"}},                           //
     {0x3A244568, {"nhapp", "rNestHappeningProb"}},               //
     {0x3A298CCF, {"btat", "rBattleAtk"}},                        //
+    {0x3A2F1717, {"sg_tbl", "rStatusGainTable"}},                //
     {0x3A6A5A4D, {"stq", "rLtSoundStreamRequest"}},              //
     {0x3A77309A, {"kc2", "rKitchenListSuccessTable2"}},          //
     {0x3A793672, {"w14m", "rWeapon14MsgData"}},                  //
@@ -469,10 +564,14 @@ static const std::map<uint32, pair_type> extensions{
     {0x3AF73507, {"emt", "rEnemyTurnPos"}},                      //
     {0x3B04F5A1, {"ape", "rAcPlayerEquip"}},                     //
     {0x3B350990, {"qsp", "rQuestSudden"}},                       //
+    {0x3B5B24BB, {"cdl", "rCalcDamageLvAdj"}},                   //
     {0x3B5C7FD3, {"ida", "rIdAnim"}},                            //
     {0x3B764DD4, {"sstr", "rSoundStreamTransition"}},            //
     {0x3B9C41F1, {"trc", "rTurretCamera"}},                      //
+    {0x3BA9E8CA, {"gat", "rGatheringItem"}},                     //
+    {0x3BB3A92A, {"dsd", "rDragonSkillParam"}},                  //
     {0x3BBA4E33, {"qct", "rQuestCtrlTbl"}},                      //
+    {0x3BC876C1, {"hni", "rHideNpcNameInfo"}},                   //
     {0x3BFEDD61, {"emm", "rEnemyMapPos"}},                       //
     {0x3C285CC6, {"otd", "rOtTensionData"}},                     //
     {0x3C318636, {"wao", "rWeaponAttachOffset"}},                //
@@ -495,25 +594,37 @@ static const std::map<uint32, pair_type> extensions{
     {0x3E363245, {"chn", "rChain"}},                             //
     {0x3E394A0E, {"npcfsmbrn", "rFSMBrain"}},                    //
     {0x3E4BFC33, {"gtb", "rGeneTableTable"}},                    // table??
+    {0x3E6000F2, {"qhd", "rQuestHistoryData"}},                  //
+    {0x3E894FE7, {"edt", "rCharacterEdit"}},                     //
+    {0x3EDAE6E3, {"pao", "rAIPawnOrder"}},                       //
     {0x3EE10653, {"wad", "rWeskerAttackData"}},                  //
+    {0x3EFA7724, {"plt", "rPlantTree"}},                         //
     {0x3F13DE3C, {"ots", "rResearchReinforce"}},                 //
     {0x3F1513D0, {"fbd", "rFieldBuddyMotionData"}},              //
     {0x3F40BDB8, {"glp", "rGoalPoint"}},                         //
     {0x3F53ECC9, {"mpd", "rMonsterPartsDisp"}},                  //
     {0x3F5955F1, {"pla", "rPlacement"}},                         //
     {0x3F685CCE, {"w09d", "rWeapon09LevelData"}},                //
+    {0x3F83D4D5, {"evtr", "rEventResTable"}},                    //
     {0x3FA5AD6A, {"ict", "rItemCategoryTypeData"}},              //
     {0x3FB52996, {"imx", "rItemMix"}},                           //
+    {0x3FBB86CC, {"mra", "rMyRoomActParam"}},                    //
     {0x3FDA9B90, {"gmd", "rFlashMessage"}},                      //
     {0x4042405A, {"fssl", "rFieldSoundIngredientSeList"}},       //
     {0x4046F1E1, {"ajp", "rAdjustParam"}},                       //
     {0x40596F49, {"stdc", "rSoundTalkDemoControl"}},             //
     {0x405FF76E, {"bct2", "rBgChangeTable"}},                    //
+    {0x4083FA81, {"crs", "rChildRegionStatusParam"}},            //
+    {0x40AEA00F, {"pqt", "rPawnQuestTalk"}},                     //
     {0x40D14033, {"gfc", "rFlashConfig"}},                       //
+    {0x41094081, {"ldp", "rLoadingParam"}},                      //
+    {0x410AA0F7, {"wcrt", "rWepCateResTbl"}},                    //
+    {0x4114AC4C, {"fal", "rFieldAreaList"}},                     //
     {0x4126B31B, {"npcmac", "rNMMachine"}},                      //
     {0x4199032B, {"w00d", "rWeapon00BaseData"}},                 //
     {0x41E33404, {"lan", "rLayoutAnime"}},                       //
     {0x42354DC6, {"wcd", "rWeaponCreateData"}},                  //
+    {0x425874E8, {"pqi", "rPackageQuestInfo"}},                  //
     {0x43057C7C, {"alc", "rAlchemyData"}},                       //
     {0x43062A33, {"npcId", "rNpcBaseData_ID"}},                  //
     {0x430B4FF4, {"ptl", "rPathList"}},                          //
@@ -524,7 +635,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x437662FC, {"oml", "rOmList"}},                            //
     {0x437D7704, {"w00d", "rWeapon00LevelData"}},                //
     {0x440D0451, {"slw00", "rEquipShopListW00"}},                //
+    {0x44121BD3, {"lup", "rEmLvUpParam"}},                       //
     {0x441F64AA, {"slw13", "rEquipShopListW13"}},                //
+    {0x447F4B2C, {"peg", "rEmoteGroup"}},                        //
     {0x44A96149, {"acs", "rAccessorySkill"}},                    //
     {0x44C8AC26, {"mloc", "rMapLocate"}},                        //
     {0x44DC7515, {"ssdsc", "rSoundShortDemoSeControl"}},         //
@@ -547,6 +660,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x470745CB, {"idx", "rCollisionIdxData"}},                  //
     {0x47165A39, {"fnmd", "rFieldNpcMotion"}},                   //
     {0x472022DF, {"AIPlActParam", "rAIPlayerActionParameter"}},  //
+    {0x4758BA86, {"jcp", "rJobCustomParam"}},                    //??
     {0x4788A739, {"w02d", "rWeapon02LevelData"}},                //
     {0x482B5B95, {"esl", "rEffectSetData"}},                     //
     {0x482DDCBE, {"eml", "rEnemyLandingPos"}},                   //
@@ -560,19 +674,29 @@ static const std::map<uint32, pair_type> extensions{
     {0x48B16938, {"isl", "rInsectLevel"}},                       //
     {0x48B239C0, {"sddc", "rSoundDramaDemoControl"}},            //
     {0x48C0AF2D, {"msl", "rMsgSerial"}},                         //
+    {0x48C6B0F2, {"ebi_sv", "rEmBaseInfoSv"}},                   //
+    {0x48DD2E14, {"kctt", "rKeyConfigTextTable"}},               //
     {0x48DFD78B, {"msgm", "rMessageData"}},                      //
     {0x48E8AC29, {"dtt", "rEnemyDtTune"}},                       //
     {0x496F8F22, {"fup", "rFreeUseParam"}},                      //
+    {0x49726B60, {"bjt", "rBakeJo"}},                            //??
     {0x49A855DA, {"jul", "rJumpList"}},                          //
     {0x49B5A885, {"ssc", "rSoundSimpleCurve"}},                  //
     {0x49BDEA0C, {"evm", "rEventManager"}},                      //
+    {0x49DA82CA, {"jobbase", "rJobBaseParam"}},                  //
     {0x4A31FCD8, {"scoop.xml", "rScoopList"}},                   //
     {0x4A32252D, {"sfcsd", "rSoundFSMCommandSeData"}},           //
     {0x4A4b677C, {"rev_ctr", "rLtSoundReverb"}},                 //
+    {0x4A6A1348, {"ned", "rNpcEditData"}},                       //
     {0x4A91DDB9, {"mle", "rMonNyanLotEnemy"}},                   //
+    {0x4A93202C, {"qmi", "rQuestMarkerInfo"}},                   //
     {0x4A96D77E, {"w04d", "rWeapon04LevelData"}},                //
+    {0x4AA35586, {"scl_change", "rErosionRegionScaleChange"}},   //
     {0x4AA69872, {"shell", "rShell"}},                           //
     {0x4AD68C63, {"slw08", "rEquipShopListW08"}},                //
+    {0x4AEFAF35, {"rds", "rRecommendDragonSkill"}},              //
+    {0x4B0C7373, {"edt_muscle", "rCharacterEditMuscle"}},        //
+    {0x4B214954, {"ams", "rAreaMasterSpotData"}},                //
     {0x4B4C2BD3, {"plcmdtbllist", "rHitDataPlayer"}},            //
     {0x4B51E836, {"olvl", "rOtLevel"}},                          //
     {0x4B704CC0, {"mia", "rMagicItemActParamList"}},             //
@@ -582,6 +706,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x4C0DB839, {"sdl", "rScheduler"}},                         //
     {0x4C2446BF, {"nasl", "rPoogieSetResourceLogDataNative"}},   //
     {0x4C3942E3, {"skt", "rSkillTypeData"}},                     //
+    {0x4C801568, {"faa", "rFieldAreaAdjoinList"}},               //
     {0x4CA26828, {"mse", "rSoundMotionSe"}},                     //
     {0x4CDF60E9, {"msg", "rMessage"}},                           //
     {0x4D52E593, {"rdf", "rRoomDefault"}},                       //
@@ -597,7 +722,9 @@ static const std::map<uint32, pair_type> extensions{
     {0x4E397417, {"ean", "rEffectAnim"}},                        //
     {0x4E399FFE, {"spkg", "rEmulationShaderPackage"}},           //
     {0x4E44FB6D, {"fpe", "rFacePartsEdit"}},                     //
+    {0x4E5DA7FF, {"alp", "rAdjLimitParam"}},                     //
     {0x4E630743, {"w06d", "rWeapon06LevelData"}},                //
+    {0x4E99C0CB, {"ofi", "rOutfitInfo"}},                        //
     {0x4EA4E09A, {"col", "rCollisionShape"}},                    //
     {0x4EB68CEE, {"hds", "rHitDataShell"}},                      //
     {0x4ED7C110, {"sqd", "rSubQuestData"}},                      //
@@ -618,16 +745,25 @@ static const std::map<uint32, pair_type> extensions{
     {0x51FC779F, {"sbc", "rCollision"}},                         //
     {0x5204D557, {"shp", "rShopList"}},                          //
     {0x522F7A3D, {"fcp", "rFacialPattern"}},                     //
+    {0x52445468, {"spg_tbl", "rShopGoods"}},                     //
     {0x525BBF16, {"esq", "rEffectSequence"}},                    //
+    {0x52637EE3, {"edt_mod_pal", "rCharacterEditModelPalette"}}, //
+    {0x52650BA4, {"ompp", "rOmParamPart"}},                      //
     {0x52776AB1, {"ips", "rItemPopSet"}},                        //
     {0x528770DF, {"efs", "rEffectStrip"}},                       //
+    {0x52B0AD9A, {"nmp", "rNpcMeetingPlace"}},                   //
     {0x52DBDCD6, {"rdd", "rRagdoll"}},                           //
     {0x52F032FA, {"cndp", "rConditionPriorityData"}},            //
+    {0x5318BF07, {"jbi", "rJukeBoxItem"}},                       //
+    {0x531BBE21, {"msl", "rMapSpotStageList"}},                  //
     {0x531EA143, {"uct2", "rUpCutObjTable"}},                    //
+    {0x5349C868, {"mot_filter", "rMotionFilter"}},               //
     {0x534BF1A0, {"ddfcv", "rDDFCurve"}},                        //
+    {0x534CD42C, {"btb", "rBitTable"}},                          //
     {0x535D969F, {"ctc", "rCnsTinyChain"}},                      //
     {0x5376F652, {"tdmmot", "rTalkDemoMotionData"}},             //
     {0x538120DE, {"eng", "rSoundEngine"}},                       //
+    {0x53DEC7D3, {"lae", "rLinkageEnemy"}},                      //
     {0x5400AB57, {"blyr", "rBattleLayoutResource"}},             //
     {0x542767EC, {"cskd", "rCatSkillData"}},                     //
     {0x5435D27B, {"hkm", "rHkMaterial"}},                        //
@@ -635,6 +771,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x54503672, {"ahl", "rAreaHitLayout"}},                     //
     {0x5450C517, {"sdm", "rShortDemoData"}},                     //
     {0x54539AEE, {"sup", "rSupplyList"}},                        //??
+    {0x5495ECFB, {"cuex", "rCraftUpGradeExp"}},                  //
     {0x54AE0DF9, {"dmlp", "rDemoListeningPoint"}},               //
     {0x54DC440A, {"msl", "rMotionSequenceList"}},                //
     {0x54DD639F, {"pvi", "rPartsVisibleInfo"}},                  //
@@ -646,20 +783,28 @@ static const std::map<uint32, pair_type> extensions{
     {0x557ECC08, {"aef", "rAHEffect"}},                          //
     {0x55A8FB34, {"anm", "rSprAnm"}},                            //
     {0x55C30579, {"stdrd", "rSoundTalkDemoRequestData"}},        //
+    {0x55ED64FA, {"sit", "rSitePack"}},                          //
     {0x55EF9710, {"hlc", "rHavokLinkCollisionLayout"}},          //
     {0x55FCA0F5, {"tlil", "rTradeLimitedItemList"}},             //
     {0x562C6C5D, {"fosd", "rFieldOrnamentSetData"}},             //
     {0x5653C1B0, {"hts", "rHitSize"}},                           //
+    {0x565490C9, {"cks", "rCraftSkillSpd"}},                     //
     {0x5699B3FE, {"dgp", "rDungeonPartsData"}},                  //
+    {0x56A4268B, {"omk", "rOmKey"}},                             //
     {0x56CF8411, {"abe", "rAreaBarrierEdit"}},                   //
     {0x56CF93D4, {"lnv", "rAINavigationMeshList"}},              //
+    {0x56D164D4, {"phs", "rPrologueHmStatus"}},                  //
     {0x56D892D0, {"areaeatdat", "rAreaEatData"}},                //
     {0x56E21768, {"w01d", "rWeapon01BaseData"}},                 //
+    {0x5726B72C, {"ompe", "rOmParamEx"}},                        //
+    {0x575E584A, {"ir_adj", "rOcdIrAdj"}},                       //
+    {0x578CCC09, {"evlst", "rEventViewerList"}},                 //
     {0x57BAE388, {"hcl", "rHavokConstraintLayout"}},             //
     {0x57D1CECD, {"dmfd", "rDemoFade"}},                         //
     {0x57DC1ED1, {"lfp", "rLensFlare"}},                         //
     {0x5802B3FF, {"ahc", "rAHCamera"}},                          //
     {0x58072136, {"sfsa", "rSeFsAse"}},                          //
+    {0x5810EB18, {"epl", "rEnhancedParamList"}},                 //
     {0x5812AC77, {"gpd", "rGeyserPointData"}},                   //
     {0x583F70B0, {"rdb", "rEnemyResidentDtBase"}},               //
     {0x5842F0B0, {"pts", "rSoundPelTiedSe"}},                    //
@@ -669,40 +814,55 @@ static const std::map<uint32, pair_type> extensions{
     {0x5898749C, {"bbm", "rBioBgmMap"}},                         //
     {0x58A15856, {"mod", "rModel"}},                             //
     {0x58BC1C29, {"ext", "rGuestQuestData"}},                    //
+    {0x58F76F4E, {"plu", "rPawnThinkLevelUp"}},                  //
+    {0x593653D3, {"pen", "rkThinkData"}},                        //
+    {0x5957FF9C, {"ali", "rActorLight"}},                        //
     {0x597812F5, {"sbmd", "rSoundBgmMonsterData"}},              //
+    {0x59C3614E, {"ujp", "rNpcIsUseJobParamEx"}},                //
     {0x59D80140, {"ablparam", "rPlAbilityParam"}},               //
     {0x59D9C3DA, {"dtb", "rEnemyDtBase"}},                       //
+    {0x59F75535, {"sca", "rStageCustom"}},                       //
     {0x5A2E573A, {"por", "rPreOcclusion"}},                      //
     {0x5A3CED86, {"rrd", "rSoundRrd"}},                          //
     {0x5A45BA9C, {"xml", "rMapLink"}},                           //
     {0x5A4767A9, {"tca", "rTPSCameraAttention"}},                //
     {0x5A525C16, {"pel", "rProofEffectList"}},                   //
     {0x5A61A7C8, {"fed", "rFaceEdit"}},                          //
+    {0x5A64B2BF, {"mgcc", "rMagicCommandList"}},                 //
     {0x5A6991F2, {"slw07", "rEquipShopListW07"}},                //
     {0x5A7A72DE, {"lsnl", "rLimitedShopNpcList"}},               //
     {0x5A7BF109, {"slw14", "rEquipShopListW14"}},                //
     {0x5A7FEA62, {"ik", "rCnsIK"}},                              //
+    {0x5AC4B200, {"cdarate", "rCalcDamageAtdmAdjRate"}},         //
     {0x5ADC692C, {"emsizetbl", "rEmSizeCalcTblElement"}},        //
     {0x5AF4E4FE, {"mot", "rMotion"}},                            //
     {0x5B0DD78A, {"otp", "rOtTrainParam"}},                      //
     {0x5B334013, {"bap", "rBowActParamList"}},                   //
     {0x5B3C302D, {"rem", "rRem"}},                               //
+    {0x5B413821, {"ndp", "rNamedParam"}},                        //
+    {0x5B5257E6, {"edt_pset_pal", "rCharacterEditPresetPalette"}},
+    {0x5B8E2BC2, {"fad", "rFurnitureAccessories"}},              //
     {0x5B8E6BF3, {"itp", "rItemPreData"}},                       //
     {0x5C0B0996, {"csl", "rCutStartList"}},                      //
+    {0x5C82A29C, {"pssl", "rPawnSpSkillLevelUI"}},               // Category??
     {0x5CA6DB93, {"sla00", "rEquipShopListA00"}},                //
     {0x5CC5C1E2, {"ips", "rInitPosSet"}},                        //
     {0x5CF33CD6, {"rnd", "rRiderNoteData"}},                     //
     {0x5D0455EB, {"slw03", "rEquipShopListW03"}},                //
     {0x5D163510, {"slw10", "rEquipShopListW10"}},                //
+    {0x5D25E20A, {"sja", "rStageJoint"}},                        //
     {0x5D2E4199, {"ane", "rAcNyanterEquip"}},                    //
     {0x5D4F7DBF, {"sosd", "rSoundOrnamentSeData"}},              //
     {0x5D5CBBCE, {"sif", "rSndIf"}},                             //
+    {0x5D5D3FB6, {"mcw", "rMagicCommandWord"}},                  //
+    {0x5DAD3F79, {"dse", "rDragonSkillEnhanceParam"}},           //
     {0x5E1A909B, {"ged", "rGeneEdit"}},                          //
     {0x5E3DC9F3, {"lge", "rGridEnvLight"}},                      //
     {0x5E4C723C, {"nls", "rNulls"}},                             //
     {0x5E5B44C8, {"sls", "rShopListSale"}},                      //
     {0x5E640ACC, {"itm", "rItemAngle"}},                         //
     {0x5E7D6A45, {"ean", "rEffectAnim"}},                        //
+    {0x5E9971C1, {"blow_save", "rBlowSaveEmLvParam"}},           //
     {0x5EA6AA68, {"oxpb", "rOtQuestExpBias"}},                   //
     {0x5EA7A3E9, {"sky", "rSky"}},                               //
     {0x5EF1FB52, {"lcm", "rCameraList"}},                        //
@@ -714,6 +874,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x5F88B715, {"epd", "rEditPatternData"}},                   //
     {0x5F975A38, {"epd", "rEggPartsData"}},                      //
     {0x5FB399F4, {"bssq", "rBioSoundSequenceSe"}},               //
+    {0x5FC0F1E5, {"tco", "rTargetCursorOffset"}},                //
     {0x601E64CD, {"szs", "rSoundZoneSwitch"}},                   //
     {0x60524FBB, {"shw", "rShape"}},                             //
     {0x60604467, {"btatef", "rBattleAtkEffect"}},                //
@@ -725,11 +886,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x61382649, {"fisd", "rFieldIngredientSetData"}},           //
     {0x617B0C47, {"dspw", "rSoundSourceDSPADPCM"}},              //
     {0x6186627D, {"wep", "rWeatherEffectParam"}},                //
+    {0x61874364, {"evd", "rEvidenceList"}},                      //
     {0x619D23DF, {"shp", "rShopList"}},                          //
     {0x61A3CCB0, {"rrh", "rRideHeli"}},                          //
     {0x61BC4073, {"fls", "rFilterSet"}},                         //
     {0x61C203A4, {"fms", "rFueMusicScData"}},                    //
     {0x61CF79AF, {"qsg", "rQuestGroup"}},                        //
+    {0x61F41287, {"arj", "rAreaInfoJointArea"}},                 //
     {0x62220853, {"vfp", "rVillageFirstPos"}},                   // MovePos?
     {0x622FA3C9, {"ewy", "rAIWayPointExpand"}},                  //
     {0x62440501, {"lmd", "rLayoutMessage"}},                     //
@@ -739,6 +902,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x630ED7BB, {"nan", "rEnemyNandoData"}},                    //
     {0x63747AA7, {"rpi", "rRomPawnInfo"}},                       //
     {0x637908D0, {"rmm", "rRankManager"}},                       //
+    {0x639F3AD8, {"lcp", "rLargeCameraParam"}},                  //
     {0x63B524A7, {"ltg", "rLockOnTarget"}},                      //
     {0x63F2D70D, {"apd", "rArmorProcessData"}},                  //
     {0x63F62424, {"ipt", "rItemPreTypeData"}},                   //
@@ -751,6 +915,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x652071B0, {"rsl", "rScrList"}},                           //
     {0x652A93A4, {"atk", "rAttackStatusData"}},                  //
     {0x65B275E5, {"sce", "rScenario"}},                          //
+    {0x65B7B85B, {"csl", "rCustimShlLimit"}},                    //
     {0x65D3AC8E, {"resmap", "rResourceMap"}},                    //
     {0x65E22C55, {"w01m", "rWeapon01MsgData"}},                  //
     {0x6622AB2D, {"smkd", "rSoundMonsterKizunaData"}},           //
@@ -762,8 +927,13 @@ static const std::map<uint32, pair_type> extensions{
     {0x67195A2E, {"mca", "rLtSoundSourceADPCM"}},                //
     {0x671F21DA, {"stp", "rStartPos"}},                          //
     {0x677EDC52, {"dptrm", "rDungeonPassTreasureTbl"}},          //
+    {0x67C828FE, {"abl", "rAbilityList"}},                       //??
     {0x681FA774, {"owp", "rOtWeaponData"}},                      //
     {0x682B1925, {"lfx", "rLtShader"}},                          //
+    {0x682BE5BC, {"wpt", "rWaypoint"}},                          //
+    {0x685CFABF, {"scpx", "rStageCustomPartsEx"}},               //
+    {0x68BA0040, {"nem", "rNPCEmoMyRoom"}},                      //
+    {0x68BFA317, {"lcd", "rLocationData"}},                      //
     {0x68CD2933, {"ses", "rMHSoundEmitter"}},                    //
     {0x68E301A1, {"uce2", "rUpCutElevator"}},                    //
     {0x694348E3, {"h2d", "rHit2D"}},                             //
@@ -774,16 +944,20 @@ static const std::map<uint32, pair_type> extensions{
     {0x6A1670F0, {"fld", "rFloorLvData"}},                       //
     {0x6A28E7C5, {"gstd", "rGatherSetTableData"}},               //
     {0x6A5CDD23, {"occ", "rOccluder"}},                          //
+    {0x6A6070DC, {"emg", "rEnemyGroup"}},                        //
     {0x6A6AFD9E, {"fld", "rFieldData"}},                         //
     {0x6A9197ED, {"sst", "rSoundStreamStructure"}},              //
     {0x6ABA51B0, {"wofb", "rWeaponOfsForBodyNative"}},           //
+    {0x6AFF2211, {"cip", "rCatchInfoParam"}},                    //
     {0x6B41A2F9, {"scd", "rStageCameraData"}},                   //
     {0x6B6D2BB6, {"w02m", "rWeapon02MsgData"}},                  //
     {0x6BB4ED5E, {"ich", "rLch"}},                               //
     {0x6BEEFB2A, {"nstera", "rNestEggReviewA"}},                 //
     {0x6C1D2073, {"srq", "rSoundRequest"}},                      //
+    {0x6C3842ED, {"shi", "rSoundHitInfo"}},                      //
     {0x6C3B4904, {"hlc", "rHavokLinkCollisionLayout"}},          //
     {0x6C980E22, {"des", "rDungeonEnemySet"}},                   //
+    {0x6C98B385, {"hmcs", "rHumanEnemyCustomSkill"}},            //
     {0x6CA1D49A, {"scm", "rScopeCamera"}},                       //
     {0x6CACB310, {"mcd", "rMiniChatData"}},                      //
     {0x6CC8C051, {"acd", "rAccessoryData"}},                     //
@@ -801,8 +975,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x6E5FB1CC, {"std", "rStoryData"}},                         //
     {0x6E6A25E0, {"mrd", "rMonsterRaceData"}},                   //
     {0x6E765E35, {"insectessenceskill", "rInsectEssenceSkill"}}, //
+    {0x6E931118, {"fbik_human2", "rFullbodyIKHuman2"}},          //
     {0x6E972F76, {"kad", "rKireajiData"}},                       //
+    {0x6EA2E537, {"dja_pawn", "rDmJobPawnAdjParam"}},            //
     {0x6EC8125C, {"raps", "rRapidshotData"}},                    //
+    {0x6ED89A4A, {"tcm", "rTbl2ChatMacro"}},                     //
     {0x6EE70EFF, {"pcf", "rAIPathConsecutive"}},                 //
     {0x6F0CD860, {"brsb", "rBattleResultBonus"}},                //
     {0x6F27254C, {"w06m", "rWeapon06MsgData"}},                  //
@@ -810,8 +987,11 @@ static const std::map<uint32, pair_type> extensions{
     {0x6F56B442, {"opl", "rOtParamLot"}},                        //
     {0x6F62D575, {"tde", "rTexDetailEdit"}},                     //
     {0x6F6F2BAD, {"w02d", "rWeapon02BaseData"}},                 //
+    {0x6FAE86B8, {"eir", "rItemEquipJobInfoList"}},              //
     {0x6FCC7AD4, {"pec", "rProofEffectColorControl"}},           //
+    {0x6FCE0D46, {"amr", "rAreaMasterRankData"}},                //
     {0x6FE1EA15, {"spl", "rSoundPhysicsList"}},                  //
+    {0x6FF78212, {"ari", "rAreaInfo"}},                          //
     {0x7039F76F, {"oxpv", "rOtQuestExpValue"}},                  //
     {0x705A17BE, {"emg", "rEnemyGroundMove"}},                   //
     {0x7063542F, {"bdy", "rBuddyPlanData"}},                     //
@@ -821,11 +1001,15 @@ static const std::map<uint32, pair_type> extensions{
     {0x70C56D5E, {"skmt", "rSwkbdMessageTable"}},                //
     {0x70FDFB5B, {"ext", "rEggTableData"}},                      //
     {0x710688E2, {"squs", "rSquatshotData"}},                    //
+    {0x7106D076, {"equip_preset", "rEquipPreset"}},              //
     {0x711BD05E, {"osf", "rObjSet"}},                            //
     {0x714EC77C, {"bes2", "rEventScript"}},                      //
+    {0x71827B54, {"ars", "rAreaInfoStage"}},                     //
     {0x7190B007, {"nstip", "rNestInitProb"}},                    //
+    {0x71B58247, {"msd", "rMapSpotData"}},                       //
     {0x71D6A0D4, {"osf", "rObjSet"}},                            //
     {0x720EF393, {"fmd", "rFieldMotionData"}},                   //
+    {0x72490158, {"ccp", "rCraftCapPass"}},                      //
     {0x724DF879, {"xsew", "rSoundSourceMSADPCM"}},               //
     {0x72763DAF, {"dim", "rDrawItemModel"}},                     //
     {0x72821C38, {"stm", "rPlStamina"}},                         //
@@ -840,6 +1024,7 @@ static const std::map<uint32, pair_type> extensions{
     {0x745DAB77, {"pvb", "rPlanetVibration"}},                   //
     {0x7470D7E9, {"tex2", "r2Texture"}},                         //
     {0x7494F854, {"hcl", "rHavokConstraintLayout"}},             //
+    {0x749E6D11, {"nmm", "rNPCMotMyRoom"}},                      //
     {0x74A22486, {"spval", "rSupportGaugeValue"}},               //
     {0x74A4D35F, {"dge", "rDungeonEventData"}},                  //
     {0x74B583F5, {"fpgl", "rPoogieList"}},                       //
@@ -857,12 +1042,17 @@ static const std::map<uint32, pair_type> extensions{
     {0x759C9F51, {"bes", "rBattleEnemySet"}},                    //
     {0x75D21272, {"cdp", "rSoundCdp"}},                          //
     {0x75E48071, {"glt", "rGeneLotting"}},                       //
+    {0x75E5D582, {"sbb", "rSoundBossBgm"}},                      //
+    {0x763B5C41, {"kcp", "rKeyCustomParam"}},                    //
+    {0x7646EAE3, {"evsi", "rEventViewerSetInfo"}},               //
     {0x766F00AC, {"bnt", "rBattleNpcTbl"}},                      //
     {0x76820D81, {"lmt", "rMotionList"}},                        //
     {0x76A1D9A2, {"isp", "rInsectParam"}},                       //
     {0x76AA6987, {"e2d", "rEffect2D"}},                          //
     {0x76DE35F6, {"rpn", "rRomPawnName"}},                       //
     {0x77044C04, {"vibpl", "rVibrationPlayerList"}},             //
+    {0x77293528, {"edt_voice_pal", "rCharacterEditVoicePalette"}},
+    {0x7766ACE5, {"ckc", "rCraftSkillCost"}},                    //
     {0x77A69893, {"bnu", "rBattleNavirouUnique"}},               //
     {0x77D70343, {"atr", "rGuestEffectiveAttr"}},                //
     {0x7808EA10, {"rtex", "rRenderTargetTexture"}},              //
@@ -872,11 +1062,16 @@ static const std::map<uint32, pair_type> extensions{
     {0x7896B60A, {"asd", "rArmorSeriesData"}},                   //
     {0x790203B0, {"angryprm", "rAngryParam"}},                   //
     {0x791DA5C9, {"tbl", "rTable"}},                             //
+    {0x79BAEBBA, {"dsp", "rDarkSkyParam"}},                      //
     {0x79C47B59, {"mca", "rSoundSourceADPCM"}},                  //
+    {0x79DAF969, {"acp", "rActionParamList"}},                   //
+    {0x79EF41FE, {"sn2", "rAISensor"}},                          //
     {0x79FF11C9, {"olos", "rOtLotOwnSupport"}},                  //
     {0x7A038F4C, {"rev_win", "rReverb"}},                        //
     {0x7A098625, {"cwc", "rCnsWaistControl"}},                   //
+    {0x7A1069C8, {"csi", "rCycleContentsSortieInfo"}},           //
     {0x7A1F334C, {"itp", "rItemParam"}},                         //
+    {0x7A201F35, {"damage_save", "rDamageSaveEmLvParam"}},       //
     {0x7A23F10F, {"mdl", "rMedalDataList"}},                     //
     {0x7A395CB7, {"sab", "rOtSupportActionBase"}},               //
     {0x7A41A133, {"w08d", "rWeapon08BaseData"}},                 //
@@ -887,27 +1082,40 @@ static const std::map<uint32, pair_type> extensions{
     {0x7B54B600, {"atd", "rActivityData"}},                      //
     {0x7B572569, {"olsk", "rOtLotOwnSkill"}},                    //
     {0x7BEA3086, {"cfl", "rLtSoundCategoryFilter"}},             //
+    {0x7BEA8828, {"cda", "rCalcDamageAtdmAdj"}},                 //
     {0x7BEC319A, {"sps", "rSoundPhysicsSoftBody"}},              //
     {0x7C067B17, {"wpd", "rWeaponData"}},                        //
+    {0x7C0E0726, {"map", "rMandraActionParam"}},                 //
     {0x7C163FF5, {"w12m", "rWeapon12MsgData"}},                  //
     {0x7C409434, {"bnf", "rBattleNaviFsm"}},                     //
     {0x7C4883A8, {"itm", "rItemData"}},                          //
     {0x7C559D35, {"sddsc", "rSoundDramaDemoSeControl"}},         //
     {0x7C5E6060, {"osa", "rOtSpecialAction"}},                   //
+    {0x7CB7EF59, {"dgm", "rGUIDogmaOrb"}},                       //
     {0x7CD0E77E, {"mpm", "rMonsterPartsManager"}},               //
     {0x7D025838, {"mla", "rMonNyanLotAdvent"}},                  //
+    {0x7D0A5AAF, {"ads", "rActivateDragonSkill"}},               //
     {0x7D1530C2, {"sngw", "rSoundSourceMusic"}},                 //
+    {0x7D8F00BD, {"tdm", "rTutorialDialogMessage"}},             //
     {0x7DA64808, {"qmk", "rQuestMarker"}},                       //
+    {0x7DAA553D, {"cdrt", "rCaughtDamageRateTbl"}},              //
     {0x7DAAFFDC, {"samd", "rSoundArchiveData"}},                 //
     {0x7DD2AFBE, {"mqsd", "rMainQuestData"}},                    //
     {0x7DD2F109, {"ssed", "rSubStEpiData"}},                     //
     {0x7E1C8D43, {"pcs", "rAIPresetStudy"}},                     //
     {0x7E33A16C, {"spc", "rSoundPackage"}},                      //
     {0x7E4152FF, {"stg", "rAISensorTargetGroup"}},               //
+    {0x7E7111A3, {"wta", "rWeatherInfoTbl"}},                    //
+    {0x7EEC78AA, {"pep", "rAIPawnEmParam"}},                     //
     {0x7EF03563, {"cfid", "rChestItemTableData"}},               //
     {0x7F2E2EE0, {"areaacttbl", "rAreaActTblData"}},             //
     {0x7F416CE5, {"mcn", "rMonNyanCirclePattern"}},              //
+    {0x7F65A700, {"fng", "rFurnitureGroup"}},                    //
+    {0x7F92D75B, {"ach", "rAchievementHeader"}},                 //
+    {0x7F99F211, {"motparam", "rMotionParam"}},                  //
+    {0x7F9FE4E7, {"esa", "rEmStatusAdj"}},                       //
     {0xC230157D, {"at3", "rSoundSourceMusic"}},                  //
+    /*                                                        */ //
 };
 
 static decltype(extensions) extensionsPS3{
@@ -1214,12 +1422,14 @@ static const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"dai_gyakuten_saiban_2", &extDGS2},             //
     {"dai_gyakuten_saiban", &extDGS},                //
     {"dd", &extDD},                                  //
+    {"ddon", &extDDON},                              //
     {"dead_rising", &extDR},                         //
     {"devil_may_cry_4", &extDMC4},                   //
     {"dgs", &extDGS},                                //
     {"dgs2", &extDGS2},                              //
     {"dmc4", &extDMC4},                              //
     {"dr", &extDR},                                  //
+    {"dragons_dogma_online", &extDDON},              //
     {"dragons_dogma", &extDD},                       //
     {"lost_planet_2", &extLP2},                      //
     {"lost_planet", &extLP},                         //
@@ -1321,11 +1531,10 @@ uint32 GetHash(es::string_view extension, es::string_view title,
 }; // namespace revil
 
 #ifdef HRG_DEBUG
-#include "datas/master_printer.hpp"
-
-static const char *shortNames[]{
-    "dd",  "dgs",    "dgs2",    "dr",  "lp",  "lp2", "mh3", "mh4", "mhg",
-    "mhs", "pwaadd", "pwaasoj", "re0", "re5", "re6", "rem", "rer",
+static es::string_view shortNames[]{
+    "dd",  "ddon", "dgs", "dgs2", "dmc4", "dr",     "lp",
+    "lp2", "mh3",  "mh4", "mhg",  "mhs",  "pwaadd", "pwaasoj",
+    "re0", "re5",  "re6", "rem",  "rer",
 };
 
 void CheckCollisions() {
