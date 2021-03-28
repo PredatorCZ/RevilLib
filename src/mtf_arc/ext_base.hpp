@@ -22,11 +22,13 @@
 #include <map>
 
 using MtExtensionsStorage = std::map<es::string_view, uint32>;
+using MtExtFixupStorage = std::map<uint32, es::string_view>;
 using namespace revil;
 
 struct MtExtensions {
   static constexpr size_t NUMSLOTS = 10;
   const MtExtensionsStorage *data[NUMSLOTS]{};
+  const MtExtFixupStorage *fixups = nullptr;
 
   static size_t Index(Platform platform) {
     return static_cast<size_t>(platform);
@@ -35,6 +37,8 @@ struct MtExtensions {
   void Assign(Platform platform, const MtExtensionsStorage *storage) {
     data[Index(platform)] = storage;
   }
+
+  void Assign(const MtExtFixupStorage *storage) { fixups = storage; }
 
   template <class... type>
   void Assign(Platform platform, const MtExtensionsStorage *storage,
@@ -50,6 +54,13 @@ struct MtExtensions {
 
   MtExtensions(const MtExtensionsStorage *base, Platform basePlatform) {
     data[0] = base;
+    data[static_cast<size_t>(basePlatform)] = base;
+  }
+
+  MtExtensions(const MtExtensionsStorage *base,
+               const MtExtFixupStorage *fixups_, Platform basePlatform) {
+    data[0] = base;
+    fixups = fixups_;
     data[static_cast<size_t>(basePlatform)] = base;
   }
 

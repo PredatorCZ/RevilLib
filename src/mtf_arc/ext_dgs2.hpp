@@ -19,28 +19,34 @@
 #include "ext_base.hpp"
 
 static const MtExtensionsStorage extDGS2Common{
-    {"e2d", 0x276DE8B7},  //
-    {"ean", 0x4E397417},  //
-    {"efl", 0x6D5AE854},  //
-    {"fsm", 0x66B45610},  //
-    {"gfd", 0x2D462600},  //
-    {"gii", 0x7F768AF},   //
-    {"gmd", 0x242BB29A},  //
-    {"gui", 0x22948394},  //
-    {"h2d", 0x694348E3},  //
-    {"chr", 0x194BE415},  //
-    {"lcm", 0x39C52040},  //
-    {"lmt", 0x76820D81},  //
-    {"lpm", 0xC41C74D},   //
-    {"mca", 0x79C47B59},  //
-    {"mod", 0x58A15856},  //
-    {"mrl", 0x2749C8A8},  //
-    {"prp", 0x272B80EA},  //
-    {"sbc", 0x51FC779F},  //
-    {"sbkr", 0x15D782FB}, //
-    {"sdl", 0x4C0DB839},  //
-    {"srqr", 0x1BCC4966}, //
-    {"tex", 0x241F5DEB},  //
+    /**/ //
+    {"e2d", 0x276DE8B7},
+    {"ean", 0x4E397417},
+    {"efl", 0x6D5AE854},
+    {"fsm", 0x66B45610},
+    {"gfd", 0x2D462600},
+    {"gii", 0x7F768AF},
+    {"gmd", 0x242BB29A},
+    {"gui", 0x22948394},
+    {"h2d", 0x694348E3},
+    {"chr", 0x194BE415},
+    {"lcm", 0x39C52040},
+    {"lmt", 0x76820D81},
+    {"lpm", 0xC41C74D},
+    {"mca", 0x79C47B59},
+    {"mod", 0x58A15856},
+    {"mrl", 0x2749C8A8},
+    {"prp", 0x272B80EA},
+    {"sbc", 0x51FC779F},
+    {"sbkr", 0x15D782FB},
+    {"sdl", 0x4C0DB839},
+    {"srq", 0x1BCC4966}, // dupe
+    {"srqr", 0x1BCC4966},
+    {"tex", 0x241F5DEB},
 };
 
-static const MtExtensions extDGS2{&extDGS2Common, Platform::N3DS};
+static const MtExtFixupStorage fixupDGS2{
+    {0x1BCC4966, "srqr"},
+};
+
+static const MtExtensions extDGS2{&extDGS2Common, &fixupDGS2, Platform::N3DS};

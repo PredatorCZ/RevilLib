@@ -35,7 +35,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"ari", 0x6FF78212},
     {"arj", 0x61F41287},
     {"ars", 0x71827B54},
-    {"ase", 0x7437CCE},
+    {"ase", 0x7437CCE}, // dupe
     {"aser", 0x7437CCE},
     {"atk", 0x6E45FABB},
     {"bap", 0x5B334013},
@@ -104,7 +104,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"epl", 0x5810EB18},
     {"epp", 0x39283CC0},
     {"epv", 0x12191BA1},
-    {"equ", 0x2B40AE8F},
+    {"equ", 0x2B40AE8F}, // dupe
     {"equip_preset", 0x7106D076},
     {"equr", 0x2B40AE8F},
     {"ero_addTime", 0x2A4169E6},
@@ -146,7 +146,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"ipa", 0x157388D3},
     {"ir_adj_pl", 0x2AF779F8},
     {"ir_adj", 0x575E584A},
-    {"itl", 0x157388D3},
+    {"itl", 0x157388D3}, // dupe
     {"jbi", 0x5318BF07},
     {"jcp", 0x4758BA86},
     {"jmc", 0x32328D7F},
@@ -162,7 +162,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"lcm", 0x39C52040},
     {"lcp", 0x639F3AD8},
     {"ldp", 0x41094081},
-    {"list", 0x7284DAF5},
+    {"list", 0x7284DAF5}, // dupe
     {"lmt", 0x76820D81},
     {"lot", 0x15302EF4},
     {"lup", 0x44121BD3},
@@ -178,7 +178,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"mra", 0x3FBB86CC},
     {"mrl", 0x2749C8A8},
     {"msd", 0x71B58247},
-    {"mse", 0x4CA26828},
+    {"mse", 0x4CA26828}, // dupe
     {"mser", 0x4CA26828},
     {"msl", 0x531BBE21},
     {"mss", 0x133917BA},
@@ -191,12 +191,12 @@ static const MtExtensionsStorage extDDONCommon{
     {"nmm", 0x749E6D11},
     {"nmp", 0x52B0AD9A},
     {"nms", 0xE0B53B4},
-    {"nnl", 0x19054795},
+    {"nnl", 0x19054795}, // dupe
     {"nsp", 0x1855D631},
     {"nvc", 0x357C803F},
     {"occ", 0x6A5CDD23},
     {"oce", 0x151B711A},
-    {"ocl", 0x199C56C0},
+    {"ocl", 0x199C56C0}, // dupe
     {"ofi", 0x4E99C0CB},
     {"olp", 0x69A1911},
     {"omk", 0x56A4268B},
@@ -231,7 +231,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"rag", 0x4FC5716},
     {"rbd", 0x2A4F96A8},
     {"rds", 0x4AEFAF35},
-    {"rev_win", 0x232E228C},
+    {"rev_win", 0x232E228C}, // dupe
     {"revr", 0x232E228C},
     {"rtex", 0x7808EA10},
     {"rwr", 0x376AA0C6},
@@ -247,10 +247,10 @@ static const MtExtensionsStorage extDDONCommon{
     {"sce", 0x65B275E5},
     {"scl_change", 0x4AA35586},
     {"scpx", 0x685CFABF},
-    {"scs", 0xECD7DF4},
+    {"scs", 0xECD7DF4}, // dupe
     {"scsr", 0xECD7DF4},
     {"sdl", 0x4C0DB839},
-    {"sds", 0x315E81F},
+    {"sds", 0x315E81F}, // dupe
     {"sdsr", 0x315E81F},
     {"sdt", 0xF985E6B},
     {"sg_tbl", 0x3A2F1717},
@@ -264,19 +264,19 @@ static const MtExtensionsStorage extDDONCommon{
     {"smc", 0x11349EA6},
     {"smp", 0x34CE45C5},
     {"sms", 0x39A0D1D6},
-    {"smx", 0x30FC745F},
+    {"smx", 0x30FC745F}, // dupe
     {"smxr", 0x30FC745F},
     {"sn2", 0x79EF41FE},
     {"spg_tbl", 0x52445468},
     {"spkg", 0x2358E1A},
-    {"srq", 0x1BCC4966},
+    {"srq", 0x1BCC4966}, // dupe
     {"srqr", 0x1BCC4966},
-    {"ssq", 0x271D08FE},
+    {"ssq", 0x271D08FE}, // dupe
     {"ssqr", 0x271D08FE},
     {"stc", 0x3E356F93},
     {"sti", 0x2E11E10E},
     {"stp", 0x671F21DA},
-    {"stq", 0x167DBBFF},
+    {"stq", 0x167DBBFF}, // dupe
     {"stqr", 0x167DBBFF},
     {"sts", 0x2E244717},
     {"swm", 0x257D2F7C},
@@ -304,4 +304,22 @@ static const MtExtensionsStorage extDDONCommon{
     {"zon", 0x1B520B68},
 };
 
-static const MtExtensions extDDON{&extDDONCommon, Platform::WinPC};
+static const MtExtFixupStorage fixupDDON{
+    /**/ //
+    {0x0315E81F, "sdsr"},
+    {0x07437CCE, "aser"},
+    {0x0ECD7DF4, "scsr"},
+    {0x157388D3, "ipa"},
+    {0x167DBBFF, "stqr"},
+    {0x19054795, "nll"},
+    {0x199C56C0, "col"},
+    {0x1BCC4966, "srqr"},
+    {0x232E228C, "revr"},
+    {0x271D08FE, "ssqr"},
+    {0x2B40AE8F, "equr"},
+    {0x30FC745F, "smxr"},
+    {0x4CA26828, "mser"},
+    {0x7284DAF5, "qst"},
+};
+
+static const MtExtensions extDDON{&extDDONCommon, &fixupDDON, Platform::WinPC};
