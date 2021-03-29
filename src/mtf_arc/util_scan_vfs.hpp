@@ -22,8 +22,8 @@
 #include "datas/master_printer.hpp"
 #include "revil/hashreg.hpp"
 
-template <class registry>
-void ScanVFS(const std::string &path, const registry &reg, Platform platform) {
+template <class registry, class reader>
+void ScanVFS(const std::string &path, const registry &reg, Platform platform, reader readFc) {
   DirectoryScanner scan;
   scan.AddFilter(".arc");
   scan.Scan(path);
@@ -38,10 +38,10 @@ void ScanVFS(const std::string &path, const registry &reg, Platform platform) {
     try {
       ARC hdr;
       ARCFiles items;
-      std::tie(hdr, items) = ReadARC(rd);
+      std::tie(hdr, items) = readFc(rd);
 
       for (auto &i : items) {
-        auto found = GetExtension(i.typeHash, platform);
+        auto found = GetExtension(i.typeHash, {}, platform);
 
         if (found.empty()) {
           if (!newHashes.count(i.typeHash)) {
@@ -79,7 +79,7 @@ void ScanVFS(const std::string &path, const registry &reg, Platform platform) {
     printline("Missing hashes:");
 
     for (auto &h : missingHashes) {
-      printline(GetExtension(h.first, platform)
+      printline(GetExtension(h.first, {}, platform)
                 << " 0x" << std::hex << std::uppercase << h.first << " "
                 << *h.second);
     }
