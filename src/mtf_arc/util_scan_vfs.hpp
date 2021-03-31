@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include "../hfs.hpp"
 #include "arc.hpp"
 #include "datas/binreader.hpp"
 #include "datas/directory_scanner.hpp"
@@ -23,7 +24,8 @@
 #include "revil/hashreg.hpp"
 
 template <class registry, class reader>
-void ScanVFS(const std::string &path, const registry &reg, Platform platform, reader readFc) {
+void ScanVFS(const std::string &path, const registry &reg, Platform platform,
+             reader readFc) {
   DirectoryScanner scan;
   scan.AddFilter(".arc");
   scan.Scan(path);
@@ -36,6 +38,9 @@ void ScanVFS(const std::string &path, const registry &reg, Platform platform, re
     es::string_view sw(f);
     BinReader rd(f);
     try {
+      uint32 id;
+      rd.Read(id);
+      rd.Seek(id == SFHID ? 16 : 0);
       ARC hdr;
       ARCFiles items;
       std::tie(hdr, items) = readFc(rd);
