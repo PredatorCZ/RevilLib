@@ -22,6 +22,7 @@
 #include "ext_dgs2.hpp"
 #include "ext_dmc4.hpp"
 #include "ext_dr.hpp"
+#include "ext_ext.hpp"
 #include "ext_lp.hpp"
 #include "ext_lp2.hpp"
 #include "ext_mh3.hpp"
@@ -59,6 +60,8 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"dr", &extDR},
     {"dragons_dogma_online", &extDDON},
     {"dragons_dogma", &extDD},
+    {"ex_troopers", &extEXT},
+    {"ext", &extEXT},
     {"lost_planet_2", &extLP2},
     {"lost_planet", &extLP},
     {"lp", &extLP},
@@ -90,8 +93,8 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"resident_evil_mercenaries", &extREM},
     {"resident_evil_revelations", &extRER},
     {"sbsh", &extSBSH},
-    {"sengoku_basara_samurai_heroes", &extSBSH},
     {"sbsyd", &extSBSYD},
+    {"sengoku_basara_samurai_heroes", &extSBSH},
     {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
 };
 
@@ -152,9 +155,9 @@ uint32 GetHash(es::string_view extension, es::string_view title,
 
 #ifdef HRG_DEBUG
 static es::string_view shortNames[]{
-    "dd",  "ddon", "dgs", "dgs2", "dmc4", "dr",     "lp",
-    "lp2", "mh3",  "mh4", "mhg",  "mhs",  "pwaadd", "pwaasoj",
-    "re0", "re5",  "re6", "rem",  "rer",  "sbsh",   "sbsyd",
+    "dd",  "ddon", "dgs", "dgs2", "dmc4", "dr",     "ext",     "lp",
+    "lp2", "mh3",  "mh4", "mhg",  "mhs",  "pwaadd", "pwaasoj", "re0",
+    "re5", "re6",  "rem", "rer",  "sbsh", "sbsyd",
 };
 
 void RE_EXTERN CheckCollisions() {
