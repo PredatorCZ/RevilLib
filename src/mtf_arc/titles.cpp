@@ -36,6 +36,7 @@
 #include "ext_rem.hpp"
 #include "ext_rer.hpp"
 #include "ext_sbsh.hpp"
+#include "ext_sbsyd.hpp"
 #include "revil/hashreg.hpp"
 
 // #define HRG_DEBUG
@@ -90,6 +91,8 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"resident_evil_revelations", &extRER},
     {"sbsh", &extSBSH},
     {"sengoku_basara_samurai_heroes", &extSBSH},
+    {"sbsyd", &extSBSYD},
+    {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
 };
 
 const MtExtFixupStorage *GetFixups(es::string_view title) {
@@ -151,7 +154,7 @@ uint32 GetHash(es::string_view extension, es::string_view title,
 static es::string_view shortNames[]{
     "dd",  "ddon", "dgs", "dgs2", "dmc4", "dr",     "lp",
     "lp2", "mh3",  "mh4", "mhg",  "mhs",  "pwaadd", "pwaasoj",
-    "re0", "re5",  "re6", "rem",  "rer",  "sbsh",
+    "re0", "re5",  "re6", "rem",  "rer",  "sbsh",   "sbsyd",
 };
 
 void RE_EXTERN CheckCollisions() {
