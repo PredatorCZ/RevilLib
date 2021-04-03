@@ -34,6 +34,7 @@
 #include "ext_re0.hpp"
 #include "ext_re5.hpp"
 #include "ext_re6.hpp"
+#include "ext_recv.hpp"
 #include "ext_rem.hpp"
 #include "ext_rer.hpp"
 #include "ext_sb3.hpp"
@@ -88,11 +89,13 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"re0", &extRE0},
     {"re5", &extRE5},
     {"re6", &extRE6},
+    {"recv", &extRECV},
     {"rem", &extREM},
     {"rer", &extRER},
     {"resident_evil_0", &extRE0},
     {"resident_evil_5", &extRE5},
     {"resident_evil_6", &extRE6},
+    {"resident_evil_code_veronica", &extRECV},
     {"resident_evil_mercenaries", &extREM},
     {"resident_evil_revelations", &extRER},
     {"sb3", &extSB3},
@@ -101,8 +104,8 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"sbsh", &extSBSH},
     {"sbsyd", &extSBSYD},
     {"sengoku_basara_3", &extSB3},
-    {"sengoku_basara_4", &extSB4},
     {"sengoku_basara_4_sumeragi", &extSB4S},
+    {"sengoku_basara_4", &extSB4},
     {"sengoku_basara_samurai_heroes", &extSBSH},
     {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
 };
