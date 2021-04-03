@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extRE5Common{
+namespace MT_RE5 {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"adh", 0x1EFB1B67},
     {"aef", 0x557ECC08},
@@ -88,8 +89,20 @@ static const MtExtensionsStorage extRE5Common{
     {"way", 0x5F36B659},
 };
 
-static const MtExtFixupStorage fixupRE5{
+static const MtExtFixupStorage fixups{
     {0x2C4666D1, "smh"},
 };
 
-static const MtExtensions extRE5{&extRE5Common, &fixupRE5, Platform::WinPC};
+static const TitleSupport suppWin{
+    ARC_WINPC_GENERIC,
+    ModSupport{0x19C},
+    TexSupport{0x70},
+    LmtSupport{51},
+};
+
+static const TitleSupports supp{
+    Platform::WinPC, suppWin, //
+};
+} // namespace MT_RE5
+static const MtExtensions extRE5{MT_RE5::extCommon, MT_RE5::fixups,
+                                 MT_RE5::supp, Platform::WinPC};

@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include "datas/supercore.hpp"
 
 namespace revil {
 enum class Platform {
@@ -27,4 +28,33 @@ enum class Platform {
   CAFE,
   NSW,
 };
+
+struct ArcSupport {
+  uint16 version = 7;
+  uint16 windowSize = 15;
+  bool allowRaw = false;
+  bool xmemOnly = false;
+  bool encrypted = false;
+};
+
+struct ModSupport {
+  uint16 version = 0;
+};
+
+struct TexSupport {
+  uint16 version = 0;
+};
+
+struct LmtSupport {
+  uint16 version = 0;
+  bool x64 = false;
+};
+
+struct TitleSupport {
+  ArcSupport arc;
+  ModSupport mod;
+  TexSupport tex;
+  LmtSupport lmt;
+};
+
 } // namespace revil

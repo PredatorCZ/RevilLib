@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extEXTCommon{
+namespace MT_EXT {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"acd", 0x2F94F561},
     {"adl", 0x199FDB52},
@@ -118,14 +119,25 @@ static const MtExtensionsStorage extEXTCommon{
     {"zon", 0x1B520B68},
 };
 
-static const MtExtFixupStorage fixupEXT{
+static const MtExtFixupStorage fixups{
     /**/ //
-    {0x0315E81F,"sdsr"},
-    {0x0ECD7DF4,"scsr"},
-    {0x167DBBFF,"stqr"},
-    {0x1BCC4966,"srqr"},
-    {0x232E228C,"revr"},
-    {0x2B40AE8F,"equr"},
+    {0x0315E81F, "sdsr"},
+    {0x0ECD7DF4, "scsr"},
+    {0x167DBBFF, "stqr"},
+    {0x1BCC4966, "srqr"},
+    {0x232E228C, "revr"},
+    {0x2B40AE8F, "equr"},
 };
 
-static const MtExtensions extEXT{&extEXTCommon, &fixupEXT, Platform::PS3};
+static const TitleSupport suppPS3{
+    ARC_PS3_GENERIC,
+    ModSupport{0xD2},
+    TexSupport{0x9A},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::PS3, suppPS3};
+} // namespace MT_EXT
+
+static const MtExtensions extEXT{MT_EXT::extCommon, MT_EXT::supp,
+                                 MT_EXT::fixups, Platform::PS3};

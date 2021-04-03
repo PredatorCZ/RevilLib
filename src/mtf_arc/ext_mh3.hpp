@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extMH3Common{
+namespace MT_MH3 {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"ain", 0x12A794D8},
     {"ase", 0x07437cce},
@@ -59,7 +60,7 @@ static const MtExtensionsStorage extMH3Common{
     {"tex", 0x241f5deb},
 };
 
-static const MtExtensionsStorage extMH3N3DS{
+static const MtExtensionsStorage extN3DS{
     /**/ //
     {"cfl", 0x7BEA3086},
     {"mca", 0x67195A2E},
@@ -68,7 +69,7 @@ static const MtExtensionsStorage extMH3N3DS{
     {"srq", 0x2618DE3F},
 };
 
-static const MtExtensionsStorage extMH3Cafe{
+static const MtExtensionsStorage extCafe{
     /**/ //
     {"dspw", 0x617B0C47},
     {"equ", 0x2B40AE8F}, // dupe
@@ -82,14 +83,36 @@ static const MtExtensionsStorage extMH3Cafe{
     {"srq", 0x1BCC4966}, // dupe
 };
 
-static const MtExtFixupStorage fixupMH3{
+static const MtExtFixupStorage fixups{
     {0x1BCC4966, "srqr"},
     {0x2B40AE8F, "equr"},
 };
 
+static const TitleSupport supp3DS{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xE6},
+    TexSupport{0xA5},
+    LmtSupport{66},
+};
+
+static const TitleSupport suppCAFE{
+    ArcSupport{0x10},
+    ModSupport{0xE6},
+    TexSupport{0xA5},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{
+    Platform::N3DS, supp3DS,  //
+    Platform::CAFE, suppCAFE, //
+
+};
+} // namespace MT_MH3
+
 static const MtExtensions extMH3{
-    &extMH3Common,               //
-    Platform::N3DS, &extMH3N3DS, //
-    Platform::CAFE, &extMH3Cafe, //
-    &fixupMH3,                   //
+    MT_MH3::extCommon,                  //
+    MT_MH3::fixups,                     //
+    MT_MH3::supp,                       //
+    Platform::N3DS,    MT_MH3::extN3DS, //
+    Platform::CAFE,    MT_MH3::extCafe, //
 };

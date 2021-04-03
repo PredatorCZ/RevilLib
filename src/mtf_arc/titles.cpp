@@ -151,6 +151,40 @@ uint32 GetHash(es::string_view extension, es::string_view title,
 
   return foundSec->GetHash(extTranslated, platform);
 }
+
+PlatformFlags GetPlatformSupport(es::string_view title) {
+  auto found = invertedExtensions.find(title);
+
+  if (es::IsEnd(invertedExtensions, found)) {
+    throw std::runtime_error("Coundn't find title.");
+  }
+
+  auto foundSec = found->second;
+  PlatformFlags flags;
+
+  for (size_t i = 1; i < foundSec->NUMSLOTS; i++) {
+    flags.Set(Platform(i), foundSec->data[i]);
+  }
+
+  return flags;
+}
+
+const TitleSupport *GetTitleSupport(es::string_view title, Platform platform) {
+  auto found = invertedExtensions.find(title);
+
+  if (es::IsEnd(invertedExtensions, found)) {
+    throw std::runtime_error("Coundn't find title.");
+  }
+
+  auto foundSec = found->second->support;
+
+  if (!foundSec) {
+    throw std::runtime_error("Title support is null.");
+  }
+
+  return foundSec->Get(platform);
+}
+
 } // namespace revil
 
 #ifdef HRG_DEBUG

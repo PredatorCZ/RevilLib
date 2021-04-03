@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extMHGCommon{
+namespace MT_MHG {
+static const MtExtensionsStorage extCommon{
     {"abd", 0x327E327E},
     {"acd", 0x737234F5},
     {"acn", 0x58ACE42},
@@ -276,7 +277,7 @@ static const MtExtensionsStorage extMHGCommon{
     {"wpd", 0x15FCE6C6},
 };
 
-static const MtExtensionsStorage extMHGN3DS{
+static const MtExtensionsStorage extN3DS{
     /**/ //
     {"lan", 0x41E33404},
     {"lanl", 0x708E0028},
@@ -289,7 +290,7 @@ static const MtExtensionsStorage extMHGN3DS{
     {"skst", 0x19278D07},
 };
 
-static const MtExtensionsStorage extMHGNSW{
+static const MtExtensionsStorage extNSW{
     /**/ //
     {"adpcm", 0x79C47B59},
     {"alc", 0x43057C7C},
@@ -307,7 +308,7 @@ static const MtExtensionsStorage extMHGNSW{
     {"vibpl", 0x77044C04},
 };
 
-static const MtExtFixupStorage fixupMHG{
+static const MtExtFixupStorage fixups{
     /**/ //
     {0x0315E81F, "sdsr"},
     {0x0ECD7DF4, "scsr"},
@@ -318,9 +319,31 @@ static const MtExtFixupStorage fixupMHG{
     {0x619D23DF, "slt"},
 };
 
+static const TitleSupport supp3DS{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xE6},
+    TexSupport{0xA6},
+    LmtSupport{67},
+};
+
+static const TitleSupport suppNSW{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xD4},
+    TexSupport{0xA8}, //??
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{
+    Platform::N3DS, supp3DS, //
+    Platform::NSW, suppNSW,  //
+};
+
+} // namespace MT_MHG
+
 static const MtExtensions extMHG{
-    &extMHGCommon,               //
-    Platform::N3DS, &extMHGN3DS, //
-    Platform::NSW,  &extMHGNSW,  //
-    &fixupMHG,
+    MT_MHG::extCommon,                  //
+    MT_MHG::fixups,                     //
+    MT_MHG::supp,                       //
+    Platform::N3DS,    MT_MHG::extN3DS, //
+    Platform::NSW,     MT_MHG::extNSW,  //
 };

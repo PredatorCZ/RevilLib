@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extSBSHCommon{
+namespace MT_SBSH {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"arc", 0x73850D05},
     {"asc", 0x5E0EF076},
@@ -108,9 +109,20 @@ static const MtExtensionsStorage extSBSHCommon{
     {"wsp", 0x00963CB2},
 };
 
-static const MtExtFixupStorage fixupSBSH{
+static const MtExtFixupStorage fixups{
     {0x62A68441, "thk"},
     {0x714EC77C, "evs"},
 };
 
-static const MtExtensions extSBSH{&extSBSHCommon, &fixupSBSH, Platform::PS3};
+static const TitleSupport suppPS3{
+    ARC_PS3_GENERIC,
+    ModSupport{0x21},
+    TexSupport{0x97},
+    LmtSupport{56},
+};
+
+static const TitleSupports supp{Platform::PS3, suppPS3};
+} // namespace MT_SBSH
+
+static const MtExtensions extSBSH{MT_SBSH::extCommon, MT_SBSH::fixups,
+                                  MT_SBSH::supp, Platform::PS3};

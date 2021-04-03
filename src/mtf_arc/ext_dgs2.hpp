@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extDGS2Common{
+namespace MT_DGS2 {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"e2d", 0x276DE8B7},
     {"ean", 0x4E397417},
@@ -45,8 +46,19 @@ static const MtExtensionsStorage extDGS2Common{
     {"tex", 0x241F5DEB},
 };
 
-static const MtExtFixupStorage fixupDGS2{
+static const MtExtFixupStorage fixups{
     {0x1BCC4966, "srqr"},
 };
 
-static const MtExtensions extDGS2{&extDGS2Common, &fixupDGS2, Platform::N3DS};
+static const TitleSupport supp3DS{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xE7},
+    TexSupport{0xA6},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS};
+} // namespace MT_DGS2
+
+static const MtExtensions extDGS2{MT_DGS2::extCommon, MT_DGS2::fixups,
+                                  MT_DGS2::supp, Platform::N3DS};

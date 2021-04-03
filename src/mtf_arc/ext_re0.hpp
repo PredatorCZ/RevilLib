@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extRE0Common{
+namespace MT_RE0 {
+static const MtExtensionsStorage extCommon{
     {"bct2", 0x405FF76E},    //
     {"bds2", 0x01F28535},    //
     {"bes2", 0x714EC77C},    //
@@ -76,4 +77,15 @@ static const MtExtensionsStorage extRE0Common{
     {"xsew", 0x724DF879},    //
 };
 
-static const MtExtensions extRE0{&extRE0Common, Platform::WinPC};
+static const TitleSupport suppWin{
+    ARC_WINPC_GENERIC,
+    ModSupport{0xD2},
+    TexSupport{0x9D},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::WinPC, suppWin};
+} // namespace MT_RE0
+
+static const MtExtensions extRE0{MT_RE0::extCommon, MT_RE0::supp,
+                                 Platform::WinPC};

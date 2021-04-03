@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extREMCommon{
+namespace MT_REM {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"amp", 0x264D1A85},
     {"arc", 0x73850D05},
@@ -64,8 +65,19 @@ static const MtExtensionsStorage extREMCommon{
     {"zon", 0x1B520B68},
 };
 
-static const MtExtFixupStorage fixupREM{
+static const MtExtFixupStorage fixups{
     {0x2B399B97, "ecd"},
 };
 
-static const MtExtensions extREM{&extREMCommon, &fixupREM, Platform::N3DS};
+static const TitleSupport supp3DS{
+    ArcSupport{0x10},
+    ModSupport{0xE5},
+    TexSupport{0xA4},
+    LmtSupport{57},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS};
+} // namespace MT_REM
+
+static const MtExtensions extREM{MT_REM::extCommon, MT_REM::supp,
+                                 MT_REM::fixups, Platform::N3DS};

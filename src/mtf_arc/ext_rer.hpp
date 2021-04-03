@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extRERCommon{
+namespace MT_RER {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"arc", 0x73850D05},
     {"arg", 0x59BC928},
@@ -69,7 +70,7 @@ static const MtExtensionsStorage extRERCommon{
     {"zon", 0x1B520B68},
 };
 
-static const MtExtensionsStorage extRERWinPC{
+static const MtExtensionsStorage extWinPC{
     /**/ //
     {"csl", 0x5C0B0996},
     {"dim", 0x72763DAF},
@@ -100,7 +101,7 @@ static const MtExtensionsStorage extRERWinPC{
     {"xsew", 0x724DF879},
 };
 
-static const MtExtensionsStorage extRER3DS{
+static const MtExtensionsStorage ext3DS{
     /**/ //
     {"ecd", 0x2B399B97},
     {"evc2", 0x2B399B97}, // dupe
@@ -111,15 +112,35 @@ static const MtExtensionsStorage extRER3DS{
     {"stq", 0x3A6A5A4D},
 };
 
-static const MtExtFixupStorage fixupRER{
+static const MtExtFixupStorage fixups{
     {0x059BC928, "arg"},
     {0x2B399B97, "ecd"},
     {0x6E45FABB, "atp"},
 };
 
+static const TitleSupport supp3DS{
+    ArcSupport{0x10},
+    ModSupport{0xE6},
+    TexSupport{0xA5},
+    LmtSupport{67},
+};
+
+static const TitleSupport suppWin{
+    ARC_WINPC_GENERIC,
+    ModSupport{0xD2},
+    TexSupport{0x9D},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{
+    Platform::N3DS, supp3DS,  //
+    Platform::WinPC, suppWin, //
+};
+} // namespace MT_RER
+
 static const MtExtensions extRER{
-    &extRERCommon,                 //
-    Platform::WinPC, &extRERWinPC, //
-    Platform::N3DS,  &extRER3DS,   //
-    &fixupRER,
+    MT_RER::extCommon,                   //
+    MT_RER::fixups,                      //
+    Platform::WinPC,   MT_RER::extWinPC, //
+    Platform::N3DS,    MT_RER::ext3DS,   //
 };

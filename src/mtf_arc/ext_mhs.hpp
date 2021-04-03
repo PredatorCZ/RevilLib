@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extMHSCommon{
+namespace MT_MHS {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"acd", 0x6CC8C051},
     {"acr", 0x488DAB8D},
@@ -241,11 +242,22 @@ static const MtExtensionsStorage extMHSCommon{
     {"wpp", 0x2141D3A9},
 };
 
-static const MtExtFixupStorage fixupMHS{
+static const MtExtFixupStorage fixups{
     /**/ //
     {0x0315E81F, "sdsr"},
     {0x167DBBFF, "stqr"},
     {0x1BCC4966, "srqr"},
 };
 
-static const MtExtensions extMHS{&extMHSCommon, &fixupMHS, Platform::N3DS};
+static const TitleSupport supp3DS{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xE6},
+    TexSupport{0xA6},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS};
+} // namespace MT_MHS
+
+static const MtExtensions extMHS{MT_MHS::extCommon, MT_MHS::fixups,
+                                 MT_MHS::supp, Platform::N3DS};

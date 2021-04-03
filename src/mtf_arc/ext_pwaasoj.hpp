@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extPWAASOJCommon{
+namespace MT_PWAASOJ {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"ccl", 0x0026E7FF},
     {"cli", 0x6D96778B},
@@ -50,10 +51,20 @@ static const MtExtensionsStorage extPWAASOJCommon{
     {"tex", 0x241F5DEB},
 };
 
-static const MtExtFixupStorage fixupPWAASOJ{
+static const MtExtFixupStorage fixups{
     {0x167DBBFF, "stqr"},
     {0x1BCC4966, "srqr"},
 };
 
-static const MtExtensions extPWAASOJ{&extPWAASOJCommon, &fixupPWAASOJ,
-                                     Platform::N3DS};
+static const TitleSupport supp3DS{
+    ARC_N3DS_GENERIC,
+    ModSupport{0xE6},
+    TexSupport{0xA6},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS};
+} // namespace MT_PWAASOJ
+
+static const MtExtensions extPWAASOJ{MT_PWAASOJ::extCommon, MT_PWAASOJ::fixups,
+                                     MT_PWAASOJ::supp, Platform::N3DS};

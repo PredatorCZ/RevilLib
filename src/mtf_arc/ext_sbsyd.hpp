@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extSBSYDCommon{
+namespace MT_SBSYD {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"acm", 0x7D47F33A},
     {"aht", 0x57728652},
@@ -28,7 +29,7 @@ static const MtExtensionsStorage extSBSYDCommon{
     {"ase", 0x5A7711B5},
     {"atk", 0x342366F0},
     {"att", 0x20C43967},
-    {"bes2", 0x714EC77C},    // dupe
+    {"bes2", 0x714EC77C}, // dupe
     {"bsd", 0x657CBB77},
     {"bsel", 0x1D3A0E3C},
     {"btf", 0x2416212F},
@@ -63,7 +64,7 @@ static const MtExtensionsStorage extSBSYDCommon{
     {"end", 0x4AC1F336},
     {"enp", 0x737C261F},
     {"epm", 0x75E854B1},
-    {"equ", 0x2B40AE8F},     // dupe
+    {"equ", 0x2B40AE8F}, // dupe
     {"equr", 0x2B40AE8F},
     {"erl", 0x3ED3FE7},
     {"evs", 0x714EC77C},
@@ -85,7 +86,7 @@ static const MtExtensionsStorage extSBSYDCommon{
     {"mef", 0x52CCE4E},
     {"mgi", 0x2EA515BF},
     {"mic", 0x4DBD88F9},
-    {"mif", 0x2EA515BF},     // dupe
+    {"mif", 0x2EA515BF}, // dupe
     {"minigame", 0x6F94E4B0},
     {"mod", 0x58A15856},
     {"mpm", 0x20574E7E},
@@ -114,19 +115,19 @@ static const MtExtensionsStorage extSBSYDCommon{
     {"sbd", 0x6677C6A3},
     {"sbkr", 0x15D782FB},
     {"scn", 0x6246E90D},
-    {"scs", 0xECD7DF4},      // dupe
+    {"scs", 0xECD7DF4}, // dupe
     {"scsr", 0xECD7DF4},
     {"sdl", 0x4C0DB839},
     {"sds", 0x315E81F},
     {"smi", 0x280C9CB7},
-    {"smx", 0x30FC745F},     // dupe
+    {"smx", 0x30FC745F}, // dupe
     {"smxr", 0x30FC745F},
     {"spkg", 0x2358E1A},
     {"spr", 0x3DA61F2A},
     {"srl", 0x5A88413C},
     {"srq", 0x1BCC4966},
     {"ssb", 0x5089998D},
-    {"ssc", 0x49B5A885},     // dupe
+    {"ssc", 0x49B5A885}, // dupe
     {"sscr", 0x49B5A885},
     {"sst", 0x15D1B6B},
     {"stex", 0x4323D83A},
@@ -135,18 +136,18 @@ static const MtExtensionsStorage extSBSYDCommon{
     {"svc", 0x1E1E93BB},
     {"tex", 0x241F5DEB},
     {"thk", 0x62A68441},
-    {"ttb", 0x62A68441},     // dupe
+    {"ttb", 0x62A68441}, // dupe
     {"upa", 0x1AF35122},
     {"uut", 0x535D0BEE},
     {"visr", 0x530D12A5},
     {"way", 0x5F36B659},
     {"wbd", 0x41006DF2},
     {"wpn", 0x2141D3A9},
-    {"wpp", 0x2141D3A9},     // dupe
+    {"wpp", 0x2141D3A9}, // dupe
     {"zon", 0x1B520B68},
 };
 
-static const MtExtFixupStorage fixupSBSYD{
+static const MtExtFixupStorage fixups{
     /**/ //
     {0x0ECD7DF4, "scsr"},
     {0x2141D3A9, "wpn"},
@@ -159,4 +160,15 @@ static const MtExtFixupStorage fixupSBSYD{
     {0x714EC77C, "evs"},
 };
 
-static const MtExtensions extSBSYD{&extSBSYDCommon, &fixupSBSYD, Platform::PS3};
+static const TitleSupport suppPS3{
+    ARC_PS3_GENERIC,
+    ModSupport{0xD3},
+    TexSupport{0x9D},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::PS3, suppPS3};
+} // namespace MT_SBSYD
+
+static const MtExtensions extSBSYD{MT_SBSYD::extCommon, MT_SBSYD::fixups,
+                                   MT_SBSYD::supp, Platform::PS3};

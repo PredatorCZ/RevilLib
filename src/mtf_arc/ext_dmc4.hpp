@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extDMC4Common{
+namespace MT_DMC4 {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"anm", 0x55A8FB34},
     {"arc", 0x21034C90},
@@ -68,23 +69,44 @@ static const MtExtensionsStorage extDMC4Common{
     {"vib", 0xD7DA737},
 };
 
-static const MtExtensionsStorage extDMC4WinPC{
+static const MtExtensionsStorage extWinPC{
     {"rev_win", 0x7A038F4C},
     {"sngw", 0x3821B94D},
 };
 
-static const MtExtensionsStorage extDMC4WinPS3{
+static const MtExtensionsStorage extWinPS3{
     {"at3", 0x3821B94D},
     {"rev_ps3", 0x7A038F4C},
 };
 
-static const MtExtFixupStorage fixupDMC4{
+static const MtExtFixupStorage fixups{
     {0x2B93C4AD, "rut"},
 };
 
+static const TitleSupport suppWin{
+    ArcSupport{0x11, 0, false, true},
+    ModSupport{0x99},
+    TexSupport{0x70},
+    LmtSupport{49},
+};
+
+static const TitleSupport suppPS3{
+    ARC_PS3_GENERIC,
+    ModSupport{0x99},
+    TexSupport{0x66},
+    LmtSupport{49},
+};
+
+static const TitleSupports supp{
+    Platform::WinPC, suppWin, //
+    Platform::PS3, suppPS3,   //
+};
+} // namespace MT_DMC4
+
 static const MtExtensions extDMC4{
-    &extDMC4Common,                  //
-    Platform::WinPC, &extDMC4WinPC,  //
-    Platform::PS3,   &extDMC4WinPS3, //
-    &fixupDMC4,                      //
+    MT_DMC4::extCommon,                     //
+    MT_DMC4::fixups,                        //
+    MT_DMC4::supp,                          //
+    Platform::WinPC,    MT_DMC4::extWinPC,  //
+    Platform::PS3,      MT_DMC4::extWinPS3, //
 };

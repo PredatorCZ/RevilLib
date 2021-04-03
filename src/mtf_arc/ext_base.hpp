@@ -17,57 +17,60 @@
 
 #pragma once
 #include "datas/string_view.hpp"
-#include "datas/supercore.hpp"
-#include "revil/platform.hpp"
+#include "supp_base.hpp"
 #include <map>
 
 using MtExtensionsStorage = std::map<es::string_view, uint32>;
 using MtExtFixupStorage = std::map<uint32, es::string_view>;
-using namespace revil;
 
 struct MtExtensions {
   static constexpr size_t NUMSLOTS = 10;
   const MtExtensionsStorage *data[NUMSLOTS]{};
   const MtExtFixupStorage *fixups = nullptr;
+  const TitleSupports *support = nullptr;
 
   static size_t Index(Platform platform) {
     return static_cast<size_t>(platform);
   }
 
-  void Assign(Platform platform, const MtExtensionsStorage *storage) {
-    data[Index(platform)] = storage;
+  void Assign(Platform platform, const MtExtensionsStorage &storage) {
+    data[Index(platform)] = &storage;
   }
 
-  void Assign(const MtExtFixupStorage *storage) { fixups = storage; }
-
   template <class... type>
-  void Assign(Platform platform, const MtExtensionsStorage *storage,
+  void Assign(Platform platform, const MtExtensionsStorage &storage,
               type... types) {
     Assign(platform, storage);
     Assign(types...);
   }
 
+  void Assign(Platform platform) { data[Index(platform)] = data[0]; }
+
+  void Assign(const MtExtFixupStorage &storage) { fixups = &storage; }
+
   template <class... type>
-  MtExtensions(const MtExtensionsStorage *base, type... types) : data{base} {
+  void Assign(const MtExtFixupStorage &storage, type... types) {
+    Assign(storage);
     Assign(types...);
   }
 
-  MtExtensions(const MtExtensionsStorage *base, Platform basePlatform) {
-    data[0] = base;
-    data[static_cast<size_t>(basePlatform)] = base;
+  void Assign(const TitleSupports &storage) { support = &storage; }
+
+  template <class... type>
+  void Assign(const TitleSupports &storage, type... types) {
+    Assign(storage);
+    Assign(types...);
   }
 
-  MtExtensions(const MtExtensionsStorage *base,
-               const MtExtFixupStorage *fixups_, Platform basePlatform) {
-    data[0] = base;
-    fixups = fixups_;
-    data[static_cast<size_t>(basePlatform)] = base;
+  template <class... type>
+  MtExtensions(const MtExtensionsStorage &base, type... types) : data{&base} {
+    Assign(types...);
   }
 
   auto Get(Platform platform) const {
     const size_t index = Index(platform);
     if (index >= NUMSLOTS) {
-      throw std::out_of_range("Platform out of range.");
+      throw std::out_of_range("Platform id out of range.");
     }
     auto item = data[index];
 

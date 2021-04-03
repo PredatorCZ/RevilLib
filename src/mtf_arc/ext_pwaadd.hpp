@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extPWAADDCommon{
+namespace MT_PWAADD {
+static const MtExtensionsStorage extCommon{
     /**/ //
     {"ean", 0x4E397417},
     {"efl", 0x6D5AE854},
@@ -46,10 +47,20 @@ static const MtExtensionsStorage extPWAADDCommon{
     {"tex", 0x241F5DEB},
 };
 
-static const MtExtFixupStorage fixupPWAADD{
+static const MtExtFixupStorage fixups{
     {0x167DBBFF, "stqr"},
     {0x1BCC4966, "srqr"},
 };
 
-static const MtExtensions extPWAADD{&extPWAADDCommon, &fixupPWAADD,
-                                    Platform::N3DS};
+static const TitleSupport supp3DS{
+    ArcSupport{0x10},
+    ModSupport{0xE6},
+    TexSupport{0xA5},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS};
+} // namespace MT_PWAADD
+
+static const MtExtensions extPWAADD{MT_PWAADD::extCommon, MT_PWAADD::fixups,
+                                    MT_PWAADD::supp, Platform::N3DS};

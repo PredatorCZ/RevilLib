@@ -18,7 +18,8 @@
 #pragma once
 #include "ext_base.hpp"
 
-static const MtExtensionsStorage extDDONCommon{
+namespace MT_DDON {
+static const MtExtensionsStorage extCommon{
     {"abl", 0x67C828FE},
     {"acp", 0x79DAF969},
     {"ads", 0x7D0A5AAF},
@@ -304,7 +305,7 @@ static const MtExtensionsStorage extDDONCommon{
     {"zon", 0x1B520B68},
 };
 
-static const MtExtFixupStorage fixupDDON{
+static const MtExtFixupStorage fixups{
     /**/ //
     {0x0315E81F, "sdsr"},
     {0x07437CCE, "aser"},
@@ -322,4 +323,16 @@ static const MtExtFixupStorage fixupDDON{
     {0x7284DAF5, "qst"},
 };
 
-static const MtExtensions extDDON{&extDDONCommon, &fixupDDON, Platform::WinPC};
+static const TitleSupport suppWin{
+    ArcSupport{7, 15, false, false, true},
+    ModSupport{0xD2},
+    TexSupport{0x9D},
+    LmtSupport{67},
+};
+
+static const TitleSupports supp{Platform::WinPC, suppWin};
+
+} // namespace MT_DDON
+
+static const MtExtensions extDDON{MT_DDON::extCommon, MT_DDON::fixups,
+                                  MT_DDON::supp, Platform::WinPC};
