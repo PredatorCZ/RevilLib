@@ -36,6 +36,7 @@
 #include "ext_re6.hpp"
 #include "ext_rem.hpp"
 #include "ext_rer.hpp"
+#include "ext_sb3.hpp"
 #include "ext_sbsh.hpp"
 #include "ext_sbsyd.hpp"
 #include "revil/hashreg.hpp"
@@ -92,8 +93,10 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"resident_evil_6", &extRE6},
     {"resident_evil_mercenaries", &extREM},
     {"resident_evil_revelations", &extRER},
+    {"sb3", &extSB3},
     {"sbsh", &extSBSH},
     {"sbsyd", &extSBSYD},
+    {"sengoku_basara_3", &extSB3},
     {"sengoku_basara_samurai_heroes", &extSBSH},
     {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
 };
@@ -191,7 +194,7 @@ const TitleSupport *GetTitleSupport(es::string_view title, Platform platform) {
 static es::string_view shortNames[]{
     "dd",  "ddon", "dgs", "dgs2", "dmc4", "dr",     "ext",     "lp",
     "lp2", "mh3",  "mh4", "mhg",  "mhs",  "pwaadd", "pwaasoj", "re0",
-    "re5", "re6",  "rem", "rer",  "sbsh", "sbsyd",
+    "re5", "re6",  "rem", "rer",  "sbsh", "sbsyd",  "sb3",
 };
 
 void RE_EXTERN CheckCollisions() {
