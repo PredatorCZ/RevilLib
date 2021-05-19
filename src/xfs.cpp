@@ -141,8 +141,8 @@ struct XFSClassMember {
   template <class pad_type>
   XFSClassMember(XFSClassMemberRaw<pad_type> &&raw)
       : name(std::move(raw.memberName)), type(raw.type), flags(raw.flags),
-        size(raw.memberSize->Get<XFSSizeAndFlag::Size>()) {
-    if (raw.memberSize->Get<XFSSizeAndFlag::Unk>()) {
+        size(raw.memberSize->template Get<XFSSizeAndFlag::Size>()) {
+    if (raw.memberSize->template Get<XFSSizeAndFlag::Unk>()) {
       throw std::runtime_error("Some bullshit");
     }
   }
