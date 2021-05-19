@@ -40,6 +40,7 @@ class LMTImpl;
 class RE_EXTERN LMT {
 public:
   LMT();
+  LMT(LMT &&);
   ~LMT();
   LMTVersion Version() const;
   void Version(LMTVersion version, LMTArchType arch);

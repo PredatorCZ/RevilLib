@@ -48,6 +48,34 @@ REFLECTOR_CREATE(XFSType, ENUM, 2, CLASS, 8, //
                  _resource_ = 0x80           // 8+, custom?
 );
 
+struct XFSSizeAndFlag {
+  using Size = BitMemberDecl<0, 15>;
+  using Unk = BitMemberDecl<1, 1>;
+  using type = BitFieldType<uint16, Size, Unk>;
+  type data;
+
+  const type *operator->() const { return &data; }
+};
+
+struct XFSClassInfo {
+  using NumMembers = BitMemberDecl<0, 15>;
+  using Unk = BitMemberDecl<1, 17>;
+  using type = BitFieldType<uint32, NumMembers, Unk>;
+  type data;
+
+  const type *operator->() const { return &data; }
+};
+
+struct XFSMeta {
+  using Active = BitMemberDecl<0, 1>;
+  using LayoutIndex = BitMemberDecl<1, 15>;
+  using MetaIndex = BitMemberDecl<2, 16>;
+  using type = BitFieldType<uint32, Active, LayoutIndex, MetaIndex>;
+  type data;
+
+  const type *operator->() const { return &data; }
+};
+
 struct XFSHeaderBase {
   uint32 id;
   uint16 version;
@@ -71,14 +99,10 @@ struct XFSHeaderV1 : XFSHeaderBase {
 };
 
 template <class PadType> struct XFSClassMemberRaw {
-  using Size = BitMemberDecl<0, 15>;
-  using Unk = BitMemberDecl<1, 1>;
-  using SizeFlag = BitFieldType<uint16, Size, Unk>;
-
   std::string memberName;
   XFSType type;
   uint8 flags; // alignment flags??
-  SizeFlag memberSize;
+  XFSSizeAndFlag memberSize;
   PadType null[4];
 
   void Read(BinReaderRef rd) {
@@ -96,18 +120,14 @@ template <class PadType> struct XFSClassMemberRaw {
 };
 
 template <class PadType> struct XFSClass {
-  using NumMembers = BitMemberDecl<0, 15>;
-  using Unk = BitMemberDecl<1, 17>;
-  using Info = BitFieldType<uint32, NumMembers, Unk>;
-
   uint32 hash;
-  Info info;
+  XFSClassInfo info;
   std::vector<XFSClassMemberRaw<PadType>> members;
 
   void Read(BinReaderRef rd) {
     rd.Read(hash);
     rd.Read(info);
-    rd.ReadContainer(members, info.Get<NumMembers>());
+    rd.ReadContainer(members, info->Get<XFSClassInfo::NumMembers>());
   }
 };
 
@@ -121,10 +141,8 @@ struct XFSClassMember {
   template <class pad_type>
   XFSClassMember(XFSClassMemberRaw<pad_type> &&raw)
       : name(std::move(raw.memberName)), type(raw.type), flags(raw.flags),
-        size(raw.memberSize
-                 .template Get<typename XFSClassMemberRaw<pad_type>::Size>()) {
-    if (raw.memberSize
-            .template Get<typename XFSClassMemberRaw<pad_type>::Unk>()) {
+        size(raw.memberSize->template Get<XFSSizeAndFlag::Size>()) {
+    if (raw.memberSize->template Get<XFSSizeAndFlag::Unk>()) {
       throw std::runtime_error("Some bullshit");
     }
   }
@@ -340,18 +358,11 @@ void XFS::ToXML(pugi::xml_node node) const { pi->ToXML(node); }
 
 void XFS::RTTIToXML(pugi::xml_node node) const { pi->RTTIToXML(node); }
 
-struct XFSMeta {
-  using Active = BitMemberDecl<0, 1>;
-  using LayoutIndex = BitMemberDecl<1, 15>;
-  using MetaIndex = BitMemberDecl<2, 16>;
-  using type = BitFieldType<uint32, Active, LayoutIndex, MetaIndex>;
-};
-
 void XFSImpl::ReadData(BinReaderRef rd, XFSClassData **root) {
-  XFSMeta::type meta;
+  XFSMeta meta;
   rd.Read(meta);
 
-  if (!meta.Get<XFSMeta::Active>()) {
+  if (!meta->Get<XFSMeta::Active>()) {
     return;
   }
 
@@ -359,7 +370,7 @@ void XFSImpl::ReadData(BinReaderRef rd, XFSClassData **root) {
   const size_t strBegin = rd.Tell();
   rd.Read(chunkSize);
 
-  auto &&desc = rtti.at(meta.Get<XFSMeta::LayoutIndex>());
+  auto &&desc = rtti.at(meta->Get<XFSMeta::LayoutIndex>());
   XFSClassData classData;
   classData.rtti = &desc;
 
@@ -720,7 +731,7 @@ template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef rd) {
   std::transform(std::make_move_iterator(layouts.begin()),
                  std::make_move_iterator(layouts.end()),
                  std::back_inserter(main.rtti), [](auto &&item) {
-                   if (item.info.template Get<XFSClass<uint32>::Unk>()) {
+                   if (item.info->template Get<XFSClassInfo::Unk>()) {
                      throw std::runtime_error("Some bullshit");
                    }
 

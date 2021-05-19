@@ -21,6 +21,7 @@
 REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);
 
 LMT::LMT() : pi(std::make_unique<LMTImpl>()) {}
+LMT::LMT(LMT &&) = default;
 LMT::~LMT() = default;
 
 LMTVersion LMT::Version() const { return pi->props.version; }

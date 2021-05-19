@@ -21,6 +21,9 @@
 #include <map>
 
 REAsset::~REAsset() = default;
+REAsset::REAsset() = default;
+REAsset::REAsset(revil::REAsset &&) = default;
+
 
 void REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);

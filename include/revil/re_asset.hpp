@@ -27,6 +27,8 @@ class REAssetImpl;
 class RE_EXTERN REAsset {
 public:
   ~REAsset();
+  REAsset();
+  REAsset(REAsset &&);
   void Load(const std::string &fileName);
   void Load(BinReaderRef rd);
 

@@ -25,8 +25,8 @@
 REFLECTOR_CREATE((AnimEvents<esPointerX86>), 2, VARNAMES, TEMPLATE, eventRemaps)
 REFLECTOR_CREATE((AnimEvents<esPointerX64>), 2, VARNAMES, TEMPLATE, eventRemaps)
 
-template class AnimEvents<esPointerX64>;
-template class AnimEvents<esPointerX86>;
+template struct AnimEvents<esPointerX64>;
+template struct AnimEvents<esPointerX86>;
 
 template <class C, size_t numGroups>
 class AnimEvents_shared : public LMTAnimationEventV1_Internal {
