@@ -67,6 +67,7 @@ if(BUILD_STATIC_LIBS)
     revil-objects
     NO_VERINFO
     NO_PROJECT_H)
+    install(TARGETS revil-static DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 if(BUILD_SHARED_LIBS)
@@ -84,4 +85,5 @@ if(BUILD_SHARED_LIBS)
     AUTHOR
     "Lukas Cone"
     NO_PROJECT_H)
+    install(TARGETS revil DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
