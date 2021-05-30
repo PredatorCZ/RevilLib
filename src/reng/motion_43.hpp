@@ -43,12 +43,19 @@ struct REMimMaxBounds {
   Vector4 max;
 };
 
+struct KnotSpan {
+  size_t offset;
+  int32 first;
+  int32 second;
+};
+
 struct RETrackController {
   using Ptr = std::unique_ptr<RETrackController>;
   virtual void Assign(RETrackCurve43 *iCurve) = 0;
   virtual void Assign(RETrackCurve65 *iCurve) = 0;
   virtual void Assign(RETrackCurve78 *iCurve) = 0;
   virtual uint16 GetFrame(uint32 id) const = 0;
+  virtual KnotSpan GetSpan(int32 frame) const = 0;
   virtual void Evaluate(uint32 id, Vector4A16 &out) const = 0;
   virtual ~RETrackController() {}
 };

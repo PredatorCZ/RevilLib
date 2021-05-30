@@ -16,8 +16,8 @@
 */
 
 #include "datas/master_printer.hpp"
-#include "motion_78.hpp"
 #include "datas/vectors_simd.hpp"
+#include "motion_78.hpp"
 #include <unordered_map>
 
 struct RETrackController_internal : RETrackController {
@@ -46,16 +46,37 @@ struct RETrackController_internal : RETrackController {
   }
 
   virtual void Assign(char *data) = 0;
-  void Assign(RETrackCurve43 *iCurve) { Assign_(iCurve); }
-  void Assign(RETrackCurve65 *iCurve) { Assign_(iCurve); }
-  void Assign(RETrackCurve78 *iCurve) { Assign_(iCurve); }
+  void Assign(RETrackCurve43 *iCurve) override { Assign_(iCurve); }
+  void Assign(RETrackCurve65 *iCurve) override { Assign_(iCurve); }
+  void Assign(RETrackCurve78 *iCurve) override { Assign_(iCurve); }
 
-  uint16 GetFrame(uint32 id) const {
+  uint16 GetFrame(uint32 id) const override {
     if (frameType == FrameType_short) {
       return reinterpret_cast<uint16 *>(frames)[id];
     } else {
       return frames[id];
     }
+  }
+
+  KnotSpan GetSpan(int32 frame) const override {
+    KnotSpan retval;
+    auto findSpan = [&](auto frames) {
+      auto begin = frames;
+      auto end = begin + numFrames;
+      typename std::remove_pointer<decltype(frames)>::type frame_ = frame;
+      auto lb = std::lower_bound(begin, end, frame_);
+      retval.offset = std::distance(begin, lb);
+      retval.second = *lb;
+      retval.first = lb == begin ? *lb : *(lb - 1);
+    };
+
+    if (frameType == FrameType_short) {
+      findSpan(reinterpret_cast<const uint16 *>(frames));
+    } else {
+      findSpan(frames);
+    }
+
+    return retval;
   }
 };
 
@@ -96,9 +117,9 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
     const uint16 &retreived = dataStorage[id];
-    out = Vector(static_cast<float>(retreived & componentMask),
-                 static_cast<float>((retreived >> 5) & componentMask),
-                 static_cast<float>((retreived >> 10) & componentMask));
+    IVector4A16 data(retreived, retreived >> 5, retreived >> 10, 0);
+
+    out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
   }
 };
@@ -123,11 +144,10 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
-    const uint32 &retreived = dataStorage[id];
-    out =
-        Vector4A16(static_cast<float>(retreived & componentMask),
-                   static_cast<float>((retreived >> 10) & componentMask),
-                   static_cast<float>((retreived >> 20) & componentMask), 0.0f);
+    const uint32 retreived = dataStorage.at(id);
+    IVector4A16 data(retreived, retreived >> 10, retreived >> 20, 0);
+
+    out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
   }
 };
@@ -153,10 +173,9 @@ struct BiLinearVector3_21bitController : RETrackController_internal {
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
     const uint64 &retreived = dataStorage[id];
-    out =
-        Vector4A16(static_cast<float>(retreived & componentMask),
-                   static_cast<float>((retreived >> 21) & componentMask),
-                   static_cast<float>((retreived >> 42) & componentMask), 0.0f);
+    IVector4A16 data(retreived, retreived >> 21, retreived >> 42, 0);
+
+    out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
   }
 };
@@ -186,11 +205,8 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
         (static_cast<uint64>(dataStorage[id].data[2]) << 16) |
         (static_cast<uint64>(dataStorage[id].data[3]) << 8) |
         (static_cast<uint64>(dataStorage[id].data[4]) << 0);
-
-    out =
-        Vector4A16(static_cast<float>(retreived & componentMask),
-                   static_cast<float>((retreived >> 13) & componentMask),
-                   static_cast<float>((retreived >> 26) & componentMask), 0.0f);
+    IVector4A16 data(retreived, retreived >> 13, retreived >> 26, 0);
+    out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
@@ -248,10 +264,9 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
         (static_cast<uint64>(dataStorage[id].data[5]) << 8) |
         (static_cast<uint64>(dataStorage[id].data[6]) << 0);
 
-    out =
-        Vector4A16(static_cast<float>(retreived & componentMask),
-                   static_cast<float>((retreived >> 18) & componentMask),
-                   static_cast<float>((retreived >> 36) & componentMask), 0.0f);
+    IVector4A16 data(retreived, retreived >> 18, retreived >> 36, 0);
+
+    out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
