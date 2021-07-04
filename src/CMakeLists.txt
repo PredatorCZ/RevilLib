@@ -24,7 +24,7 @@ if(BUILD_STATIC_OBJECTS OR (MSVC AND BUILD_SHARED_OBJECTS))
   target_include_directories(revil-objects PUBLIC ../include)
 
   set_precore_sources(revil-objects master_printer matrix44 reflector
-                      reflector_xml no_rtti)
+                      reflector_xml no_rtti uni_format)
 endif()
 
 if(BUILD_SHARED_OBJECTS)
@@ -43,7 +43,7 @@ if(BUILD_SHARED_OBJECTS)
 
   target_include_directories(revil-shared PUBLIC ../include)
   set_precore_sources(revil-shared master_printer matrix44 reflector
-                      reflector_xml no_rtti)
+                      reflector_xml no_rtti uni_format)
 
   if(PUGI_AS_SHARED)
     target_link_libraries(revil-shared pugixml)

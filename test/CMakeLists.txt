@@ -22,3 +22,20 @@ if(ODR_TEST)
   test_odr(PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../include)
   set_precore_sources(test_odr)
 endif()
+
+build_target(
+  NAME
+  arc7
+  TYPE
+  APP
+  SOURCES
+  arc7.cpp
+  LINKS
+  revil-objects
+  INCLUDES
+  ../src
+  ~/RevilToolset/3rd_party/gltf
+  NO_PROJECT_H
+  NO_VERINFO)
+
+  set_precore_sources(arc7 directory_scanner)
