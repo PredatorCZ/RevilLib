@@ -36,4 +36,7 @@ using TitleCallback = void (*)(es::string_view);
 void RE_EXTERN GetTitles(TitleCallback cb);
 using PrintFunc = void(*)(const char *);
 void RE_EXTERN LinkLogging(PrintFunc func, bool useColor);
+
+uint32 RE_EXTERN MTHashV1(es::string_view text);
+uint32 RE_EXTERN MTHashV2(es::string_view text);
 }; // namespace revil
