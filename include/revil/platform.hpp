@@ -35,6 +35,7 @@ struct ArcSupport {
   bool allowRaw = false;
   bool xmemOnly = false;
   bool encrypted = false;
+  bool extendedFilePath = false;
 };
 
 struct ModSupport {

@@ -29,6 +29,7 @@
 #include "ext_mh4.hpp"
 #include "ext_mhg.hpp"
 #include "ext_mhs.hpp"
+#include "ext_mhs2.hpp"
 #include "ext_pwaadd.hpp"
 #include "ext_pwaasoj.hpp"
 #include "ext_re0.hpp"
@@ -74,6 +75,7 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"mh4", &extMH4},
     {"mhg", &extMHG},
     {"mhs", &extMHS},
+    {"mhs2", &extMHS2},
     {"mhx", &extMHG},
     {"mhxx", &extMHG},
     {"monster_hunter_3", &extMH3},
@@ -81,6 +83,7 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"monster_hunter_cross", &extMHG},
     {"monster_hunter_double_cross", &extMHG},
     {"monster_hunter_generations", &extMHG},
+    {"monster_hunter_stories_2", &extMHS2},
     {"monster_hunter_stories", &extMHS},
     {"monster_hunter_x", &extMHG},
     {"monster_hunter_xx", &extMHG},

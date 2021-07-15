@@ -54,6 +54,14 @@ struct ARCFile {
   }
 };
 
+struct ARCExtendedFile {
+  char fileName[0x80];
+  uint32 typeHash;
+  uint32 compressedSize;
+  ARCFileSize uncompressedSize;
+  uint32 offset;
+};
+
 static constexpr uint32 ARCID = CompileFourCC("ARC");
 static constexpr uint32 CRAID = CompileFourCC("\0CRA");
 
@@ -71,6 +79,7 @@ struct ARC {
 };
 
 using ARCFiles = std::vector<ARCFile>;
+using ARCExtendedFiles = std::vector<ARCExtendedFile>;
 
 auto ReadARC(BinReaderRef rd) {
   ARC hdr;
@@ -88,6 +97,22 @@ auto ReadARC(BinReaderRef rd) {
   }
 
   ARCFiles files;
+  rd.ReadContainer(files, hdr.numFiles);
+
+  return std::make_tuple(hdr, files);
+}
+
+auto ReadExtendedARC(BinReaderRef rd) {
+  ARC hdr;
+  rd.Read(hdr);
+
+  if (hdr.id != ARCID) {
+    throw es::InvalidHeaderError(hdr.id);
+  }
+
+  rd.Skip(-4);
+
+  ARCExtendedFiles files;
   rd.ReadContainer(files, hdr.numFiles);
 
   return std::make_tuple(hdr, files);

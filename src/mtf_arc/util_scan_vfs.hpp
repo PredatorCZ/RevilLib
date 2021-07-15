@@ -42,7 +42,9 @@ void ScanVFS(const std::string &path, const registry &reg, Platform platform,
       rd.Read(id);
       rd.Seek(id == SFHID ? 16 : 0);
       ARC hdr;
-      ARCFiles items;
+      using items_type_ref = decltype(std::get<1>(readFc(rd)));
+      using files_type = typename std::remove_reference<items_type_ref>::type;
+      files_type items;
       std::tie(hdr, items) = readFc(rd);
 
       for (auto &i : items) {
