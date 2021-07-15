@@ -39,9 +39,9 @@ struct MtExtensions {
 
   template <class... type>
   void Assign(Platform platform, const MtExtensionsStorage &storage,
-              type... types) {
+              type&&... types) {
     Assign(platform, storage);
-    Assign(types...);
+    Assign(std::forward<type>(types)...);
   }
 
   void Assign(Platform platform) { data[Index(platform)] = data[0]; }
@@ -49,22 +49,22 @@ struct MtExtensions {
   void Assign(const MtExtFixupStorage &storage) { fixups = &storage; }
 
   template <class... type>
-  void Assign(const MtExtFixupStorage &storage, type... types) {
+  void Assign(const MtExtFixupStorage &storage, type&&... types) {
     Assign(storage);
-    Assign(types...);
+    Assign(std::forward<type>(types)...);
   }
 
   void Assign(const TitleSupports &storage) { support = &storage; }
 
   template <class... type>
-  void Assign(const TitleSupports &storage, type... types) {
+  void Assign(const TitleSupports &storage, type&&... types) {
     Assign(storage);
-    Assign(types...);
+    Assign(std::forward<type>(types)...);
   }
 
   template <class... type>
-  MtExtensions(const MtExtensionsStorage &base, type... types) : data{&base} {
-    Assign(types...);
+  MtExtensions(const MtExtensionsStorage &base, type&&... types) : data{&base} {
+    Assign(std::forward<type>(types)...);
   }
 
   auto Get(Platform platform) const {

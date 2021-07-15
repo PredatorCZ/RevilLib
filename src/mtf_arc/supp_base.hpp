@@ -33,15 +33,14 @@ struct TitleSupports {
   }
 
   template <class... type>
-  void Assign(Platform platform, const TitleSupport &storage,
-              type... types) {
+  void Assign(Platform platform, const TitleSupport &storage, type&&... types) {
     Assign(platform, storage);
-    Assign(types...);
+    Assign(std::forward<type>(types)...);
   }
 
   template <class... type>
-  TitleSupports(type... types) {
-    Assign(types...);
+  TitleSupports(type&&... types) {
+    Assign(std::forward<type>(types)...);
   }
 
   auto Get(Platform platform) const {

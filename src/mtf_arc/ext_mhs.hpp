@@ -208,7 +208,7 @@ static const MtExtensionsStorage extCommon{
     {"sqd", 0x4ED7C110},
     {"srcd", 0x2074FB1F},
     {"srqr", 0x1BCC4966},
-    {"srqr", 0x1BCC4966}, // dupe
+    {"srq", 0x1BCC4966}, // dupe
     {"ssd", 0x125F7431},
     {"ssdc", 0x3C56A1F1},
     {"ssdsc", 0x44DC7515},
