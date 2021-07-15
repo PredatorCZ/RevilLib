@@ -23,7 +23,7 @@ static const MtExtensionsStorage extCommon{
     /**/ //
     {"adpcm", 0x79C47B59},
     {"asd", 0x3565348B},
-    {"bccam", 0x37CBA824},
+    {"bccmd", 0x37CBA824},
     {"btat", 0x1688C822},
     {"ccinfo", 0x18D25FEC},
     {"ccl", 0x0026E7FF},
