@@ -38,7 +38,7 @@ public:
   REMotionBone *bone;
   REMotionBoneWrap *parent = nullptr;
 
-  TransformType TMType() const override { return TMTYPE_RTS; }
+  uni::TransformType TMType() const override { return uni::TMTYPE_RTS; }
 
   void GetTM(uni::RTSValue &out) const override {
     out.rotation = bone->rotation;

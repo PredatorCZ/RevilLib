@@ -20,7 +20,7 @@
 #include "supp_base.hpp"
 #include <map>
 
-using MtExtensionsStorage = std::map<es::string_view, uint32>;
+using MtExtensionsStorage = std::multimap<es::string_view, uint32>;
 using MtExtFixupStorage = std::map<uint32, es::string_view>;
 
 struct MtExtensions {

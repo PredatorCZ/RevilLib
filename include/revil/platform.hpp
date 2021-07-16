@@ -40,6 +40,7 @@ struct ArcSupport {
 
 struct ModSupport {
   uint16 version = 0;
+  bool x64 = false;
 };
 
 struct TexSupport {
