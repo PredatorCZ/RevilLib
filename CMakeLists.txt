@@ -23,17 +23,11 @@ option(BUILD_STATIC_OBJECTS "Builds revil-objects target." ON)
 option(BUILD_SHARED_OBJECTS "Builds revil-shared target." OFF)
 option(BUILD_STATIC_LIBS "Builds revil-static target." OFF)
 option(BUILD_SHARED_LIBS "Builds revil target." OFF)
-option(PUGI_AS_SHARED "pugixml target will be shared library instead of being embedded." OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 add_subdirectory(3rd_party/PreCore)
 include(targetex)
 include(chartype)
-
-set(BUILD_SHARED_LIBS_ ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS ${PUGI_AS_SHARED})
-add_subdirectory(3rd_party/pugixml)
-set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_})
 
 add_subdirectory(src)
 

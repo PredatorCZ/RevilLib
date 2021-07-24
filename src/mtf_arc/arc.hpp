@@ -20,6 +20,7 @@
 #include "datas/binreader_stream.hpp"
 #include "datas/except.hpp"
 #include <tuple>
+#include <vector>
 
 struct ARCFileSize {
   using Size = BitMemberDecl<0, 29>;

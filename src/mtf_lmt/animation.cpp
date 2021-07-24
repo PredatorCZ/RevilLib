@@ -22,6 +22,7 @@
 #include "datas/reflector_xml.hpp"
 #include "event.hpp"
 #include "fixup_storage.hpp"
+#include "pugixml.hpp"
 
 #include <map>
 
@@ -53,8 +54,7 @@ struct AnimTraitsV2 {
 /***************************** ANIM_V0 **********************************/
 /************************************************************************/
 
-template <class AnimTraits>
-struct AnimV0 {
+template <class AnimTraits> struct AnimV0 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 1;
@@ -112,8 +112,7 @@ struct AnimV0 {
 /***************************** ANIM_V1 **********************************/
 /************************************************************************/
 
-template <class AnimTraits>
-struct AnimV1 {
+template <class AnimTraits> struct AnimV1 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 1;
@@ -174,8 +173,7 @@ struct AnimV1 {
 REFLECTOR_CREATE(AnimV2Flags, ENUM, 2, CLASS, 32, Events = 0x800000,
                  FLoatTracks = 0x40000, Unk00 = 0x1000000, Unk01 = 0x1)
 
-template <class AnimTraits>
-struct AnimV2 {
+template <class AnimTraits> struct AnimV2 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 2;
@@ -230,7 +228,8 @@ struct AnimV2 {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(AnimV2, tracks), offsetof(AnimV2, eventTable),
+        offsetof(AnimV2, tracks),
+        offsetof(AnimV2, eventTable),
         offsetof(AnimV2, floatTracks),
     };
 
@@ -242,8 +241,7 @@ struct AnimV2 {
 /***************************** ANIM_V3 **********************************/
 /************************************************************************/
 
-template <class AnimTraits>
-struct AnimV3 {
+template <class AnimTraits> struct AnimV3 {
   using Traits = AnimTraits;
 
   static constexpr size_t VERSION = 3;
@@ -287,7 +285,8 @@ struct AnimV3 {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(AnimV3, tracks), offsetof(AnimV3, eventTable),
+        offsetof(AnimV3, tracks),
+        offsetof(AnimV3, eventTable),
     };
 
     return ptrs;
@@ -347,7 +346,7 @@ public:
       size_t curTrack = 0;
       do {
         storage.emplace_back(LMTTrack::Create(props));
-        auto buffa = static_cast<char*>(props.dataStart);
+        auto buffa = static_cast<char *>(props.dataStart);
         props.dataStart = buffa + storage.back()->Stride();
       } while (++curTrack < data->numTracks);
     }

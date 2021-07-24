@@ -18,6 +18,7 @@
 #include "float_track.hpp"
 #include "datas/reflector_xml.hpp"
 #include "fixup_storage.hpp"
+#include "pugixml.hpp"
 
 #include <array>
 #include <map>
@@ -25,8 +26,7 @@
 REFLECTOR_CREATE(FloatTrackComponentRemap, ENUM, 2, CLASS, 8, NONE, X_COMP,
                  Y_COMP, Z_COMP);
 
-template <template <class C> class PtrType>
-struct FloatTrack {
+template <template <class C> class PtrType> struct FloatTrack {
   FloatTrackComponentRemap componentRemaps[4];
   uint32 numFloats;
   PtrType<FloatFrame> frames;

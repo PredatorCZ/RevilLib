@@ -8,7 +8,7 @@ if(BUILD_SHARED_LIBS)
   set(BUILD_SHARED_OBJECTS ON)
 endif()
 
-if(BUILD_STATIC_OBJECTS OR (MSVC AND BUILD_SHARED_OBJECTS))
+if(BUILD_STATIC_OBJECTS)
   build_target(
     NAME
     revil-objects
@@ -17,14 +17,24 @@ if(BUILD_STATIC_OBJECTS OR (MSVC AND BUILD_SHARED_OBJECTS))
     SOURCES
     ${CORE_SOURCE_FILES}
     LINKS
-    pugixml
+    pugixml-objects
     NO_VERINFO
     NO_PROJECT_H)
 
   target_include_directories(revil-objects PUBLIC ../include)
 
-  set_precore_sources(revil-objects master_printer matrix44 reflector
-                      reflector_xml no_rtti)
+  set(PUGI_STATIC_OBJECTS
+      ON
+      CACHE BOOL "" FORCE)
+
+  set_precore_sources(
+    revil-objects
+    master_printer
+    matrix44
+    reflector
+    reflector_xml
+    no_rtti
+    uni_format)
 endif()
 
 if(BUILD_SHARED_OBJECTS)
@@ -42,14 +52,28 @@ if(BUILD_SHARED_OBJECTS)
     NO_PROJECT_H)
 
   target_include_directories(revil-shared PUBLIC ../include)
-  set_precore_sources(revil-shared master_printer matrix44 reflector
-                      reflector_xml no_rtti)
 
-  if(PUGI_AS_SHARED)
+  if(PC_SHARED_LIB)
+    target_link_libraries(revil-shared precore)
+  else()
+    set_precore_sources(
+      revil-shared
+      master_printer
+      matrix44
+      reflector
+      reflector_xml
+      no_rtti
+      uni_format)
+  endif()
+
+  set(PUGI_SHARED_OBJECTS
+      ON
+      CACHE BOOL "" FORCE)
+
+  if(PUGI_SHARED_LIBS)
     target_link_libraries(revil-shared pugixml)
   else()
-    target_include_directories(revil-shared PRIVATE ../3rd_party/pugixml/src)
-    target_sources(revil-shared PRIVATE ../3rd_party/pugixml/src/pugixml.cpp)
+    target_link_libraries(revil-shared pugixml-shared)
   endif()
 endif()
 
@@ -63,11 +87,10 @@ if(BUILD_STATIC_LIBS)
     TYPE
     STATIC
     LINKS
-    pugixml
     revil-objects
     NO_VERINFO
     NO_PROJECT_H)
-    install(TARGETS revil-static DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS revil-static DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 if(BUILD_SHARED_LIBS)
@@ -85,5 +108,8 @@ if(BUILD_SHARED_LIBS)
     AUTHOR
     "Lukas Cone"
     NO_PROJECT_H)
-    install(TARGETS revil DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+  target_compile_definitions(revil INTERFACE RE_IMPORT)
+  install(TARGETS revil LIBRARY NAMELINK_SKIP
+                                DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

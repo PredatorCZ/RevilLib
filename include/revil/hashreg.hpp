@@ -25,7 +25,7 @@
 namespace revil {
 using PlatformFlags = es::Flags<Platform>;
 PlatformFlags RE_EXTERN GetPlatformSupport(es::string_view title);
-const TitleSupport * RE_EXTERN GetTitleSupport(es::string_view title, Platform platform);
+const TitleSupport RE_EXTERN *  GetTitleSupport(es::string_view title, Platform platform);
 es::string_view RE_EXTERN GetExtension(uint32 hash, es::string_view title = {},
                                        Platform platform = Platform::WinPC);
 es::string_view RE_EXTERN GetClassName(uint32 hash,

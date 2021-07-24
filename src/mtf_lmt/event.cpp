@@ -18,6 +18,7 @@
 #include "event.hpp"
 #include "datas/reflector_xml.hpp"
 #include "fixup_storage.hpp"
+#include "pugixml.hpp"
 
 #include <array>
 #include <map>

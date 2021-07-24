@@ -19,6 +19,7 @@
 #include "datas/deleter_hybrid.hpp"
 #include "datas/reflector_xml.hpp"
 #include "fixup_storage.hpp"
+#include "pugixml.hpp"
 
 #include <map>
 #include <memory>
@@ -41,8 +42,7 @@ REFLECTOR_CREATE(TrackV2BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
                  BiLinearRotationQuatYW_14bit, BiLinearRotationQuatZW_14bit,
                  BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)
 
-template <template <class C> class PtrType>
-struct TrackV0 {
+template <template <class C> class PtrType> struct TrackV0 {
   static constexpr uint32 SUBVERSION = 0;
   static constexpr size_t NUMPOINTERS = 1;
 
@@ -89,8 +89,7 @@ template <> struct BufferVersion<TrackV1_5BufferTypes> {
   static constexpr uint32 value = 1;
 };
 
-template <template <class C> class PtrType, class BufferType>
-struct TrackV1 {
+template <template <class C> class PtrType, class BufferType> struct TrackV1 {
   static constexpr uint32 SUBVERSION = BufferVersion<BufferType>::value;
   static constexpr size_t NUMPOINTERS = 1;
 
@@ -131,8 +130,7 @@ struct TrackV1 {
   }
 };
 
-template <template <class C> class PtrType>
-struct TrackV2 {
+template <template <class C> class PtrType> struct TrackV2 {
   static constexpr uint32 SUBVERSION = 2;
   static constexpr size_t NUMPOINTERS = 2;
 
@@ -170,15 +168,15 @@ struct TrackV2 {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(TrackV2, bufferOffset), offsetof(TrackV2, extremes),
+        offsetof(TrackV2, bufferOffset),
+        offsetof(TrackV2, extremes),
     };
 
     return ptrs;
   }
 };
 
-template <template <class C> class PtrType>
-struct TrackV3 {
+template <template <class C> class PtrType> struct TrackV3 {
   static constexpr uint32 SUBVERSION = 2;
   static constexpr size_t NUMPOINTERS = 2;
 
@@ -218,7 +216,8 @@ struct TrackV3 {
 
   static const size_t *Pointers() {
     static const size_t ptrs[]{
-        offsetof(TrackV3, bufferOffset), offsetof(TrackV3, extremes),
+        offsetof(TrackV3, bufferOffset),
+        offsetof(TrackV3, extremes),
     };
 
     return ptrs;
