@@ -19,8 +19,10 @@
 
 void REMotion458::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
-  tracks.Fixup(masterBuffer);
-  animationName.Fixup(masterBuffer);
+
+  if (!es::FixupPointers(masterBuffer, ptrStore, tracks, animationName)) {
+    return;
+  }
 
   for (uint32 b = 0; b < numTracks; b++) {
     tracks[b].Fixup(masterBuffer);

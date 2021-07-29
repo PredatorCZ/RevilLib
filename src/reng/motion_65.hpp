@@ -37,6 +37,7 @@ using REMotion65 = REMotion_t<REMotionTrack65>;
 
 class REMotion65Asset final : public REMotion43Asset {
 public:
+  using REMotion43Asset::REMotion43Asset;
   REMotion65 &Get() { return REAssetBase::Get<REMotion65>(this->buffer); }
   const REMotion65 &Get() const {
     return REAssetBase::Get<const REMotion65>(this->buffer);

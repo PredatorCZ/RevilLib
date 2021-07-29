@@ -27,7 +27,7 @@ template <class registry, class reader>
 void ScanVFS(const std::string &path, const registry &reg, Platform platform,
              reader readFc) {
   DirectoryScanner scan;
-  scan.AddFilter(".arc");
+  scan.AddFilter(es::string_view(".arc"));
   scan.Scan(path);
 
   std::map<uint32, const std::string *> newHashes;

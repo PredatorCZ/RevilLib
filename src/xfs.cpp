@@ -9,6 +9,7 @@
 #include "pugixml.hpp"
 #include "revil/hashreg.hpp"
 #include <deque>
+#include <vector>
 
 //#define XFS_DEBUG
 
@@ -22,30 +23,31 @@ using namespace revil;
 
 struct XFSClassMember;
 
-REFLECTOR_CREATE(XFSType, ENUM, 2, CLASS, 8, //
-                 invalid_,                   //
-                 class_,                     //
-                 classref_,                  //
-                 bool_,                      //
-                 u8_,                        //
-                 u16_,                       //
-                 u32_,                       //
-                 u64_,                       //
-                 s8_,                        //
-                 s16_,                       //
-                 s32_,                       //
-                 s64_,                       //
-                 f32_,                       //
-                 string_ = 14,               //
-                 color_,                     //
-                 point_,                     //
-                 size_,                      //
-                 rect_,                      // 8+ rectangle?
-                 _matrix_,                   //
-                 vector4_,                   //
-                 _vector4_,                  // colour
-                 vector3_ = 35,              //
-                 _resource_ = 0x80           // 8+, custom?
+MAKE_ENUM(ENUMSCOPE(class XFSType
+                    : uint8, XFSType), //
+          EMEMBER(invalid_),           //
+          EMEMBER(class_),             //
+          EMEMBER(classref_),          //
+          EMEMBER(bool_),              //
+          EMEMBER(u8_),                //
+          EMEMBER(u16_),               //
+          EMEMBER(u32_),               //
+          EMEMBER(u64_),               //
+          EMEMBER(s8_),                //
+          EMEMBER(s16_),               //
+          EMEMBER(s32_),               //
+          EMEMBER(s64_),               //
+          EMEMBER(f32_),               //
+          EMEMBERVAL(string_, 14),     //
+          EMEMBER(color_),             //
+          EMEMBER(point_),             //
+          EMEMBER(size_),              //
+          EMEMBER(rect_),              // 8+ rectangle?
+          EMEMBER(_matrix_),           //
+          EMEMBER(vector4_),           //
+          EMEMBER(_vector4_),          // colour
+          EMEMBERVAL(vector3_, 35),    //
+          EMEMBERVAL(_resource_, 0x80) // 8+, custom?
 );
 
 struct XFSSizeAndFlag {
@@ -148,7 +150,7 @@ struct XFSClassMember {
   }
 };
 
-REFLECTOR_CREATE(XFSClassMember, 1, VARNAMES, name, type, flags);
+REFLECT(CLASS(XFSClassMember), MEMBER(name), MEMBER(type), MEMBER(flags));
 
 struct XFSClassDesc {
   uint32 hash;
@@ -556,17 +558,24 @@ void XFSImpl::RTTIToXML(pugi::xml_node node) {
 
 void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
   static const auto refEnum = GetReflectedEnum<XFSType>();
-  char enumBuffer[0x10]{};
 
   for (auto &m : item.members) {
-    auto name = refEnum.find(static_cast<uint64>(m.rtti->type));
-    memcpy(enumBuffer, name.data(), name.size() - 1);
-    enumBuffer[name.size() - 1] = 0;
+    auto name = [&] {
+      const size_t numEns = refEnum->numMembers;
+
+      for (size_t i = 0; i < numEns; i++) {
+        if (refEnum->values[i] == static_cast<uint64>(m.rtti->type)) {
+          return refEnum->names[i];
+        }
+      }
+
+      return "__UNREGISTERED__";
+    }();
 
     if (m.numItems > 1) {
       auto cNode = node.append_child("array");
       cNode.append_attribute("name").set_value(m.rtti->name.data());
-      cNode.append_attribute("type").set_value(enumBuffer);
+      cNode.append_attribute("type").set_value(name);
       cNode.append_attribute("count").set_value(m.numItems);
 
       switch (m.rtti->type) {
@@ -575,7 +584,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         auto adata =
             reinterpret_cast<const XFSClassData *const *>(m.data.asPointer);
         for (size_t i = 0; i < m.numItems; i++) {
-          auto aNode = cNode.append_child(enumBuffer);
+          auto aNode = cNode.append_child(name);
           auto found = std::find_if(
               dataStore.begin(), dataStore.end(),
               [adata, i](auto &value) { return &value == adata[i]; });
@@ -591,7 +600,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         auto adata = reinterpret_cast<const uint8 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
-          auto aNode = cNode.append_child(enumBuffer);
+          auto aNode = cNode.append_child(name);
           aNode.append_attribute("value").set_value(adata[i]);
         }
         break;
@@ -600,7 +609,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         throw std::runtime_error("Unhandled xml array type");
       }
     } else if (m.numItems == 1) {
-      auto cNode = node.append_child(enumBuffer);
+      auto cNode = node.append_child(name);
       cNode.append_attribute("name").set_value(m.rtti->name.data());
       auto value = cNode.append_attribute("value");
 

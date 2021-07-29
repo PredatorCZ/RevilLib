@@ -16,8 +16,8 @@
 */
 
 #pragma once
-#include "datas/bitfield.hpp"
 #include "datas/binreader_stream.hpp"
+#include "datas/bitfield.hpp"
 #include "datas/except.hpp"
 #include <tuple>
 #include <vector>
@@ -66,17 +66,20 @@ struct ARCExtendedFile {
 static constexpr uint32 ARCID = CompileFourCC("ARC");
 static constexpr uint32 CRAID = CompileFourCC("\0CRA");
 
-struct ARC {
+struct ARCBase {
   uint32 id = ARCID;
   uint16 version = 7;
   uint16 numFiles;
-  uint32 LZXTag = 0;
 
   void SwapEndian() {
     FByteswapper(id);
     FByteswapper(version);
     FByteswapper(numFiles);
   }
+};
+
+struct ARC : ARCBase {
+  uint32 LZXTag = 0;
 };
 
 using ARCFiles = std::vector<ARCFile>;

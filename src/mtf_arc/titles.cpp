@@ -125,7 +125,7 @@ const MtExtFixupStorage *GetFixups(es::string_view title) {
 
 namespace revil {
 void LinkLogging(PrintFunc func, bool useColor) {
-  printer.AddPrinterFunction(func, useColor);
+  es::print::AddPrinterFunction(func, useColor);
 }
 
 void GetTitles(TitleCallback cb) {
@@ -143,9 +143,8 @@ uint32 GetHash(es::string_view extension, es::string_view title,
   }
 
   auto foundSec = found->second;
-  uint32 retVal = foundSec->GetHash(extension, platform);
 
-  if (retVal) {
+  if (uint32 retVal = foundSec->GetHash(extension, platform); retVal) {
     return retVal;
   }
 

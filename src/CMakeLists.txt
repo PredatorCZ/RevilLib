@@ -23,10 +23,6 @@ if(BUILD_STATIC_OBJECTS)
 
   target_include_directories(revil-objects PUBLIC ../include)
 
-  set(PUGI_STATIC_OBJECTS
-      ON
-      CACHE BOOL "" FORCE)
-
   set_precore_sources(
     revil-objects
     master_printer
@@ -66,10 +62,6 @@ if(BUILD_SHARED_OBJECTS)
       uni_format)
   endif()
 
-  set(PUGI_SHARED_OBJECTS
-      ON
-      CACHE BOOL "" FORCE)
-
   if(PUGI_SHARED_LIBS)
     target_link_libraries(revil-shared pugixml)
   else()
@@ -90,7 +82,7 @@ if(BUILD_STATIC_LIBS)
     revil-objects
     NO_VERINFO
     NO_PROJECT_H)
-  install(TARGETS revil-static DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS revil-static LIBRARY DESTINATION lib)
 endif()
 
 if(BUILD_SHARED_LIBS)
@@ -110,6 +102,11 @@ if(BUILD_SHARED_LIBS)
     NO_PROJECT_H)
 
   target_compile_definitions(revil INTERFACE RE_IMPORT)
-  install(TARGETS revil LIBRARY NAMELINK_SKIP
-                                DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  if(NOT MSVC)
+    target_link_libraries(revil -Wl,-z,defs)
+  endif()
+  install(
+    TARGETS revil
+    LIBRARY NAMELINK_SKIP DESTINATION lib
+    RUNTIME DESTINATION bin)
 endif()

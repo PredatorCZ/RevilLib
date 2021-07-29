@@ -24,23 +24,34 @@
 #include <map>
 #include <memory>
 
-REFLECTOR_CREATE(TrackType_er, ENUM, 2, CLASS, 8, LocalRotation, LocalPosition,
-                 LocalScale, AbsoluteRotation, AbsolutePosition);
+MAKE_ENUM(ENUMSCOPE(class TrackType_er
+                    : uint8, TrackType_er),
+          EMEMBER(LocalRotation), EMEMBER(LocalPosition), EMEMBER(LocalScale),
+          EMEMBER(AbsoluteRotation), EMEMBER(AbsolutePosition));
 
-REFLECTOR_CREATE(TrackV1BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
-                 SinglePositionVector3, SingleRotationQuat3 = 4, HermiteVector3,
-                 SphericalRotation, LinearVector3 = 9);
+MAKE_ENUM(ENUMSCOPE(class TrackV1BufferTypes
+                    : uint8, TrackV1BufferTypes),
+          EMEMBERVAL(SingleVector3, 1), EMEMBER(SinglePositionVector3),
+          EMEMBERVAL(SingleRotationQuat3, 4), EMEMBER(HermiteVector3),
+          EMEMBER(SphericalRotation), EMEMBERVAL(LinearVector3, 9));
 
-REFLECTOR_CREATE(TrackV1_5BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
-                 SinglePositionVector3, SingleRotationQuat3 = 4, HermiteVector3,
-                 LinearRotationQuat4_14bit, LinearVector3 = 9)
+MAKE_ENUM(ENUMSCOPE(class TrackV1_5BufferTypes
+                    : uint8, TrackV1_5BufferTypes),
+          EMEMBERVAL(SingleVector3, 1), EMEMBER(SinglePositionVector3),
+          EMEMBERVAL(SingleRotationQuat3, 4), EMEMBER(HermiteVector3),
+          EMEMBER(LinearRotationQuat4_14bit), EMEMBERVAL(LinearVector3, 9));
 
-REFLECTOR_CREATE(TrackV2BufferTypes, ENUM, 2, CLASS, 8, SingleVector3 = 1,
-                 SingleRotationQuat3, LinearVector3, BiLinearVector3_16bit,
-                 BiLinearVector3_8bit, LinearRotationQuat4_14bit,
-                 BiLinearRotationQuat4_7bit, BiLinearRotationQuatXW_14bit = 11,
-                 BiLinearRotationQuatYW_14bit, BiLinearRotationQuatZW_14bit,
-                 BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)
+MAKE_ENUM(ENUMSCOPE(class TrackV2BufferTypes
+                    : uint8, TrackV2BufferTypes),
+          EMEMBERVAL(SingleVector3, 1), EMEMBER(SingleRotationQuat3),
+          EMEMBER(LinearVector3), EMEMBER(BiLinearVector3_16bit),
+          EMEMBER(BiLinearVector3_8bit), EMEMBER(LinearRotationQuat4_14bit),
+          EMEMBER(BiLinearRotationQuat4_7bit),
+          EMEMBERVAL(BiLinearRotationQuatXW_14bit, 11),
+          EMEMBER(BiLinearRotationQuatYW_14bit),
+          EMEMBER(BiLinearRotationQuatZW_14bit),
+          EMEMBER(BiLinearRotationQuat4_11bit),
+          EMEMBER(BiLinearRotationQuat4_9bit))
 
 template <template <class C> class PtrType> struct TrackV0 {
   static constexpr uint32 SUBVERSION = 0;
@@ -61,15 +72,15 @@ template <template <class C> class PtrType> struct TrackV0 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    bufferOffset.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -110,15 +121,15 @@ template <template <class C> class PtrType, class BufferType> struct TrackV1 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    bufferOffset.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -154,16 +165,16 @@ template <template <class C> class PtrType> struct TrackV2 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset,
+                             extremes)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    bufferOffset.Fixup(masterBuffer);
-    extremes.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -202,16 +213,16 @@ template <template <class C> class PtrType> struct TrackV3 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (bufferOffset.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset,
+                             extremes)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    bufferOffset.Fixup(masterBuffer);
-    extremes.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -331,77 +342,30 @@ public:
 
   std::unique_ptr<C, es::deleter_hybrid> data;
 
-  LMTTrackShared() : data(new C) { useRefFrame = UseRefFrame_(0); }
+  LMTTrackShared() : data(new C) { useRefFrame = USE_REF_FRAME; }
   LMTTrackShared(C *_data, char *masterBuffer, bool swapEndian)
       : data(_data, false) {
-    useRefFrame = UseRefFrame_(0);
+    useRefFrame = USE_REF_FRAME;
     data->Fixup(masterBuffer, swapEndian);
 
     if (CreateController()) {
       controller->Assign(data->bufferOffset, data->bufferSize, swapEndian);
     }
 
-    auto rExtremes = GetTrackExtremes_(0);
-    useMinMax = rExtremes;
-
-    if (useMinMax) {
-      memcpy(&minMax, rExtremes, sizeof(TrackMinMax));
+    if constexpr (USE_EXTREMES) {
+      useMinMax = true;
+      memcpy(&minMax, data->extremes, sizeof(TrackMinMax));
     }
   }
 
   // SFINAE ACCESSORS
-  template <class SC = C>
-  auto UseTrackExtremes_(int) const
-      -> decltype(std::declval<SC>().extremes, true) {
-    return true;
-  }
+  template <class SC>
+  using UseTrackExtremes_ = decltype(std::declval<SC>().extremes);
 
-  template <class SC = C> bool UseTrackExtremes_(...) const { return false; }
+  template <class SC>
+  using UseRefFrane_ = decltype(std::declval<SC>().referenceData);
 
-  template <class SC = C>
-  auto GetTrackExtremes_(int)
-      -> decltype(std::declval<SC>().extremes, (TrackMinMax *)nullptr) {
-    return data->extremes;
-  }
-
-  template <class SC = C> TrackMinMax *GetTrackExtremes_(...) {
-    return nullptr;
-  }
-
-  template <class SC = C>
-  auto UseRefFrame_(int) const
-      -> decltype(std::declval<SC>().referenceData, (int)0) {
-    return 1;
-  }
-
-  template <class SC = C> int UseRefFrame_(...) const { return 0; }
-
-  template <class SC = C>
-  auto RefData_(int) const
-      -> decltype(std::declval<SC>().referenceData, (const Vector4 *)nullptr) {
-    return &data->referenceData;
-  }
-
-  template <class SC = C> const Vector4 *RefData_(...) const { return nullptr; }
-
-  template <class SC = C>
-  auto BoneID_(int) const -> decltype(std::declval<SC>().boneID2, (int32)0) {
-    return data->boneID;
-  }
-
-  template <class SC = C> int32 BoneID_(...) const {
-    return data->boneID == 0xff ? -1 : data->boneID;
-  }
-
-  template <class SC = C>
-  auto SetBoneID_(int32 id, int)
-      -> decltype(std::declval<SC>().boneID2, void()) {
-    data->boneID = id;
-  }
-
-  template <class SC = C> void SetBoneID_(int32 id, ...) {
-    data->boneID = id == -1 ? 0xff : id;
-  }
+  template <class SC> using UseBoneID2_ = decltype(std::declval<SC>().boneID2);
 
   // OVERRIDDES
   bool CreateController() override {
@@ -421,13 +385,37 @@ public:
 
   size_t Stride() const override { return sizeof(C); }
 
-  size_t BoneIndex() const noexcept override { return BoneID_(0); }
+  size_t BoneIndex() const noexcept override {
+    auto boneID = data->boneID;
+
+    if constexpr (USE_BONEID2) {
+      return boneID;
+    } else {
+      return boneID == 0xff ? -1 : boneID;
+    }
+  }
 
   uint32 BoneType() const noexcept override { return data->boneType; }
 
-  void BoneID(int32 boneID) noexcept override { SetBoneID_(boneID, 0); }
+  void BoneID(int32 boneID) noexcept override {
+    if constexpr (USE_BONEID2) {
+      data->boneID = boneID;
+    } else {
+      if (boneID == -1) {
+        data->boneID = 0xff;
+      } else {
+        data->boneID = boneID;
+      }
+    }
+  }
 
-  const Vector4 *GetRefData() const override { return RefData_(0); }
+  const Vector4 *GetRefData() const override {
+    if constexpr (USE_REF_FRAME) {
+      return data->referenceData;
+    } else {
+      return nullptr;
+    }
+  }
 
   // research this
   /*enabledFunction(noMHBone, int32) MirroredBoneID() const noexcept {
@@ -444,7 +432,16 @@ public:
 
   disabledFunction(noMHBone, void) MirroredBoneID(int32 boneID) noexcept {}*/
 
-  bool UseTrackExtremes() const override { return UseTrackExtremes_(0); }
+  static constexpr bool USE_EXTREMES =
+      es::is_detected_v<UseTrackExtremes_, LMTTrackShared>;
+
+  static constexpr bool USE_REF_FRAME =
+      es::is_detected_v<UseRefFrane_, LMTTrackShared>;
+
+  static constexpr bool USE_BONEID2 =
+      es::is_detected_v<UseBoneID2_, LMTTrackShared>;
+
+  bool UseTrackExtremes() const override { return USE_EXTREMES; }
 
   void ReflectToXML(pugi::xml_node node) const override {
     ReflectorWrap<C> refl(data.get());
@@ -474,39 +471,43 @@ LMTTrack_internal::LMTTrack_internal() : controller(nullptr) {
                          TrackV2BufferTypes, TrackType_er>();
 }
 
-REFLECTOR_CREATE((TrackV0<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, weight);
+REFLECT(CLASS(TrackV0<esPointerX86>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(weight));
 
-REFLECTOR_CREATE((TrackV0<esPointerX64>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, weight);
+REFLECT(CLASS(TrackV0<esPointerX64>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(weight));
 
-REFLECTOR_CREATE((TrackV1<esPointerX86, TrackV1BufferTypes>), 2, VARNAMES,
-                 TEMPLATE, compression, trackType, boneType, boneID, weight,
-                 referenceData);
+REFLECT(CLASS(TrackV1<esPointerX86, TrackV1BufferTypes>), MEMBER(compression),
+        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV1<esPointerX64, TrackV1BufferTypes>), 2, VARNAMES,
-                 TEMPLATE, compression, trackType, boneType, boneID, weight,
-                 referenceData);
+REFLECT(CLASS(TrackV1<esPointerX64, TrackV1BufferTypes>), MEMBER(compression),
+        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV1<esPointerX86, TrackV1_5BufferTypes>), 2, VARNAMES,
-                 TEMPLATE, compression, trackType, boneType, boneID, weight,
-                 referenceData);
+REFLECT(CLASS(TrackV1<esPointerX86, TrackV1_5BufferTypes>), MEMBER(compression),
+        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV1<esPointerX64, TrackV1_5BufferTypes>), 2, VARNAMES,
-                 TEMPLATE, compression, trackType, boneType, boneID, weight,
-                 referenceData);
+REFLECT(CLASS(TrackV1<esPointerX64, TrackV1_5BufferTypes>), MEMBER(compression),
+        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV2<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, weight, referenceData);
+REFLECT(CLASS(TrackV2<esPointerX86>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV2<esPointerX64>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, weight, referenceData);
+REFLECT(CLASS(TrackV2<esPointerX64>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV3<esPointerX86>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, boneID2, weight, referenceData);
+REFLECT(CLASS(TrackV3<esPointerX86>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(boneID2), MEMBER(weight),
+        MEMBER(referenceData));
 
-REFLECTOR_CREATE((TrackV3<esPointerX64>), 2, VARNAMES, TEMPLATE, compression,
-                 trackType, boneType, boneID, boneID2, weight, referenceData);
+REFLECT(CLASS(TrackV3<esPointerX64>), MEMBER(compression), MEMBER(trackType),
+        MEMBER(boneType), MEMBER(boneID), MEMBER(boneID2), MEMBER(weight),
+        MEMBER(referenceData));
 
 using ptr_type_ = std::unique_ptr<LMTTrack>;
 

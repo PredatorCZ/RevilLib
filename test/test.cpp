@@ -3,7 +3,7 @@
 #include "datas/tchar.hpp"
 
 int main() {
-  printer.AddPrinterFunction(UPrintf);
+  es::print::AddPrinterFunction(UPrintf);
 
   TEST_CASES(int testResult, TEST_FUNC(test_lmt_codec00),
              TEST_FUNC(test_lmt_codec01), TEST_FUNC(test_lmt_codec02),

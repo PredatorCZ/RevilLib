@@ -248,10 +248,12 @@ LMTAnimation_internal::Load(BinReaderRef rd,
   static_cast<LMTAnimation_internal *>(out.get())->masterBuffer =
       uni::ToElement(buff);
 
-  ClearESPointers();
+  ptrStore.clear();
 
   return out;
 }
+
+thread_local std::vector<void *> ptrStore;
 
 void LMT::Load(BinReaderRef rd) {
   uint32 magic;
@@ -345,7 +347,7 @@ void LMT::Load(BinReaderRef rd) {
     pi->storage[a] = uni::ToElement(LMTAnimation::Create(cProps));
   }
 
-  ClearESPointers();
+  ptrStore.clear();
 }
 
 void LMT::Save(BinWritterRef wr) const {

@@ -86,8 +86,10 @@ struct Buf_LinearVector3 {
   void SwapEndian();
 };
 
-REFLECTOR_CREATE(Buf_HermiteVector3_Flags, ENUM, 2, CLASS, 8, InTangentX,
-                 InTangentY, InTangentZ, OutTangentX, OutTangentY, OutTangentZ)
+MAKE_ENUM(ENUMSCOPE(class Buf_HermiteVector3_Flags
+                    : uint8, Buf_HermiteVector3_Flags),
+          EMEMBER(InTangentX), EMEMBER(InTangentY), EMEMBER(InTangentZ),
+          EMEMBER(OutTangentX), EMEMBER(OutTangentY), EMEMBER(OutTangentZ))
 
 struct Buf_HermiteVector3 {
   uint8 size;
@@ -397,7 +399,7 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
 
   template <class _C = C>
   typename std::enable_if<!_C::VARIABLE_SIZE>::type
-  GetTangents_(Vector4A16 &inTangs, Vector4A16 &outTangs, size_t frame) const {}
+  GetTangents_(Vector4A16 &, Vector4A16 &, size_t) const {}
 
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                    size_t frame) const override {

@@ -62,10 +62,14 @@ public:
   EventCollection GetEvents(size_t groupID, size_t eventID) const override;
 };
 
-REFLECTOR_CREATE(EventFrameV2DataType, ENUM, 2, CLASS, 16, Int8, Int32, Float,
-                 Bool = 4);
-REFLECTOR_CREATE(EventFrameV2Type, ENUM, 2, CLASS, 16, Scalar, Scalar2, Scalar3,
-                 PackedFloat, PackedBitFlags = 5, PackedInt);
+MAKE_ENUM(ENUMSCOPE(class EventFrameV2DataType
+                    : uint16, EventFrameV2DataType),
+          EMEMBER(Int8), EMEMBER(Int32), EMEMBER(Float), EMEMBERVAL(Bool, 4));
+MAKE_ENUM(ENUMSCOPE(class EventFrameV2Type
+                    : uint16, EventFrameV2Type),
+          EMEMBER(Scalar), EMEMBER(Scalar2), EMEMBER(Scalar3),
+          EMEMBER(PackedFloat), EMEMBERVAL(PackedBitFlags, 5),
+          EMEMBER(PackedInt));
 
 struct AnimEventFrameV2 {
   union {

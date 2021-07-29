@@ -45,7 +45,7 @@ void REAssetImpl::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   rd.ReadContainer(buffer, fleSize);
   Fixup();
-  ClearESPointers();
+  ptrStore.clear();
 }
 
 void REAssetImpl::Assign(REAssetBase *data) {

@@ -29,6 +29,7 @@
 using namespace revil;
 
 struct LMTFixupStorage;
+thread_local extern std::vector<void*> ptrStore;
 
 static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",

@@ -23,8 +23,9 @@
 #include <array>
 #include <map>
 
-REFLECTOR_CREATE(FloatTrackComponentRemap, ENUM, 2, CLASS, 8, NONE, X_COMP,
-                 Y_COMP, Z_COMP);
+MAKE_ENUM(ENUMSCOPE(class FloatTrackComponentRemap
+                    : uint8, FloatTrackComponentRemap),
+          EMEMBER(NONE), EMEMBER(X_COMP), EMEMBER(Y_COMP), EMEMBER(Z_COMP));
 
 template <template <class C> class PtrType> struct FloatTrack {
   FloatTrackComponentRemap componentRemaps[4];
@@ -37,23 +38,20 @@ template <template <class C> class PtrType> struct FloatTrack {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (frames.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, frames)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    frames.Fixup(masterBuffer);
   }
 };
 
-REFLECTOR_CREATE((FloatTrack<esPointerX86>), 2, VARNAMES, TEMPLATE,
-                 componentRemaps);
-
-REFLECTOR_CREATE((FloatTrack<esPointerX64>), 2, VARNAMES, TEMPLATE,
-                 componentRemaps);
+REFLECT(CLASS(FloatTrack<esPointerX86>), MEMBER(componentRemaps));
+REFLECT(CLASS(FloatTrack<esPointerX64>), MEMBER(componentRemaps));
 
 template <class C> class FloatTracks_shared : public LMTFloatTrack_internal {
 public:

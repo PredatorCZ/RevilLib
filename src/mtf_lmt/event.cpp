@@ -23,11 +23,8 @@
 #include <array>
 #include <map>
 
-REFLECTOR_CREATE((AnimEvents<esPointerX86>), 2, VARNAMES, TEMPLATE, eventRemaps)
-REFLECTOR_CREATE((AnimEvents<esPointerX64>), 2, VARNAMES, TEMPLATE, eventRemaps)
-
-template struct AnimEvents<esPointerX64>;
-template struct AnimEvents<esPointerX86>;
+REFLECT(CLASS(AnimEvents<esPointerX86>), MEMBER(eventRemaps));
+REFLECT(CLASS(AnimEvents<esPointerX64>), MEMBER(eventRemaps));
 
 template <class C, size_t numGroups>
 class AnimEvents_shared : public LMTAnimationEventV1_Internal {
@@ -143,17 +140,13 @@ void AnimEvents<PtrType>::SwapEndian() {
 
 template <template <class C> class PtrType>
 void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
-  if (events.Fixed()) {
-    return;
-  }
+  auto cb = [&] {
+    if (swapEndian) {
+      SwapEndian();
+    }
+  };
 
-  if (swapEndian) {
-    SwapEndian();
-  }
-
-  events.Fixup(masterBuffer);
-
-  if (!swapEndian) {
+  if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, events) || !swapEndian) {
     return;
   }
 
@@ -163,6 +156,9 @@ void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
     events_[e].SwapEndian();
   }
 }
+
+template struct AnimEvents<esPointerX64>;
+template struct AnimEvents<esPointerX86>;
 
 size_t LMTAnimationEventV1_Internal::GetVersion() const { return 1; }
 
@@ -191,7 +187,7 @@ LMTAnimationEventV1_Internal::GetEvents(size_t groupID, size_t eventID) const {
 /***************************** EVENTS V2 ********************************/
 /************************************************************************/
 
-REFLECTOR_CREATE(AnimEventFrameV2, 1, VARNAMES, frame, type, dataType);
+REFLECT(CLASS(AnimEventFrameV2), MEMBER(frame), MEMBER(type), MEMBER(dataType));
 
 struct AnimEventV2 {
   using FramesPtr = esPointerX64<AnimEventFrameV2>;
@@ -209,17 +205,14 @@ struct AnimEventV2 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (frames.Fixed()) {
-      return;
-    }
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
 
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    frames.Fixup(masterBuffer);
-
-    if (!swapEndian) {
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, frames) ||
+        !swapEndian) {
       return;
     }
 
@@ -245,15 +238,15 @@ struct AnimEventGroupV2 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (events.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, events)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    events.Fixup(masterBuffer);
 
     AnimEventV2 *events_ = events;
 
@@ -282,15 +275,15 @@ struct AnimEventsHeaderV2 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (eventGroups.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, eventGroups)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    eventGroups.Fixup(masterBuffer);
 
     AnimEventGroupV2 *groups = eventGroups;
 

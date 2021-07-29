@@ -19,9 +19,10 @@
 
 template <> void REMotion78::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
-  tracks.Fixup(masterBuffer);
-  unkOffset02.Fixup(masterBuffer);
-  animationName.Fixup(masterBuffer);
+  if (!es::FixupPointers(masterBuffer, ptrStore, tracks, unkOffset02,
+                         animationName)) {
+    return;
+  }
 
   for (uint32 b = 0; b < numTracks; b++) {
     tracks[b].Fixup(masterBuffer);
@@ -29,7 +30,9 @@ template <> void REMotion78::Fixup() {
 }
 
 void REMotionTrack78::Fixup(char *masterBuffer) {
-  curves.Fixup(masterBuffer);
+  if (!es::FixupPointers(masterBuffer, ptrStore, curves)) {
+    return;
+  }
 
   size_t numUsedCurves = 0;
 
@@ -41,9 +44,8 @@ void REMotionTrack78::Fixup(char *masterBuffer) {
 }
 
 void RETrackCurve78::Fixup(char *masterBuffer) {
-  frames.Fixup(masterBuffer);
-  controlPoints.Fixup(masterBuffer);
-  minMaxBounds.Fixup(masterBuffer);
+  es::FixupPointers(masterBuffer, ptrStore, frames, controlPoints,
+                    minMaxBounds);
 }
 
 void REMotion78Asset::Build() {

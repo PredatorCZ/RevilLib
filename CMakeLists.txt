@@ -24,7 +24,19 @@ option(BUILD_SHARED_OBJECTS "Builds revil-shared target." OFF)
 option(BUILD_STATIC_LIBS "Builds revil-static target." OFF)
 option(BUILD_SHARED_LIBS "Builds revil target." OFF)
 
-set(CMAKE_CXX_STANDARD 14)
+if(BUILD_STATIC_OBJECTS)
+  set(PUGI_STATIC_OBJECTS
+      ON
+      CACHE BOOL "" FORCE)
+endif()
+
+if(BUILD_SHARED_OBJECTS)
+  set(PUGI_SHARED_OBJECTS
+      ON
+      CACHE BOOL "" FORCE)
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(3rd_party/PreCore)
 include(targetex)
 include(chartype)

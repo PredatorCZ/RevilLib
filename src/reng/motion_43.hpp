@@ -57,7 +57,7 @@ struct RETrackController {
   virtual uint16 GetFrame(uint32 id) const = 0;
   virtual KnotSpan GetSpan(int32 frame) const = 0;
   virtual void Evaluate(uint32 id, Vector4A16 &out) const = 0;
-  virtual ~RETrackController() {}
+  virtual ~RETrackController() = default;
 };
 
 struct RETrackCurve43 {
@@ -127,6 +127,10 @@ class REMotion43Asset
       public uni::Motion,
       protected uni::VectorList<uni::MotionTrack, REMotionTrackWorker> {
 public:
+  explicit REMotion43Asset(REAssetBase *base) { Assign(base); }
+  REMotion43Asset() = default;
+  REMotion43Asset(const REMotion43Asset &) = delete;
+  REMotion43Asset(REMotion43Asset &&) = default;
   REMotion43 &Get() { return REAssetBase::Get<REMotion43>(this->buffer); }
   const REMotion43 &Get() const {
     return REAssetBase::Get<const REMotion43>(this->buffer);

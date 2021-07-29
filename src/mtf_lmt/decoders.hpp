@@ -14,7 +14,7 @@ struct LMTRawTrack {
 };
 
 struct LMTOutputTracks {
-  LMTTrack *position, *rotation, *scale;
+  revil::LMTTrack *position, *rotation, *scale;
 };
 
 LMTOutputTracks CreateTrackFromRaw(const LMTRawTrack &rawData);

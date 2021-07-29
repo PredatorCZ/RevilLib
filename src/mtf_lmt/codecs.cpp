@@ -25,9 +25,10 @@
 #include <sstream>
 #include <unordered_map>
 
-REFLECTOR_CREATE(Buf_SingleVector3, 1, VARNAMES, data);
-REFLECTOR_CREATE(Buf_LinearVector3, 1, VARNAMES, data, additiveFrames);
-REFLECTOR_CREATE(Buf_HermiteVector3, 1, VARNAMES, flags, additiveFrames, data);
+REFLECT(CLASS(Buf_SingleVector3), MEMBER(data));
+REFLECT(CLASS(Buf_LinearVector3), MEMBER(data), MEMBER(additiveFrames));
+REFLECT(CLASS(Buf_HermiteVector3), MEMBER(flags), MEMBER(additiveFrames),
+        MEMBER(data));
 
 // https://en.wikipedia.org/wiki/Slerp
 static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {

@@ -18,7 +18,7 @@
 #include "datas/reflector.hpp"
 #include "internal.hpp"
 
-REFLECTOR_CREATE(TrackMinMax, 1, VARNAMES, min, max);
+REFLECT(CLASS(TrackMinMax), MEMBER(min), MEMBER(max));
 
 LMT::LMT() : pi(std::make_unique<LMTImpl>()) {}
 LMT::LMT(LMT &&) = default;
@@ -28,7 +28,7 @@ LMTVersion LMT::Version() const { return pi->props.version; }
 LMTArchType LMT::Architecture() const { return pi->props.arch; }
 auto LMT::CreateAnimation() const { return LMTAnimation::Create(pi->props); }
 
-LMT::operator uni::MotionsConst () const { return uni::MotionsConst{pi.get()}; }
+LMT::operator uni::MotionsConst() const { return uni::MotionsConst{pi.get()}; }
 
 void LMT::Version(LMTVersion _version, LMTArchType _arch) {
   if (!pi->masterBuffer.empty()) {

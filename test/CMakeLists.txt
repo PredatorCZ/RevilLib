@@ -7,12 +7,13 @@ build_target(
   test.cpp
   LINKS
   revil-objects
+  pugixml-objects
   INCLUDES
   ../src
   NO_PROJECT_H
   NO_VERINFO)
 
-set_precore_sources(test_main)
+set_precore_sources(test_main uni)
 add_test(test_main test_main)
 
 add_subdirectory(resources_lmt)

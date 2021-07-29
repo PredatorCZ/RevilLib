@@ -8,21 +8,20 @@ env:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
       matrix:
         include:
-          - CC: gcc-5
-            CXX: g++-5
-            #use-gcov: true #currently broken af
-          - CC: gcc-9
-            CXX: g++-9
-          - CC: clang-3.5
-            CXX: clang++-3.5
-            install: true
-          - CC: clang-9
-            CXX: clang++-9
+          - name: G++ 7 & GCOV
+            CC: gcc-7
+            CXX: g++-7
+            use-gcov: true
+            install: g++-7
+          - name: Clang 5
+            CC: clang-5.0
+            CXX: clang++-5.0
+            install: clang-5.0
 
     env:
       CC: ${{matrix.CC}}
@@ -39,8 +38,8 @@ jobs:
           submodules: recursive
 
       - name: Install compiler
-        if: ${{matrix.install == true}}
-        run: sudo apt install ${{matrix.CC}}
+        if: ${{matrix.install}}
+        run: sudo apt install ${{matrix.install}}
 
       - name: Configure stuff
         run: |
@@ -59,12 +58,16 @@ jobs:
       - name: Upload coverage report
         working-directory: ${{github.workspace}}
         if: ${{matrix.use-gcov == true}}
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.CoverallsToken }}
         run: |
-          pip install --user idna==2.10 cryptography==2.9.2 cpp-coveralls
-          export PATH="$HOME/.local/bin:$PATH"
-          "service_name: github-ci\n" > .coveralls.yml 
-          export TRAVIS_JOB_ID="#${GITHUB_RUN_ID}"
-          coveralls --verbose -E ".*/build/.*.c((pp)|(c)|(xx))?$" --gcov-options '\-lp'
+          sudo apt install python3-setuptools python3-idna python3-requests python3-urllib3
+          git clone https://github.com/PredatorCZ/cpp-coveralls.git
+          pushd cpp-coveralls
+          sudo python3 setup.py install
+          popd
+          export COVERALLS_SERVICE_NAME="gitlab-ci"
+          coveralls -E ".*/build/.*.[ch]((pp)|(c)|(xx))?$" -e test -e 3rd_party --gcov-options '\-lp' > /dev/null
 
   build-widle:
     runs-on: windows-2019
@@ -79,7 +82,8 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . -j 6 --config Release
+        run: |
+          cmake --build . -j 6 --config Release
 
       - name: Test
         working-directory: ${{github.workspace}}/build

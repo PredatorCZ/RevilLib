@@ -85,7 +85,7 @@ void FloatFrame::Load(pugi::xml_node node) {
   NumComponents(numItems);
 }
 
-void LMTFloatTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
+void LMTFloatTrack_internal::Save(pugi::xml_node node, bool) const {
   pugi::xml_node evGroupsNode = node.append_child("floatTracks");
 
   for (size_t g = 0; g < GetNumGroups(); g++) {
@@ -200,8 +200,7 @@ void AnimEvent::Load(pugi::xml_node node) {
   }
 }
 
-void LMTAnimationEventV1_Internal::Save(pugi::xml_node node,
-                                        bool standAlone) const {
+void LMTAnimationEventV1_Internal::Save(pugi::xml_node node, bool) const {
   pugi::xml_node evGroupsNode = node.append_child("eventGroups");
 
   for (uint32 g = 0; g < GetNumGroups(); g++) {
@@ -210,7 +209,6 @@ void LMTAnimationEventV1_Internal::Save(pugi::xml_node node,
     ReflectToXML(evGroupNode, g);
 
     pugi::xml_node rangesNode = evGroupNode.append_child("events");
-    uint32 numEvents = GetGroupEventCount(g);
     const EventsCollection &cEvents = GetEvents(g);
 
     for (auto &e : cEvents) {
@@ -337,7 +335,7 @@ void LMTAnimationEventV2Event::Load(pugi::xml_node node) {
 
   auto eventFramesNodes = XMLCollectChildren(node, "frame");
 
-  if (!eNumFrames.empty() && eNumFrames.as_int() != eventFramesNodes.size()) {
+  if (!eNumFrames.empty() && eNumFrames.as_uint() != eventFramesNodes.size()) {
     XML_WARNING(node,
                 "<event numFrames=/> differs from actual <frame/> count.");
   }
@@ -361,7 +359,7 @@ void LMTAnimationEventV2Group::Load(pugi::xml_node node) {
 
   auto eventNodes = XMLCollectChildren(node, "event");
 
-  if (!cNumEvents.empty() && cNumEvents.as_int() != eventNodes.size()) {
+  if (!cNumEvents.empty() && cNumEvents.as_uint() != eventNodes.size()) {
     XML_WARNING(node,
                 "<eventGroup numEvents=/> differs from actual <event/> count.");
   }
@@ -372,8 +370,7 @@ void LMTAnimationEventV2Group::Load(pugi::xml_node node) {
   }
 }
 
-void LMTAnimationEventV2_Internal::Save(pugi::xml_node node,
-                                        bool standAlone) const {
+void LMTAnimationEventV2_Internal::Save(pugi::xml_node node, bool) const {
   pugi::xml_node evGroupsNode = node.append_child("eventGroups");
   evGroupsNode.append_attribute("hash").set_value(GetHash());
 
@@ -424,7 +421,7 @@ void LMTTrack_internal::Load(pugi::xml_node node) {
 
   if (UseTrackExtremes()) {
     ReflectorWrap<TrackMinMax> minMaxRelfl(minMax);
-    pugi::xml_node minMaxNode = ReflectorXMLUtil::Load(minMaxRelfl, node);
+    ReflectorXMLUtil::Load(minMaxRelfl, node);
   }
 
   if (!CreateController()) {
@@ -454,7 +451,6 @@ void LMTTrack_internal::Save(pugi::xml_node node, bool standAlone) const {
     ReflectorXMLUtil::Save(refl, node);
   }
 
-  uint32 currentBufferOffset = 0;
   pugi::xml_node dataNode = node.append_child("data");
   std::string strBuff;
   controller->ToString(strBuff, standAlone ? numIdents - 1 : numIdents);
@@ -649,7 +645,7 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
     } else {
       const char *path = nodeBuffer.get();
       std::string absolutePath = path;
-      BinReader rd;
+      BinReader<> rd;
 
       try {
         rd.Open(absolutePath);

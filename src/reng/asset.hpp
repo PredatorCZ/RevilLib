@@ -25,6 +25,8 @@
 
 using namespace revil;
 
+thread_local extern std::vector<void*> ptrStore;
+
 template <class C> struct REArray {
   esPointerX64<C> ptr;
   int32 numItems;
@@ -51,4 +53,5 @@ public:
   virtual uni::BaseElementConst AsMotion() const { return {}; }
   virtual uni::BaseElementConst AsMotions() const { return {}; }
   virtual uni::BaseElementConst AsSkeletons() const { return {}; }
+  virtual ~REAssetImpl() = default;
 };

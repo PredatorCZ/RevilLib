@@ -1,5 +1,5 @@
-#include "codecs.hpp"
 #include "decoders.hpp"
+#include "codecs.hpp"
 #include <algorithm>
 
 typedef std::vector<Vector4A16> VectCollection;
@@ -197,10 +197,9 @@ static void ChooseRightVector3(const VectCollection &input) {
   CompressionReport report2 =
       ReportCompression(possibleFractals[1], compressed, values);
 
-  printer << std::setprecision(25) << report.avgFrac << ' ' << report2.avgFrac << ' ' << report.avgDiff << ' ' << report2.avgDiff>>
-      1;
-
-  int df = 0;
+  printinfo(std::setprecision(25)
+            << report.avgFrac << ' ' << report2.avgFrac << ' ' << report.avgDiff
+            << ' ' << report2.avgDiff);
 }
 
 LMTOutputTracks CreateTrackFromRaw(const LMTRawTrack &rawData) {

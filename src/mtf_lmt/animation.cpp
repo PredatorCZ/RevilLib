@@ -82,15 +82,15 @@ template <class AnimTraits> struct AnimV0 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, tracks)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    tracks.Fixup(masterBuffer);
 
     for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
@@ -140,15 +140,15 @@ template <class AnimTraits> struct AnimV1 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, tracks)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    tracks.Fixup(masterBuffer);
 
     for (auto &e : events) {
       e.Fixup(masterBuffer, swapEndian);
@@ -170,8 +170,10 @@ template <class AnimTraits> struct AnimV1 {
 /***************************** ANIM_V2 **********************************/
 /************************************************************************/
 
-REFLECTOR_CREATE(AnimV2Flags, ENUM, 2, CLASS, 32, Events = 0x800000,
-                 FLoatTracks = 0x40000, Unk00 = 0x1000000, Unk01 = 0x1)
+MAKE_ENUM(ENUMSCOPE(class AnimV2Flags
+                    : uint32, AnimV2Flags),
+          EMEMBERVAL(Events, 0x800000), EMEMBERVAL(FLoatTracks, 0x40000),
+          EMEMBERVAL(Unk00, 0x1000000), EMEMBERVAL(Unk01, 0x1))
 
 template <class AnimTraits> struct AnimV2 {
   using Traits = AnimTraits;
@@ -205,17 +207,16 @@ template <class AnimTraits> struct AnimV2 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, tracks, eventTable,
+                           floatTracks)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    tracks.Fixup(masterBuffer);
-    eventTable.Fixup(masterBuffer);
-    floatTracks.Fixup(masterBuffer);
 
     auto dEvents = Events();
 
@@ -271,16 +272,15 @@ template <class AnimTraits> struct AnimV3 {
   }
 
   void Fixup(char *masterBuffer, bool swapEndian) {
-    if (tracks.Fixed()) {
+    auto cb = [&] {
+      if (swapEndian) {
+        SwapEndian();
+      }
+    };
+
+    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, tracks, eventTable)) {
       return;
     }
-
-    if (swapEndian) {
-      SwapEndian();
-    }
-
-    tracks.Fixup(masterBuffer);
-    eventTable.Fixup(masterBuffer);
   }
 
   static const size_t *Pointers() {
@@ -477,61 +477,71 @@ public:
   }
 };
 
-REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition);
+REFLECT(CLASS(AnimV0<AnimTraitsV1<esPointerX86, LMTVersion::V_22>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition));
 
-REFLECTOR_CREATE((AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition);
+REFLECT(CLASS(AnimV0<AnimTraitsV1<esPointerX64, LMTVersion::V_22>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_40>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_40>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_51>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV1<esPointerX64, LMTVersion::V_51>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV1<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV2<AnimTraitsV2<esPointerX86, LMTVersion::V_56>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV2<AnimTraitsV2<esPointerX64, LMTVersion::V_56>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV3<AnimTraitsV2<esPointerX86, LMTVersion::V_92>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-REFLECTOR_CREATE((AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>), 2,
-                 VARNAMES, TEMPLATE, numFrames, loopFrame,
-                 endFrameAdditiveScenePosition, endFrameAdditiveSceneRotation);
+REFLECT(CLASS(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>),
+        MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(endFrameAdditiveScenePosition),
+        MEMBER(endFrameAdditiveSceneRotation));
 
-ES_STATIC_ASSERT(sizeof(AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>) ==
-                 192);
-ES_STATIC_ASSERT(sizeof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) ==
-                 96);
-ES_STATIC_ASSERT(
-    alignof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) == 16);
-// ES_STATIC_ASSERT(offsetof(AnimV3X64TrackV3, eventTable) == 88);
+static_assert(sizeof(AnimV1<AnimTraitsV1<esPointerX86, LMTVersion::V_51>>) ==
+              192);
+static_assert(sizeof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) ==
+              96);
+static_assert(alignof(AnimV3<AnimTraitsV2<esPointerX64, LMTVersion::V_92>>) ==
+              16);
+// static_assert(offsetof(AnimV3X64TrackV3, eventTable) == 88);
 
 using ptr_type_ = LMTAnimation::Ptr;
 

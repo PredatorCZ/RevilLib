@@ -21,13 +21,13 @@
 void REMotlist99::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
-  motions.Fixup(masterBuffer);
-  unkOffset00.Fixup(masterBuffer);
-  fileName.Fixup(masterBuffer);
-  null.Fixup(masterBuffer);
+  if (!es::FixupPointers(masterBuffer, ptrStore, motions, unkOffset00, fileName,
+                         null)) {
+    return;
+  }
 
   for (uint32 m = 0; m < numMotions; m++) {
-    motions[m].Fixup(masterBuffer);
+    motions[m].Fixup(masterBuffer, &ptrStore);
 
     REAssetBase *cMotBase = motions[m];
 
@@ -45,8 +45,8 @@ void REMotlist99::Fixup() {
       continue;
     }
 
-    cMot->bones.Fixup(localBuffer);
-    cMot->bones->ptr.Fixup(localBuffer);
+    cMot->bones.Fixup(localBuffer, &ptrStore);
+    cMot->bones->ptr.Fixup(localBuffer, &ptrStore);
     REMotionBone *bonesPtr = cMot->bones->ptr;
 
     if (!bonesPtr) {
@@ -74,8 +74,7 @@ void REMotlist99Asset::Build() {
       continue;
     }
 
-    motionListStorage.emplace_back();
-    motionListStorage.back().Assign(cMot);
+    motionListStorage.emplace_back<REAssetBase *>(cMot);
 
     if (cMot->pad || !cMot->bones || !cMot->bones->ptr) {
       continue;

@@ -20,15 +20,14 @@
 template <> void REMotion65::Fixup() {
   char *masterBuffer = reinterpret_cast<char *>(this);
 
-  bones.Fixup(masterBuffer);
+  if (!es::FixupPointers(masterBuffer, ptrStore, bones, tracks, unkOffset02,
+                         animationName)) {
+    return;
+  }
 
   if (bones) {
     bones->ptr.Fixup(masterBuffer);
   }
-
-  tracks.Fixup(masterBuffer);
-  unkOffset02.Fixup(masterBuffer);
-  animationName.Fixup(masterBuffer);
 
   for (uint32 b = 0; b < numBones; b++) {
     bones->ptr[b].Fixup(masterBuffer);
@@ -40,7 +39,9 @@ template <> void REMotion65::Fixup() {
 }
 
 void REMotionTrack65::Fixup(char *masterBuffer) {
-  curves.Fixup(masterBuffer);
+  if (!es::FixupPointers(masterBuffer, ptrStore, curves)) {
+    return;
+  }
 
   size_t numUsedCurves = 0;
 

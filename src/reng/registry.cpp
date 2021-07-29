@@ -58,5 +58,3 @@ REAssetImpl::Ptr REAssetImpl::Create(REAssetBase base) {
     }
   }
 }
-
-thread_local std::vector<void *> es::usedPts;
