@@ -7,21 +7,18 @@ env:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
       matrix:
         include:
-          - CC: gcc-5
-            CXX: g++-5
+            CC: gcc-7
+            CXX: g++-7
+            install: g++-7
             artifacts: true
-          - CC: gcc-9
-            CXX: g++-9
-          - CC: clang-3.5
-            CXX: clang++-3.5
-            install: true
-          - CC: clang-9
-            CXX: clang++-9
+            CC: clang-5.0
+            CXX: clang++-5.0
+            install: clang-5.0
 
     env:
       CC: ${{matrix.CC}}
@@ -37,33 +34,32 @@ jobs:
           submodules: recursive
 
       - name: Install compiler
-        if: ${{matrix.install == true}}
-        run: sudo apt install ${{matrix.CC}}
+        if: ${{matrix.install}}
+        run: sudo apt install ${{matrix.install}}
 
       - name: Configure stuff
         run: |
           mkdir ${{github.workspace}}/build
           cd ${{github.workspace}}/build
-          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_INSTALL_PREFIX=${{github.workspace}} ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . -j 6
-
-      - name: Install
-        if: ${{matrix.artifacts == true}}
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --target install
+        run: |
+          cmake --build . -j 6 --target install
+          cd ..
+          install -D LICENSE.md share/doc/revil-toolset/LICENSE.md
+          install -D README.md share/doc/revil-toolset/README.md
 
       - name: Upload Artifacts
         if: ${{matrix.artifacts == true}}
         uses: actions/upload-artifact@v2
         with:
-          name: RevilToolset-xenial
+          name: RevilToolset-linux-amd64
           path: |
-            ${{github.workspace}}/bin/*
-            ${{github.workspace}}/LICENSE.md
-            ${{github.workspace}}/README.md
+            ${{github.workspace}}/bin
+            ${{github.workspace}}/lib
+            ${{github.workspace}}/share
           retention-days: 5
 
   build-widle:
@@ -76,21 +72,17 @@ jobs:
         run: |
           mkdir ${{github.workspace}}/build
           cd ${{github.workspace}}/build
-          cmake -DCMAKE_BUILD_TYPE=Release -A x64 ..
+          cmake -DCMAKE_BUILD_TYPE=Release -A x64 -DCMAKE_INSTALL_PREFIX=${{github.workspace}} ..
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . -j 6 --config Release
-
-      - name: Install
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --target install --config Release
+        run: cmake --build . -j 6 --config Release --target install
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: RevilToolset-win64
           path: |
-            ${{github.workspace}}/bin/*
+            ${{github.workspace}}/bin
             ${{github.workspace}}/LICENSE.md
             ${{github.workspace}}/README.md
           retention-days: 5
