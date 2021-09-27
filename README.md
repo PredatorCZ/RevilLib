@@ -1,18 +1,19 @@
 # RevilLib
 
-[![Build Status](https://travis-ci.com/PredatorCZ/RevilLib.svg?branch=master)](https://travis-ci.com/PredatorCZ/RevilLib)
+[![build](https://github.com/PredatorCZ/RevilLib/actions/workflows/cmake.yml/badge.svg)](https://github.com/PredatorCZ/RevilLib/actions/workflows/cmake.yml)
+[![Coverage Status](https://coveralls.io/repos/github/PredatorCZ/RevilLib/badge.svg?branch=master)](https://coveralls.io/github/PredatorCZ/RevilLib?branch=master)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 RevilLib is an independent library for various formats, used by RE Engine and MT Framework.
 
-Library is written for C++14 and compilable under MSVC 2017+, GCC 5+, Clang 3.5+.
+Library is written for C++17 and compilable under MSVC 2017+, GCC 7+, Clang 5+.
 
 ## Supported titles/formats
 
 * RE 7: motlist.60, mot.43 (PC only tested)
 * REMake 2: motlist.85, mot.65 (PC only tested)
 * REMake 3/Resistance: motlist.99, mot.78 (PC only tested)
-* MT Framework: LMT (Cross platform, Multiversion)
+* MT Framework: LMT, MOD, TEX, XFS, ARC (Cross platform, Multiversion)
 
 ## License
 
