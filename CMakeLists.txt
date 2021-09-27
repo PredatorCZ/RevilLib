@@ -16,3 +16,4 @@ include(targetex)
 include(chartype)
 
 add_subdirectory(spac_conv)
+add_subdirectory(arc_conv)
