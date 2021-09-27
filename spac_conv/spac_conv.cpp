@@ -15,44 +15,41 @@
         along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/MultiThread.hpp"
-#include "datas/SettingsManager.hpp"
 #include "datas/binreader.hpp"
 #include "datas/binwritter.hpp"
+#include "datas/directory_scanner.hpp"
 #include "datas/endian.hpp"
 #include "datas/fileinfo.hpp"
-#include "datas/reflectorRegistry.hpp"
+#include "datas/multi_thread.hpp"
+#include "datas/pugiex.hpp"
+#include "datas/reflector_xml.hpp"
+#include "datas/settings_manager.hpp"
+#include "datas/stat.hpp"
 #include "formats/FWSE.hpp"
 #include "formats/MSF.hpp"
 #include "formats/WAVE.hpp"
 #include "project.h"
-#include "pugixml.hpp"
 
 extern "C" {
 #include "vgmstream.h"
 }
 
-static struct SPACConvert : SettingsManager {
-  DECLARE_REFLECTOR;
-
+static struct SPACConvert : SettingsManager<SPACConvert> {
   bool Generate_Log = false;
   bool Force_WAV_Conversion = false;
   bool Convert_to_WAV = true;
 } settings;
 
-REFLECTOR_START_WNAMES(SPACConvert, Convert_to_WAV, Force_WAV_Conversion,
-                       Generate_Log);
+REFLECTOR_CREATE(SPACConvert, 1, VARNAMES, Convert_to_WAV, Force_WAV_Conversion,
+                 Generate_Log);
 
-static const char help[] = "\nConverts SPAC sound archives.\n\
-Settings (.config file):\n\
-  Convert_to_WAV: \n\
-        Convert non WAV formats into a 16bit PCM WAV.\n\
-  Force_WAV_Conversion:\n\
-        Force conversion of all sounds to a 16bit PCM WAV.\n\
-  Generate_Log: \n\
-        Will generate text log of console output next to application location.\n\t";
+static const char appHeader[] =
+    SPACConvert_DESC " v" SPACConvert_VERSION ", " SPACConvert_COPYRIGHT "Lukas Cone"
+                  "\nSimply drag'n'drop files/folders onto application or "
+                  "use as " SPACConvert_NAME
+                  " path1 path2 ...\nTool can detect and scan folders.";
 
-static const char pressKeyCont[] = "\nPress ENTER to close.";
+static const char configHelp[] = "For settings, edit .config file.";
 
 class VGMMemoryFile;
 
@@ -64,15 +61,16 @@ class VGMMemoryFile {
 
 public:
   char *buffer;
-  uint bufferSize;
+  size_t bufferSize;
   const char *fileName;
 
 private:
   static size_t Read(STREAMFILE *fl, uint8_t *dest, off_t offset,
                      size_t length) {
     VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
-    if (offset + length > self->bufferSize || !dest || !length)
+    if (offset + length > self->bufferSize || !dest || !length) {
       return 0;
+    }
 
     char *cBufferPos = self->buffer + offset;
     self->bufferOffset = offset + length;
@@ -134,46 +132,36 @@ public:
 };
 
 struct SPACHeader {
-  static constexpr int ID = 0x43415053;
-  static constexpr int ID_R = 0x53504143;
+  static constexpr uint32 ID = CompileFourCC("SPAC");
+  static constexpr uint32 ID_R = CompileFourCC("CAPS");
 
-  int id, version, numFiles, unkCount00, unkCount01, unkOffset00, unkOffset01,
-      dataOffset;
+  uint32 id, version, numFiles, unkCount00, unkCount01, unkOffset00,
+      unkOffset01, dataOffset;
 
   void SwapEndian() { FArraySwapper<int>(*this); }
 };
 
-REFLECTOR_CREATE(FileType, ENUM, 2, CLASS, EXTERN, WAV, FWSE, MSF);
+REFLECTOR_CREATE(SPACFileType, ENUM, 1, CLASS, WAV, FWSE, MSF);
 
-struct ArchiveBuffer {
-  struct FileEntry {
-    char *start;
-    int size;
-    FileType fileType;
+struct ArchiveFileEntry {
+  char *start;
+  size_t size;
+  SPACFileType fileType;
 
-    FileEntry(char *iStart, int iLen, FileType iType)
-        : start(iStart), size(iLen), fileType(iType) {}
-  };
-
-  char *buffer = nullptr;
-  int curPos = 0;
-  std::vector<FileEntry> entries;
-  ~ArchiveBuffer() {
-    if (buffer)
-      free(buffer);
-  }
+  ArchiveFileEntry(char *iStart, size_t iLen, SPACFileType iType)
+      : start(iStart), size(iLen), fileType(iType) {}
 };
 
-void LoadSPAC(const TCHAR *fle) {
-  printline("Loading file: ", << fle);
+struct ArchiveBuffer {
+  std::string buffer;
+  size_t curPos = 0;
+  std::vector<ArchiveFileEntry> entries;
+};
 
-  TSTRING filepath = fle;
-  BinReader rd(fle);
+void LoadSPAC(const std::string &fileName) {
+  printline("Loading file: " << fileName);
 
-  if (!rd.IsValid()) {
-    printerror("Cannot open file.");
-    return;
-  }
+  BinReader rd(fileName);
 
   SPACHeader hdr;
   rd.Read(hdr);
@@ -181,39 +169,38 @@ void LoadSPAC(const TCHAR *fle) {
   if (hdr.id == SPACHeader::ID_R) {
     hdr.SwapEndian();
   } else if (hdr.id != SPACHeader::ID) {
-    printerror("Invalid file format.");
-    return;
+    throw es::InvalidHeaderError(hdr.id);
   }
 
   size_t curBuffITer = hdr.dataOffset;
   ArchiveBuffer msBuffer;
-  msBuffer.buffer = static_cast<char *>(malloc(rd.GetSize()));
+  msBuffer.buffer.resize(rd.GetSize());
 
-  for (int f = 0; f < hdr.numFiles; f++) {
-    int firstFileID;
-    rd.SavePos();
+  for (size_t f = 0; f < hdr.numFiles; f++) {
+    uint32 firstFileID;
+    rd.Push();
     rd.Read(firstFileID);
-    rd.RestorePos();
+    rd.Pop();
 
     if ((firstFileID & 0xffffff) == CompileFourCC("MSF\0")) {
-      char *bufferStart = msBuffer.buffer + msBuffer.curPos;
+      char *bufferStart = &msBuffer.buffer[0] + msBuffer.curPos;
 
       rd.ReadBuffer(bufferStart, sizeof(MSF));
 
-      int msfDataSize = reinterpret_cast<MSF *>(bufferStart)->dataSize;
+      uint32 msfDataSize = reinterpret_cast<MSF *>(bufferStart)->dataSize;
       FByteswapper(msfDataSize);
 
-      rd.SavePos();
+      rd.Push();
       rd.Seek(curBuffITer);
       rd.ReadBuffer(bufferStart + sizeof(MSF), msfDataSize);
-      int fullSize = msfDataSize + sizeof(MSF);
-      msBuffer.entries.emplace_back(bufferStart, fullSize, FileType::MSF);
+      size_t fullSize = msfDataSize + sizeof(MSF);
+      msBuffer.entries.emplace_back(bufferStart, fullSize, SPACFileType::MSF);
       msBuffer.curPos += fullSize;
       rd.ApplyPadding(128);
       curBuffITer = rd.Tell();
-      rd.RestorePos();
+      rd.Pop();
     } else if (firstFileID == RIFFHeader::ID) {
-      char *bufferStart = msBuffer.buffer + msBuffer.curPos;
+      char *bufferStart = &msBuffer.buffer[0] + msBuffer.curPos;
       char *bufferIter = bufferStart;
 
       rd.ReadBuffer(bufferStart, sizeof(RIFFHeader));
@@ -222,21 +209,21 @@ void LoadSPAC(const TCHAR *fle) {
       WAVEGenericHeader gHdr(0);
 
       while (true) {
-        rd.SavePos();
+        rd.Push();
         rd.Read(gHdr);
-        rd.RestorePos();
+        rd.Pop();
 
-        if (gHdr.id == RIFFHeader::ID)
+        if (gHdr.id == RIFFHeader::ID) {
           break;
-        else if (gHdr.id == WAVE_data::ID) {
+        } else if (gHdr.id == WAVE_data::ID) {
           rd.ReadBuffer(bufferIter, sizeof(WAVEGenericHeader));
           bufferIter += sizeof(WAVEGenericHeader);
-          rd.SavePos();
+          rd.Push();
           rd.Seek(curBuffITer);
           rd.ReadBuffer(bufferIter, gHdr.chunkSize);
           bufferIter += gHdr.chunkSize;
           curBuffITer = rd.Tell();
-          rd.RestorePos();
+          rd.Pop();
         } else if (IsValidWaveChunk(gHdr)) {
           rd.ReadBuffer(bufferIter, sizeof(WAVEGenericHeader) + gHdr.chunkSize);
 
@@ -245,8 +232,9 @@ void LoadSPAC(const TCHAR *fle) {
             if (fmt->numSampleLoops) {
               WAVE_smpl::SampleLoop *cLoop = fmt->GetSampleLoops();
 
-              if (!cLoop->end && !cLoop->start)
+              if (!cLoop->end && !cLoop->start) {
                 fmt->numSampleLoops = 0;
+              }
             }
           }
 
@@ -257,50 +245,52 @@ void LoadSPAC(const TCHAR *fle) {
           break;
         }
       }
-      const int fullSize = bufferIter - bufferStart;
-      msBuffer.entries.emplace_back(bufferStart, fullSize, FileType::WAV);
+      const size_t fullSize = bufferIter - bufferStart;
+      msBuffer.entries.emplace_back(bufferStart, fullSize, SPACFileType::WAV);
       msBuffer.curPos += fullSize;
 
     } else if (firstFileID == FWSE::ID) {
-      char *bufferStart = msBuffer.buffer + msBuffer.curPos;
+      char *bufferStart = &msBuffer.buffer[0] + msBuffer.curPos;
 
       rd.ReadBuffer(bufferStart, sizeof(FWSE));
       FWSE *fwseHdr = reinterpret_cast<FWSE *>(bufferStart);
-      int fwseDataSize = fwseHdr->fileSize - fwseHdr->bufferOffset;
+      size_t fwseDataSize = fwseHdr->fileSize - fwseHdr->bufferOffset;
 
-      if (fwseHdr->bufferOffset != 0x400)
+      if (fwseHdr->bufferOffset != 0x400) {
         throw std::runtime_error("Invalid FWSE header length!");
+      }
 
-      rd.SavePos();
+      rd.Push();
       rd.Seek(curBuffITer);
       rd.ReadBuffer(bufferStart + sizeof(FWSE), fwseDataSize);
       msBuffer.entries.emplace_back(bufferStart, fwseHdr->fileSize,
-                                    FileType::FWSE);
+                                    SPACFileType::FWSE);
       msBuffer.curPos += fwseHdr->fileSize;
       curBuffITer = rd.Tell();
-      rd.RestorePos();
+      rd.Pop();
     } else {
       throw std::runtime_error("Invalid entry format!");
     }
   }
 
-  int currentFile = 0;
+  size_t currentFile = 0;
   VGMMemoryFile *nmFile =
       !settings.Convert_to_WAV ? nullptr : VGMMemoryFile::Create();
 
   for (auto &e : msBuffer.entries) {
-    TFileInfo finf(fle);
-    _tmkdir((finf.GetPath() + _T("out")).c_str());
-
+    AFileInfo finf(fileName);
+    auto outFolder = finf.GetFolder().to_string() + "out";
+    es::mkdir(outFolder);
+    auto extension =
+        GetReflectedEnum<SPACFileType>().at(static_cast<size_t>(e.fileType));
     std::string nakedName =
-        std::to_string(currentFile) + '.' +
-        _EnumWrap<FileType>{}._reflected[static_cast<int>(e.fileType)];
+        std::to_string(currentFile) + '.' + extension.to_string();
 
     if (settings.Convert_to_WAV &&
-        (settings.Force_WAV_Conversion || e.fileType != FileType::WAV)) {
+        (settings.Force_WAV_Conversion || e.fileType != SPACFileType::WAV)) {
       nmFile->buffer = e.start;
       nmFile->bufferSize = e.size;
-      nmFile->fileName = nakedName.c_str();
+      nmFile->fileName = nakedName.data();
 
       VGMSTREAM *cVGMStream = init_vgmstream_from_STREAMFILE(*nmFile);
 
@@ -310,7 +300,9 @@ void LoadSPAC(const TCHAR *fle) {
       }
 
       const size_t samplerSize = cVGMStream->num_samples * sizeof(sample_t);
-      sample_t *sampleBuffer = static_cast<sample_t *>(malloc(samplerSize));
+      std::string samples;
+      samples.resize(samplerSize);
+      sample_t *sampleBuffer = reinterpret_cast<sample_t *>(&samples[0]);
 
       render_vgmstream(sampleBuffer, cVGMStream->num_samples, cVGMStream);
 
@@ -323,27 +315,26 @@ void LoadSPAC(const TCHAR *fle) {
 
       close_vgmstream(cVGMStream);
 
-      TSTRING filename = finf.GetPath() + _T("out/") + finf.GetFileName() +
-                         _T('_') + ToTSTRING(currentFile) + _T(".wav");
+      auto filename = finf.GetFolder().to_string() + "out/" +
+                      finf.GetFilename().to_string() + '_' +
+                      std::to_string(currentFile) + ".wav";
 
-      BinWritter wr(filename);
+      try {
+        BinWritter wr(filename);
 
-      if (!wr.IsValid()) {
-        printerror("Failed to create file: ", << filename);
-        free(sampleBuffer);
-        continue;
+        wr.Write(hdr);
+        wr.Write(fmt);
+        wr.Write(wData);
+
+        wr.WriteBuffer(reinterpret_cast<char *>(sampleBuffer), samplerSize);
+      } catch (const std::exception &e) {
+        printerror(e.what());
       }
 
-      wr.Write(hdr);
-      wr.Write(fmt);
-      wr.Write(wData);
-
-      wr.WriteBuffer(reinterpret_cast<char *>(sampleBuffer), samplerSize);
-
-      free(sampleBuffer);
     } else {
-      TSTRING filename = finf.GetPath() + _T("out/") + finf.GetFileName() +
-                         _T('_') + esStringConvert<TCHAR>(nakedName.c_str());
+      auto filename = finf.GetFolder().to_string() + "out/" +
+                      finf.GetFilename().to_string() + '_' +
+                      std::to_string(nakedName);
       std::ofstream ofs(filename, std::ios::out | std::ios::binary);
       ofs.write(e.start, e.size);
       ofs.close();
@@ -353,72 +344,89 @@ void LoadSPAC(const TCHAR *fle) {
   }
 
   delete nmFile;
-
-  return;
 }
-
-REGISTER_ENUMS(FileType);
-
-struct SPACQueueTraits {
-  int queue;
-  int queueEnd;
-  TCHAR **files;
-  typedef void return_type;
-
-  return_type RetreiveItem() { LoadSPAC(files[queue]); }
-
-  operator bool() { return queue < queueEnd; }
-  void operator++(int) { queue++; }
-  int NumQueues() const { return queueEnd - 1; }
-};
 
 int _tmain(int argc, TCHAR *argv[]) {
   setlocale(LC_ALL, "");
-  printer.AddPrinterFunction(wprintf);
-  RegisterLocalEnums();
+  printer.AddPrinterFunction(UPrintf);
+  printline(appHeader);
 
-  printline(SPACConvert_DESC ", " SPACConvert_COPYRIGHT
-                             "\nSimply drag'n'drop files into application or "
-                             "use as " SPACConvert_PRODUCT_NAME
-                             " file1 file2 ...\n");
+  AFileInfo configInfo(std::to_string(*argv));
+  auto configName = configInfo.GetFullPathNoExt().to_string() + ".config";
+  try {
+    auto doc = XMLFromFile(configName);
+    ReflectorXMLUtil::LoadV2(settings, doc, true);
+  } catch (const es::FileNotFoundError &e) {
+  }
+  {
+    pugi::xml_document doc = {};
+    std::stringstream str;
+    settings.GetHelp(str);
+    auto buff = str.str();
+    doc.append_child(pugi::node_comment).set_value(buff.data());
 
-  TFileInfo configInfo(*argv);
-  const TSTRING configName =
-      configInfo.GetPath() + configInfo.GetFileName() + _T(".config");
-
-  settings.FromXML(configName);
-
-  pugi::xml_document doc = {};
-  pugi::xml_node mainNode(settings.ToXML(doc));
-  mainNode.prepend_child(pugi::xml_node_type::node_comment).set_value(help);
-
-  doc.save_file(configName.c_str(), "\t",
-                pugi::format_write_bom | pugi::format_indent);
+    ReflectorXMLUtil::SaveV2a(settings, doc,
+                              {ReflectorXMLUtil::Flags_ClassNode,
+                               ReflectorXMLUtil::Flags_StringAsAttribute});
+    XMLToFile(configName, doc,
+              {XMLFormatFlag::WriteBOM, XMLFormatFlag::IndentAttributes});
+  }
 
   if (argc < 2) {
     printerror("Insufficient argument count, expected at least 1.");
-    printer << help << pressKeyCont >> 1;
-    getchar();
+    printline(configHelp);
     return 1;
   }
 
-  if (argv[1][1] == '?' || argv[1][1] == 'h') {
-    printer << help << pressKeyCont >> 1;
-    getchar();
+  if (IsHelp(argv[1])) {
+    printline(configHelp);
     return 0;
   }
 
-  if (settings.Generate_Log)
-    settings.CreateLog(configInfo.GetPath() + configInfo.GetFileName());
+  if (settings.Generate_Log) {
+    settings.CreateLog(configInfo.GetFullPathNoExt().to_string());
+  }
+
+  std::vector<std::string> files;
+
+  for (int a = 1; a < argc; a++) {
+    auto fileName = std::to_string(argv[a]);
+    auto type = FileType(fileName);
+
+    switch (type) {
+    case FileType_e::Directory: {
+      DirectoryScanner sc;
+      sc.AddFilter(".spc");
+      printline("Scanning: " << fileName);
+      sc.Scan(fileName);
+      printline("Files found: " << sc.Files().size());
+
+      std::transform(std::make_move_iterator(sc.begin()),
+                     std::make_move_iterator(sc.end()),
+                     std::back_inserter(files),
+                     [](auto &&item) { return std::move(item); });
+
+      break;
+    }
+    case FileType_e::File:
+      files.emplace_back(std::move(fileName));
+      break;
+    default: {
+      printerror("Invalid path: " << fileName);
+      break;
+    }
+    }
+  }
 
   printer.PrintThreadID(true);
 
-  SPACQueueTraits spcQue;
-  spcQue.files = argv;
-  spcQue.queue = 1;
-  spcQue.queueEnd = argc;
-
-  RunThreadedQueue(spcQue);
+  RunThreadedQueue(files.size(), [&](size_t index) {
+    try {
+      LoadSPAC(files[index]);
+    } catch (const std::exception &e) {
+      printerror(e.what());
+    }
+  });
 
   return 0;
 }

@@ -1,9 +1,9 @@
-[submodule "3rd_party/precore"]
-	path = 3rd_party/precore
-	url = https://github.com/predatorcz/precore
 [submodule "3rd_party/vgmstream"]
 	path = 3rd_party/vgmstream
-	url = https://github.com/PredatorCZ/vgmstream.git
+	url = git@github.com:PredatorCZ/vgmstream.git
 [submodule "3rd_party/RevilLib"]
 	path = 3rd_party/RevilLib
-	url = https://github.com/PredatorCZ/RevilLib.git
+	url = git@github.com:PredatorCZ/RevilLib.git
+[submodule "3rd_party/zlib"]
+	path = 3rd_party/zlib
+	url = git@github.com:madler/zlib.git
