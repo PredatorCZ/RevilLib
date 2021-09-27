@@ -6,7 +6,7 @@ build_target(
   NAME
   ddon_sngw
   TYPE
-  APP
+  ESMODULE
   SOURCES
   ddon_sngw.cpp
   LINKS
@@ -17,5 +17,3 @@ build_target(
   "DD:Online SNGW converter"
   START_YEAR
   2021)
-
-install(TARGETS ddon_sngw RUNTIME DESTINATION bin)

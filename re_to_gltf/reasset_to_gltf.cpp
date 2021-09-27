@@ -1,14 +1,10 @@
-#include "datas/binwritter_stream.hpp"
-#include "datas/directory_scanner.hpp"
-#include "datas/fileinfo.hpp"
-#include "datas/multi_thread.hpp"
-#include "datas/pugiex.hpp"
-#include "datas/reflector_xml.hpp"
-#include "datas/settings_manager.hpp"
-#include "datas/stat.hpp"
-#include "datas/tchar.hpp"
 #include "gltf.h"
+
+#include "datas/binreader_stream.hpp"
+#include "datas/binwritter_stream.hpp"
+#include "datas/fileinfo.hpp"
 #include "project.h"
+#include "re_common.hpp"
 #include "revil/re_asset.hpp"
 #include "uni/motion.hpp"
 #include "uni/rts.hpp"
@@ -25,22 +21,26 @@ static struct {
   bool compressKeys = false;
 } debug;
 
-static struct REAsset2GLTF : SettingsManager<REAsset2GLTF> {
-  bool Generate_Log = false;
+static struct REAsset2GLTF : ReflectorBase<REAsset2GLTF> {
 } settings;
 
-REFLECTOR_CREATE(REAsset2GLTF, 1, EXTENDED,
-                 (D, Generate_Log,
-                  "Will generate text log of console output next to "
-                  "application location."));
+REFLECT(CLASS(REAsset2GLTF));
 
-static const char appHeader[] = REAsset2GLTF_DESC
-    " v" REAsset2GLTF_VERSION ", " REAsset2GLTF_COPYRIGHT "Lukas Cone"
-    "\nSimply drag'n'drop files/folders onto application or "
-    "use as " REAsset2GLTF_NAME
-    " path1 path2 ...\nTool can detect and scan folders.";
+es::string_view filters[]{
+    "$.mot.43",     "$.mot.65",      "$.mot.78",
+    "$.mot.458",    "$.motlist.60",  "$.motlist.85",
+    "$.motlist.99", "$.motlist.486", {},
+};
 
-static const char configHelp[] = "For settings, edit .config file.";
+ES_EXPORT AppInfo_s appInfo{
+    AppInfo_s::CONTEXT_VERSION,
+    AppMode_e::CONVERT,
+    ArchiveLoadType::FILTERED,
+    REAsset2GLTF_DESC " v" REAsset2GLTF_VERSION ", " REAsset2GLTF_COPYRIGHT
+                      "Lukas Cone",
+    reinterpret_cast<ReflectorFriend *>(&settings),
+    filters,
+};
 
 class GLTF {
 public:
@@ -405,106 +405,14 @@ void GLTF::Pipeline(const revil::REAsset &asset) {
   }
 }
 
-void ProcessFile(const std::string &fileName) {
-  printline("Converting " << fileName);
+void AppProcessFile(std::istream &stream, AppContext *ctx) {
   revil::REAsset asset;
-  asset.Load(fileName);
+  BinReaderRef rd(stream);
+  asset.Load(rd);
   GLTF main;
   main.Pipeline(asset);
-  AFileInfo info(fileName);
+  AFileInfo info(ctx->workingFile);
   auto outFile = info.GetFullPathNoExt().to_string() +
                  (debug.binaryGLTF ? ".glb" : ".gltf");
   gltf::Save(main.doc, outFile, debug.binaryGLTF);
-}
-
-int _tmain(int argc, TCHAR *argv[]) {
-  setlocale(LC_ALL, "");
-  printer.AddPrinterFunction(UPrintf);
-  printline(appHeader);
-
-  AFileInfo configInfo(std::to_string(*argv));
-  auto configName = configInfo.GetFullPathNoExt().to_string() + ".config";
-  try {
-    auto doc = XMLFromFile(configName);
-    ReflectorXMLUtil::LoadV2(settings, doc, true);
-  } catch (const es::FileNotFoundError &e) {
-  }
-  {
-    pugi::xml_document doc = {};
-    std::stringstream str;
-    settings.GetHelp(str);
-    auto buff = str.str();
-    doc.append_child(pugi::node_comment).set_value(buff.data());
-
-    ReflectorXMLUtil::SaveV2a(settings, doc,
-                              {ReflectorXMLUtil::Flags_ClassNode,
-                               ReflectorXMLUtil::Flags_StringAsAttribute});
-    XMLToFile(configName, doc,
-              {XMLFormatFlag::WriteBOM, XMLFormatFlag::IndentAttributes});
-  }
-
-  if (argc < 2) {
-    printerror("Insufficient argument count, expected at least 1.");
-    printline(configHelp);
-    return 1;
-  }
-
-  if (IsHelp(argv[1])) {
-    printline(configHelp);
-    return 0;
-  }
-
-  if (settings.Generate_Log) {
-    settings.CreateLog(configInfo.GetFullPathNoExt().to_string());
-  }
-
-  std::vector<std::string> files;
-
-  for (int a = 1; a < argc; a++) {
-    auto fileName = std::to_string(argv[a]);
-    auto type = FileType(fileName);
-
-    switch (type) {
-    case FileType_e::Directory: {
-      DirectoryScanner sc;
-      sc.AddFilter(".mot.43");
-      sc.AddFilter(".mot.65");
-      sc.AddFilter(".mot.78");
-      sc.AddFilter(".mot.458");
-      sc.AddFilter(".motlist.60");
-      sc.AddFilter(".motlist.85");
-      sc.AddFilter(".motlist.99");
-      sc.AddFilter(".motlist.486");
-      printline("Scanning: " << fileName);
-      sc.Scan(fileName);
-      printline("Files found: " << sc.Files().size());
-
-      std::transform(std::make_move_iterator(sc.begin()),
-                     std::make_move_iterator(sc.end()),
-                     std::back_inserter(files),
-                     [](auto &&item) { return std::move(item); });
-
-      break;
-    }
-    case FileType_e::File:
-      files.emplace_back(std::move(fileName));
-      break;
-    default: {
-      printerror("Invalid path: " << fileName);
-      break;
-    }
-    }
-  }
-
-  printer.PrintThreadID(true);
-
-  RunThreadedQueue(files.size(), [&](size_t index) {
-    try {
-      ProcessFile(files[index]);
-    } catch (const std::exception &e) {
-      printerror(e.what());
-    }
-  });
-
-  return 0;
 }

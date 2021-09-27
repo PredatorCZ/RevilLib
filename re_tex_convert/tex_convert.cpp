@@ -15,50 +15,49 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader.hpp"
+#include "datas/app_context.hpp"
+#include "datas/binreader_stream.hpp"
 #include "datas/binwritter.hpp"
-#include "datas/directory_scanner.hpp"
+#include "datas/fileinfo.hpp"
 #include "datas/master_printer.hpp"
-#include "datas/multi_thread.hpp"
-#include "datas/pugiex.hpp"
 #include "datas/reflector.hpp"
-#include "datas/reflector_xml.hpp"
-#include "datas/settings_manager.hpp"
-#include "datas/stat.hpp"
 #include "formats/DDS.hpp"
 #include "project.h"
 #include <algorithm>
 
-static struct TEXConvert : SettingsManager<TEXConvert> {
-  bool Generate_Log = false;
-  bool Convert_DDS_to_legacy = true;
-  bool Force_unconvetional_legacy_formats = true;
-  bool Folder_scan_TEX_only = true;
-  bool Extract_largest_mipmap = false;
+es::string_view filters[]{
+    "$.tex",
+    {},
+};
+
+struct TEXConvert : ReflectorBase<TEXConvert> {
+  bool legacyDDS = true;
+  bool forceLegacyDDS = true;
+  bool largestMipmap = true;
 } settings;
 
-REFLECTOR_CREATE(
-    TEXConvert, 1, EXTENDED,
-    (D, Convert_DDS_to_legacy,
-     "Tries to convert TEX into legacy (DX9) DDS format."),
-    (D, Force_unconvetional_legacy_formats,
-     "Will try to convert some matching formats from DX10 to DX9, for "
-     "example: RG88 to AL88."),
-    (D, Extract_largest_mipmap,
-     "Will try to extract only highest mipmap.\nTexture musn't be converted "
-     "back afterwards, unless you regenerate mipmaps!\nThis setting does not "
-     "apply, if texture have arrays or is a cubemap!"),
-    (D, Generate_Log,
-     "Will generate text log of console output next to "
-     "application location."));
+REFLECT(CLASS(TEXConvert),
+        MEMBERNAME(legacyDDS, "legacy-dds", "l",
+                   ReflDesc{
+                       "Tries to convert texture into legacy (DX9) DDS format.",
+                       ""}),
+        MEMBERNAME(forceLegacyDDS, "force-legacy-dds", "f",
+                   ReflDesc{
+                       "Will try to convert some matching formats from DX10 "
+                       "to DX9, for example: RG88 to AL88.",
+                       ""}),
+        MEMBERNAME(largestMipmap, "largest-mipmap-only", "m",
+                   ReflDesc{"Will try to extract only highest mipmap.", ""}), );
 
-static const char appHeader[] = RETEXConvert_DESC
-    " v" RETEXConvert_VERSION ", " RETEXConvert_COPYRIGHT "Lukas Cone"
-    "\nSimply drag'n'drop files/folders onto application or "
-    "use as " RETEXConvert_NAME
-    " path1 path2 ...\nTool can detect and scan folders.";
-
-static const char configHelp[] = "For settings, edit .config file.";
+ES_EXPORT AppInfo_s appInfo{
+    AppInfo_s::CONTEXT_VERSION,
+    AppMode_e::CONVERT,
+    ArchiveLoadType::FILTERED,
+    RETEXConvert_DESC " v" RETEXConvert_VERSION ", " RETEXConvert_COPYRIGHT
+                      "Lukas Cone",
+    reinterpret_cast<ReflectorFriend *>(&settings),
+    filters,
+};
 
 struct RETEXMip {
   char *offset;
@@ -94,9 +93,8 @@ struct RETEX {
   }
 };
 
-void FilehandleITFC(const std::string &fle) {
-  printline("Loading file: " << fle);
-  BinReader rd(fle);
+void AppProcessFile(std::istream &stream, AppContext *ctx) {
+  BinReaderRef rd(stream);
 
   uint32 id;
   rd.Read(id);
@@ -112,7 +110,7 @@ void FilehandleITFC(const std::string &fle) {
   RETEX *tex = reinterpret_cast<RETEX *>(&buffer[0]);
   tex->Fixup();
 
-  AFileInfo fleInfo0(fle);
+  AFileInfo fleInfo0(ctx->workingFile);
   auto outFile = fleInfo0.GetFullPathNoExt().to_string() + ".dds";
   BinWritter wr(outFile);
 
@@ -136,15 +134,14 @@ void FilehandleITFC(const std::string &fle) {
         DDS::Caps01Flags_CubeMap_PositiveZ);
   }
 
-  ddtex.NumMipmaps(settings.Extract_largest_mipmap ? 1 : tex->numMips);
+  ddtex.NumMipmaps(settings.largestMipmap ? 1 : tex->numMips);
 
-  const uint32 sizetoWrite =
-      !settings.Convert_DDS_to_legacy || ddtex.arraySize > 1 ||
-              ddtex.ToLegacy(settings.Force_unconvetional_legacy_formats)
-          ? ddtex.DDS_SIZE
-          : ddtex.LEGACY_SIZE;
+  const uint32 sizetoWrite = !settings.legacyDDS || ddtex.arraySize > 1 ||
+                                     ddtex.ToLegacy(settings.forceLegacyDDS)
+                                 ? ddtex.DDS_SIZE
+                                 : ddtex.LEGACY_SIZE;
 
-  if (settings.Convert_DDS_to_legacy && sizetoWrite == ddtex.DDS_SIZE) {
+  if (settings.legacyDDS && sizetoWrite == ddtex.DDS_SIZE) {
     printwarning("Couldn't convert DX10 dds to legacy.")
   }
 
@@ -159,87 +156,4 @@ void FilehandleITFC(const std::string &fle) {
       wr.WriteBuffer(cMip.offset, cMip.size * tex->depth);
     }
   }
-}
-
-int _tmain(int argc, TCHAR *argv[]) {
-  setlocale(LC_ALL, "");
-  printer.AddPrinterFunction(UPrintf);
-  printline(appHeader);
-
-  AFileInfo configInfo(std::to_string(*argv));
-  auto configName = configInfo.GetFullPathNoExt().to_string() + ".config";
-  try {
-    auto doc = XMLFromFile(configName);
-    ReflectorXMLUtil::LoadV2(settings, doc, true);
-  } catch (const es::FileNotFoundError &e) {
-  }
-  {
-    pugi::xml_document doc = {};
-    std::stringstream str;
-    settings.GetHelp(str);
-    auto buff = str.str();
-    doc.append_child(pugi::node_comment).set_value(buff.data());
-
-    ReflectorXMLUtil::SaveV2a(settings, doc,
-                              {ReflectorXMLUtil::Flags_ClassNode});
-    XMLToFile(configName, doc,
-              {XMLFormatFlag::WriteBOM, XMLFormatFlag::IndentAttributes});
-  }
-
-  if (argc < 2) {
-    printerror("Insufficient argument count, expected at least 1.");
-    printline(configHelp);
-    return 1;
-  }
-
-  if (IsHelp(argv[1])) {
-    printline(configHelp);
-    return 0;
-  }
-
-  if (settings.Generate_Log) {
-    settings.CreateLog(configInfo.GetFullPathNoExt().to_string());
-  }
-
-  std::vector<std::string> files;
-
-  for (int a = 1; a < argc; a++) {
-    auto fileName = std::to_string(argv[a]);
-    auto type = FileType(fileName);
-
-    switch (type) {
-    case FileType_e::Directory: {
-      DirectoryScanner sc;
-      sc.AddFilter(settings.Folder_scan_TEX_only ? ".tex." : ".dds");
-      printline("Scanning: " << fileName);
-      sc.Scan(fileName);
-      printline("Files found: " << sc.Files().size());
-
-      std::transform(std::make_move_iterator(sc.begin()),
-                     std::make_move_iterator(sc.end()),
-                     std::back_inserter(files),
-                     [](auto &&item) { return std::move(item); });
-
-      break;
-    }
-    case FileType_e::File:
-      files.emplace_back(std::move(fileName));
-      break;
-    default:
-      printerror("Invalid path: " << fileName);
-      break;
-    }
-  }
-
-  printer.PrintThreadID(true);
-
-  RunThreadedQueue(files.size(), [&](size_t index) {
-    try {
-      FilehandleITFC(files[index]);
-    } catch (const std::exception &e) {
-      printerror(e.what());
-    }
-  });
-
-  return 0;
 }

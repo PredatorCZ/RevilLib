@@ -15,45 +15,56 @@
         along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/directory_scanner.hpp"
+#include "datas/app_context.hpp"
+#include "datas/binreader_stream.hpp"
+#include "datas/binwritter_stream.hpp"
 #include "datas/endian.hpp"
+#include "datas/except.hpp"
 #include "datas/fileinfo.hpp"
-#include "datas/multi_thread.hpp"
-#include "datas/pugiex.hpp"
-#include "datas/reflector_xml.hpp"
-#include "datas/settings_manager.hpp"
-#include "datas/stat.hpp"
+#include "datas/master_printer.hpp"
+#include "datas/reflector.hpp"
 #include "formats/FWSE.hpp"
 #include "formats/MSF.hpp"
 #include "formats/WAVE.hpp"
 #include "project.h"
+#include <sstream>
 
 extern "C" {
 #include "vgmstream.h"
 }
 
-static struct SPACConvert : SettingsManager<SPACConvert> {
-  bool Generate_Log = false;
-  bool Force_WAV_Conversion = false;
-  bool Convert_to_WAV = true;
+es::string_view filters[]{
+    "$.spc",
+    {},
+};
+
+static struct SPACConvert : ReflectorBase<SPACConvert> {
+  bool forceWAV = false;
+  bool convertWAV = true;
 } settings;
 
-REFLECTOR_CREATE(SPACConvert, 1, VARNAMES, Convert_to_WAV, Force_WAV_Conversion,
-                 Generate_Log);
+REFLECT(
+    CLASS(SPACConvert),
+    MEMBERNAME(convertWAV, "convert-wav", "w",
+               ReflDesc{"Convert sounds to WAV format."}),
+    MEMBERNAME(
+        forceWAV, "force-wav", "W",
+        ReflDesc{
+            "Convert ADPCM WAV files into PCM WAV if SPAC contains then."}));
 
-static const char appHeader[] =
-    SPACConvert_DESC " v" SPACConvert_VERSION ", " SPACConvert_COPYRIGHT "Lukas Cone"
-                  "\nSimply drag'n'drop files/folders onto application or "
-                  "use as " SPACConvert_NAME
-                  " path1 path2 ...\nTool can detect and scan folders.";
-
-static const char configHelp[] = "For settings, edit .config file.";
+ES_EXPORT AppInfo_s appInfo{
+    AppInfo_s::CONTEXT_VERSION,
+    AppMode_e::EXTRACT,
+    ArchiveLoadType::FILTERED,
+    SPACConvert_DESC " v" SPACConvert_VERSION ", " SPACConvert_COPYRIGHT
+                     "Lukas Cone",
+    reinterpret_cast<ReflectorFriend *>(&settings),
+    filters,
+};
 
 class VGMMemoryFile;
 
-static thread_local VGMMemoryFile *currentFile = nullptr;
+static thread_local std::unique_ptr<VGMMemoryFile> currentFile;
 
 class VGMMemoryFile {
   STREAMFILE sf; // must be always first, to fool free(), reinterpret_casts, etc
@@ -99,7 +110,7 @@ private:
   }
 
   static void Destroy(STREAMFILE *fl) {
-    VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
+    //VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
 
     // currentFile = nullptr;
     // delete self;
@@ -107,20 +118,18 @@ private:
 
   static STREAMFILE *Create(STREAMFILE *, const char *fileName, size_t) {
     if (fileName)
-      return *currentFile;
+      return reinterpret_cast<STREAMFILE *>(currentFile.get());
 
-    VGMMemoryFile *memfile = new VGMMemoryFile();
+    currentFile = std::make_unique<VGMMemoryFile>();
 
-    memfile->sf.read = Read;
-    memfile->sf.get_size = GetSize;
-    memfile->sf.get_offset = GetOffset;
-    memfile->sf.get_name = GetName;
-    memfile->sf.open = Create;
-    memfile->sf.close = Destroy;
+    currentFile->sf.read = Read;
+    currentFile->sf.get_size = GetSize;
+    currentFile->sf.get_offset = GetOffset;
+    currentFile->sf.get_name = GetName;
+    currentFile->sf.open = Create;
+    currentFile->sf.close = Destroy;
 
-    currentFile = memfile;
-
-    return *memfile;
+    return reinterpret_cast<STREAMFILE*>(currentFile.get());
   }
 
 public:
@@ -141,7 +150,8 @@ struct SPACHeader {
   void SwapEndian() { FArraySwapper<int>(*this); }
 };
 
-REFLECTOR_CREATE(SPACFileType, ENUM, 1, CLASS, WAV, FWSE, MSF);
+MAKE_ENUM(ENUMSCOPE(class SPACFileType, SPACFileType), EMEMBER(WAV),
+          EMEMBER(FWSE), EMEMBER(MSF));
 
 struct ArchiveFileEntry {
   char *start;
@@ -158,10 +168,8 @@ struct ArchiveBuffer {
   std::vector<ArchiveFileEntry> entries;
 };
 
-void LoadSPAC(const std::string &fileName) {
-  printline("Loading file: " << fileName);
-
-  BinReader rd(fileName);
+void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
+  BinReaderRef rd(stream);
 
   SPACHeader hdr;
   rd.Read(hdr);
@@ -275,19 +283,16 @@ void LoadSPAC(const std::string &fileName) {
 
   size_t currentFile = 0;
   VGMMemoryFile *nmFile =
-      !settings.Convert_to_WAV ? nullptr : VGMMemoryFile::Create();
+      !settings.convertWAV ? nullptr : VGMMemoryFile::Create();
 
   for (auto &e : msBuffer.entries) {
-    AFileInfo finf(fileName);
-    auto outFolder = finf.GetFolder().to_string() + "out";
-    es::mkdir(outFolder);
-    auto extension =
-        GetReflectedEnum<SPACFileType>().at(static_cast<size_t>(e.fileType));
-    std::string nakedName =
-        std::to_string(currentFile) + '.' + extension.to_string();
+    AFileInfo finf(ctx->ctx->workingFile);
+    auto extension = GetReflectedEnum<SPACFileType>()
+                         ->names[static_cast<size_t>(e.fileType)];
+    std::string nakedName = (std::to_string(currentFile) + '.') + extension;
 
-    if (settings.Convert_to_WAV &&
-        (settings.Force_WAV_Conversion || e.fileType != SPACFileType::WAV)) {
+    if (settings.convertWAV &&
+        (settings.forceWAV || e.fileType != SPACFileType::WAV)) {
       nmFile->buffer = e.start;
       nmFile->bufferSize = e.size;
       nmFile->fileName = nakedName.data();
@@ -315,118 +320,27 @@ void LoadSPAC(const std::string &fileName) {
 
       close_vgmstream(cVGMStream);
 
-      auto filename = finf.GetFolder().to_string() + "out/" +
-                      finf.GetFilename().to_string() + '_' +
+      auto filename = finf.GetFilename().to_string() + '_' +
                       std::to_string(currentFile) + ".wav";
 
-      try {
-        BinWritter wr(filename);
-
-        wr.Write(hdr);
-        wr.Write(fmt);
-        wr.Write(wData);
-
-        wr.WriteBuffer(reinterpret_cast<char *>(sampleBuffer), samplerSize);
-      } catch (const std::exception &e) {
-        printerror(e.what());
-      }
-
+      ctx->NewFile(filename);
+      std::stringstream str;
+      BinWritterRef wr(str);
+      wr.Write(hdr);
+      wr.Write(fmt);
+      wr.Write(wData);
+      auto strBuff = str.str();
+      ctx->SendData(strBuff);
+      ctx->SendData({reinterpret_cast<char *>(sampleBuffer), samplerSize});
     } else {
-      auto filename = finf.GetFolder().to_string() + "out/" +
-                      finf.GetFilename().to_string() + '_' +
-                      std::to_string(nakedName);
-      std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-      ofs.write(e.start, e.size);
-      ofs.close();
+      auto filename =
+          finf.GetFilename().to_string() + '_' + std::to_string(nakedName);
+      ctx->NewFile(filename);
+      ctx->SendData({e.start, e.size});
     }
 
     currentFile++;
   }
 
   delete nmFile;
-}
-
-int _tmain(int argc, TCHAR *argv[]) {
-  setlocale(LC_ALL, "");
-  printer.AddPrinterFunction(UPrintf);
-  printline(appHeader);
-
-  AFileInfo configInfo(std::to_string(*argv));
-  auto configName = configInfo.GetFullPathNoExt().to_string() + ".config";
-  try {
-    auto doc = XMLFromFile(configName);
-    ReflectorXMLUtil::LoadV2(settings, doc, true);
-  } catch (const es::FileNotFoundError &e) {
-  }
-  {
-    pugi::xml_document doc = {};
-    std::stringstream str;
-    settings.GetHelp(str);
-    auto buff = str.str();
-    doc.append_child(pugi::node_comment).set_value(buff.data());
-
-    ReflectorXMLUtil::SaveV2a(settings, doc,
-                              {ReflectorXMLUtil::Flags_ClassNode,
-                               ReflectorXMLUtil::Flags_StringAsAttribute});
-    XMLToFile(configName, doc,
-              {XMLFormatFlag::WriteBOM, XMLFormatFlag::IndentAttributes});
-  }
-
-  if (argc < 2) {
-    printerror("Insufficient argument count, expected at least 1.");
-    printline(configHelp);
-    return 1;
-  }
-
-  if (IsHelp(argv[1])) {
-    printline(configHelp);
-    return 0;
-  }
-
-  if (settings.Generate_Log) {
-    settings.CreateLog(configInfo.GetFullPathNoExt().to_string());
-  }
-
-  std::vector<std::string> files;
-
-  for (int a = 1; a < argc; a++) {
-    auto fileName = std::to_string(argv[a]);
-    auto type = FileType(fileName);
-
-    switch (type) {
-    case FileType_e::Directory: {
-      DirectoryScanner sc;
-      sc.AddFilter(".spc");
-      printline("Scanning: " << fileName);
-      sc.Scan(fileName);
-      printline("Files found: " << sc.Files().size());
-
-      std::transform(std::make_move_iterator(sc.begin()),
-                     std::make_move_iterator(sc.end()),
-                     std::back_inserter(files),
-                     [](auto &&item) { return std::move(item); });
-
-      break;
-    }
-    case FileType_e::File:
-      files.emplace_back(std::move(fileName));
-      break;
-    default: {
-      printerror("Invalid path: " << fileName);
-      break;
-    }
-    }
-  }
-
-  printer.PrintThreadID(true);
-
-  RunThreadedQueue(files.size(), [&](size_t index) {
-    try {
-      LoadSPAC(files[index]);
-    } catch (const std::exception &e) {
-      printerror(e.what());
-    }
-  });
-
-  return 0;
 }

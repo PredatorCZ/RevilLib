@@ -4,9 +4,9 @@ project(RETEXConvert VERSION 1.0)
 
 build_target(
   NAME
-  tex_conv_re
+  re_tex_to_dds
   TYPE
-  APP
+  ESMODULE
   SOURCES
   tex_convert.cpp
   LINKS
@@ -17,5 +17,3 @@ build_target(
   "RE TEX Converter"
   START_YEAR
   2020)
-
-install(TARGETS tex_conv_re RUNTIME DESTINATION bin)

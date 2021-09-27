@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 project(REAsset2GLTF VERSION 1.0)
 
@@ -6,13 +6,16 @@ build_target(
   NAME
   reasset_to_gltf
   TYPE
-  APP
+  ESMODULE
   SOURCES
   reasset_to_gltf
   LINKS
   revil
   INCLUDES
   ${TPD_PATH}/gltf
+  PROPERTIES
+  DEFINE_SYMBOL
+  GLTF_PCH
   AUTHOR
   "Lukas Cone"
   DESCR
@@ -20,4 +23,4 @@ build_target(
   START_YEAR
   2021)
 
-install(TARGETS reasset_to_gltf RUNTIME DESTINATION bin)
+target_precompile_headers(reasset_to_gltf REUSE_FROM gltf_pch)

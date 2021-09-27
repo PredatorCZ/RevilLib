@@ -1988,6 +1988,7 @@ namespace gltf
     }
 } // namespace gltf
 
+/* rtti only
 // A general-purpose utility to format an exception hierarchy into a string for output
 inline void FormatException(std::string & output, std::exception const & ex, int level = 0)
 {
@@ -2000,7 +2001,7 @@ inline void FormatException(std::string & output, std::exception const & ex, int
     {
         FormatException(output.append("\n"), e, level + 2);
     }
-}
+}*/
 
 } // namespace fx
 

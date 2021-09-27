@@ -36,7 +36,7 @@ build_target(
   NAME
   spac_conv
   TYPE
-  APP
+  ESMODULE
   SOURCES
   spac_conv.cpp
   LINKS
@@ -50,5 +50,3 @@ build_target(
   2019)
 
 setup_target(spac_conv TRUE)
-
-install(TARGETS spac_conv RUNTIME DESTINATION bin)
