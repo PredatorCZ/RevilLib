@@ -11,16 +11,10 @@ build_target(
   reasset_to_gltf
   LINKS
   revil
-  INCLUDES
-  ${TPD_PATH}/gltf
-  PROPERTIES
-  DEFINE_SYMBOL
-  GLTF_PCH
+  gltf
   AUTHOR
   "Lukas Cone"
   DESCR
   "RE Assets to GLTF"
   START_YEAR
   2021)
-
-target_precompile_headers(reasset_to_gltf REUSE_FROM gltf_pch)

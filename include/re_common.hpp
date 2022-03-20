@@ -1,5 +1,5 @@
 /*  Revil Toolset common stuff
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by

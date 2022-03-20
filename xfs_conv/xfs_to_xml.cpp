@@ -1,5 +1,5 @@
 /*  XFSConvert
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -22,10 +22,6 @@
 #include "revil/xfs.hpp"
 #include <algorithm>
 
-es::string_view filters[]{
-    {},
-};
-
 struct XFS2XML : ReflectorBase<XFS2XML> {
   bool saveRTTI = true;
   bool saveData = true;
@@ -36,15 +32,16 @@ REFLECT(CLASS(XFS2XML),
                    ReflDesc{"Save layout information."}),
         MEMBERNAME(saveData, "save-data", "d", ReflDesc{"Save data."}), );
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::CONVERT,
     ArchiveLoadType::ALL,
     XFSConvert_DESC " v" XFSConvert_VERSION ", " XFSConvert_COPYRIGHT
                     "Lukas Cone",
     reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
 };
+
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 void AppProcessFile(std::istream &stream, AppContext *ctx) {
   XFS xfs;

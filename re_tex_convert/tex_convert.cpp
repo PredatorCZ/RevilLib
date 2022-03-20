@@ -1,5 +1,5 @@
 /*  TEXConvert
-    Copyright(C) 2020 Lukas Cone
+    Copyright(C) 2020-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 #include <algorithm>
 
 es::string_view filters[]{
-    "$.tex",
+    ".tex$",
     {},
 };
 
@@ -49,7 +49,7 @@ REFLECT(CLASS(TEXConvert),
         MEMBERNAME(largestMipmap, "largest-mipmap-only", "m",
                    ReflDesc{"Will try to extract only highest mipmap.", ""}), );
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::CONVERT,
     ArchiveLoadType::FILTERED,
@@ -58,6 +58,8 @@ ES_EXPORT AppInfo_s appInfo{
     reinterpret_cast<ReflectorFriend *>(&settings),
     filters,
 };
+
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 struct RETEXMip {
   char *offset;

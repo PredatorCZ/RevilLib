@@ -14,15 +14,23 @@ set(BUILD_SHARED_LIBS
 set(BUILD_STATIC_OBJECTS
     OFF
     CACHE BOOL "")
+set(PUGI_SHARED_LIBS
+    ON
+    CACHE BOOL "")
+set(PC_SHARED_LIB
+    ON
+    CACHE BOOL "")
+set(GLTF_SHARED_LIB
+    ON
+    CACHE BOOL "")
 
+add_subdirectory(${TPD_PATH}/RevilLib)
 add_subdirectory(${TPD_PATH}/RevilLib/3rd_party/PreCore/spike
                  ${CMAKE_CURRENT_BINARY_DIR}/spike)
-add_subdirectory(${TPD_PATH}/RevilLib)
-add_subdirectory(${TPD_PATH}/gltf)
+add_subdirectory(${TPD_PATH}/RevilLib/3rd_party/PreCore/gltf)
 set_target_properties(spike PROPERTIES OUTPUT_NAME revil_toolset)
 
 include(targetex)
-include(chartype)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 

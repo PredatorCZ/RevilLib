@@ -12,11 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-            CC: gcc-7
+          - CC: gcc-7
             CXX: g++-7
             install: g++-7
             artifacts: true
-            CC: clang-5.0
+          - CC: clang-5.0
             CXX: clang++-5.0
             install: clang-5.0
 
@@ -33,9 +33,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install compiler
-        if: ${{matrix.install}}
-        run: sudo apt install ${{matrix.install}}
+      - name: Install dependencies
+        run: |
+          sudo rm -rd /usr/lib/gcc/x86_64-linux-gnu/10 /usr/lib/gcc/x86_64-linux-gnu/8 /usr/lib/gcc/x86_64-linux-gnu/9
+          sudo apt install ${{matrix.install}} libavcodec-dev libavformat-dev libswresample-dev libavutil-dev
 
       - name: Configure stuff
         run: |
@@ -75,7 +76,11 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -A x64 -DCMAKE_INSTALL_PREFIX=${{github.workspace}} ..
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . -j 6 --config Release --target install
+        run: |
+          cmake --build . -j 6 --config Release --target install
+          cd ..
+          copy LICENSE.md bin/LICENSE.md
+          copy README.md bin/README.md
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
@@ -83,6 +88,4 @@ jobs:
           name: RevilToolset-win64
           path: |
             ${{github.workspace}}/bin
-            ${{github.workspace}}/LICENSE.md
-            ${{github.workspace}}/README.md
           retention-days: 5

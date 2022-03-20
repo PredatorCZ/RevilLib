@@ -1,5 +1,5 @@
 /*  DDONSngw
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include <vector>
 
 es::string_view filters[]{
-    "$.sngw",
+    ".sngw$",
     {},
 };
 
@@ -36,7 +36,7 @@ REFLECT(CLASS(DDONSngw),
         MEMBER(encrypt, "e",
                ReflDesc{"Switch between encrypt or decrypt only."}));
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::CONVERT,
     ArchiveLoadType::FILTERED,
@@ -44,6 +44,8 @@ ES_EXPORT AppInfo_s appInfo{
     reinterpret_cast<ReflectorFriend *>(&settings),
     filters,
 };
+
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 constexpr uint32 SNGWID = CompileFourCC("OggS");
 const UIVector4A16 KEY = 0x64958637;

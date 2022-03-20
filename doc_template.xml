@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<toolset_name>RevilToolset</toolset_name>
+<toolset_description>Revil Toolset is a collection of modding tools for RE Engine/MT Framework titles.
+
+This toolset runs on Spike foundation.
+
+Head to this **[Wiki](https://github.com/PredatorCZ/PreCore/wiki/Spike)** for more information on how to effectively use it.</toolset_description>
+<ddon_sngw>Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.</ddon_sngw>
+<mod_to_gltf name="MOD2GLTF">Converts MT Framework `.mod` model into GLTF format.</mod_to_gltf>
+<mtf_tex_to_dds>Converts MT Framework `.tex` texture into DDS format.</mtf_tex_to_dds>
+<re_tex_to_dds>Converts RE Engine `.tex` texture into DDS format.</re_tex_to_dds>
+<reasset_to_gltf name="REAsset2GLTF">Converts RE Engine various assets into GLTF format.
+Currently only supports animations.</reasset_to_gltf>
+<spac_conv>Extracts MT Framework `.spc` sound containers and converts their files into WAV format.
+
+### Supported formats within SPAC archive
+
+- FWSE, Modified IMA ADPCM, PC
+- MSF, Various formats (16bit PCM, AT3, ...), PS3
+- RIFF WAVE, Various formats (MS IMA ADPCM mostly), PC</spac_conv>
+<xfs_to_xml>Converts MT Framework generic binary data table format into XML.</xfs_to_xml>
+<extract_arc>Extract MT Framework ARC archives.</extract_arc>
+<make_arc>Create MT Framework ARC archives.</make_arc>
+<toolset_footer>## [Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)
+
+## License
+
+This toolset is available under GPL v3 license. (See LICENSE.md)\
+This toolset uses following libraries:
+
+- RevilLib, Copyright (c) 2017-2022 Lukas Cone
+- vgmstream, Various Authors (See COPYING)
+</toolset_footer>

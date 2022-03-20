@@ -1,5 +1,5 @@
 /*  MTFTEXConvert
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 #include "revil/tex.hpp"
 
 es::string_view filters[]{
-    "$.tex",
+    ".tex$",
     {},
 };
 
@@ -42,7 +42,7 @@ REFLECT(CLASS(TEXConvert),
         MEMBERNAME(platformOverride, "platform", "p",
                    ReflDesc{"Set platform for correct texture handling."}));
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::CONVERT,
     ArchiveLoadType::FILTERED,
@@ -52,7 +52,10 @@ ES_EXPORT AppInfo_s appInfo{
     filters,
 };
 
-void AppInitModule() { RegisterReflectedType<Platform>(); }
+AppInfo_s *AppInitModule() {
+  RegisterReflectedType<Platform>();
+  return &appInfo;
+}
 
 void AppProcessFile(std::istream &stream, AppContext *ctx) {
   TEX tex;

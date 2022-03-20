@@ -1,18 +1,18 @@
-/*      SPACConvert
-        Copyright(C) 2019 Lukas Cone
+/*  SPACConvert
+    Copyright(C) 2019-2022 Lukas Cone
 
-        This program is free software : you can redistribute it and / or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-        GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with this program.If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "datas/app_context.hpp"
@@ -27,6 +27,7 @@
 #include "formats/MSF.hpp"
 #include "formats/WAVE.hpp"
 #include "project.h"
+#include <memory>
 #include <sstream>
 
 extern "C" {
@@ -34,7 +35,7 @@ extern "C" {
 }
 
 es::string_view filters[]{
-    "$.spc",
+    ".spc$",
     {},
 };
 
@@ -52,7 +53,7 @@ REFLECT(
         ReflDesc{
             "Convert ADPCM WAV files into PCM WAV if SPAC contains then."}));
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::EXTRACT,
     ArchiveLoadType::FILTERED,
@@ -62,13 +63,15 @@ ES_EXPORT AppInfo_s appInfo{
     filters,
 };
 
+AppInfo_s *AppInitModule() { return &appInfo; }
+
 class VGMMemoryFile;
 
 static thread_local std::unique_ptr<VGMMemoryFile> currentFile;
 
 class VGMMemoryFile {
   STREAMFILE sf; // must be always first, to fool free(), reinterpret_casts, etc
-  off_t bufferOffset = 0;
+  offv_t bufferOffset = 0;
 
 public:
   char *buffer;
@@ -76,7 +79,7 @@ public:
   const char *fileName;
 
 private:
-  static size_t Read(STREAMFILE *fl, uint8_t *dest, off_t offset,
+  static size_t Read(STREAMFILE *fl, uint8_t *dest, offv_t offset,
                      size_t length) {
     VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
     if (offset + length > self->bufferSize || !dest || !length) {
@@ -96,7 +99,7 @@ private:
     return self->bufferSize;
   }
 
-  static off_t GetOffset(STREAMFILE *fl) {
+  static offv_t GetOffset(STREAMFILE *fl) {
     VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
 
     return self->bufferOffset;
@@ -110,7 +113,7 @@ private:
   }
 
   static void Destroy(STREAMFILE *fl) {
-    //VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
+    // VGMMemoryFile *self = reinterpret_cast<VGMMemoryFile *>(fl);
 
     // currentFile = nullptr;
     // delete self;
@@ -129,7 +132,7 @@ private:
     currentFile->sf.open = Create;
     currentFile->sf.close = Destroy;
 
-    return reinterpret_cast<STREAMFILE*>(currentFile.get());
+    return reinterpret_cast<STREAMFILE *>(currentFile.get());
   }
 
 public:
@@ -333,8 +336,7 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
       ctx->SendData(strBuff);
       ctx->SendData({reinterpret_cast<char *>(sampleBuffer), samplerSize});
     } else {
-      auto filename =
-          finf.GetFilename().to_string() + '_' + std::to_string(nakedName);
+      auto filename = finf.GetFilename().to_string() + '_' + nakedName;
       ctx->NewFile(filename);
       ctx->SendData({e.start, e.size});
     }

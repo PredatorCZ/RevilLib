@@ -1,5 +1,5 @@
 /*  ARCConvert
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,73 +16,85 @@
 */
 
 #include "arc_conv.hpp"
+#include "datas/binreader.hpp"
 #include "datas/binwritter.hpp"
 #include "datas/master_printer.hpp"
+#include "datas/stat.hpp"
 #include "project.h"
+#include <atomic>
+#include <mutex>
+#include <thread>
 
 static struct ARCMake : ReflectorBase<ARCMake> {
   std::string title;
   Platform platform = Platform::Auto;
-  uint32 compressTreshold = 90;
-  uint32 minFileSize = 0x80;
   bool forceZLIBHeader = false;
-  bool verbose = false;
 } settings;
 
-REFLECT(
-    CLASS(ARCMake),
-    MEMBER(title, "t", ReflDesc{"Set title for correct archive handling."}),
-    MEMBER(platform, "p",
-           ReflDesc{"Set platform for correct archive handling."}),
-    MEMBERNAME(compressTreshold, "compress-treshold", "c",
-               ReflDesc{
-                   "Writes compressed data only when compression ratio is less "
-                   "than specified threshold [0 - 100]%"}),
-    MEMBERNAME(
-        minFileSize, "min-file-size", "m",
-        ReflDesc{
-            "Files that are smaller than specified size won't be compressed."}),
-    MEMBERNAME(forceZLIBHeader, "force-zlib-header", "z",
-               ReflDesc{"Force ZLIB header for files that won't be "
-                        "compressed. (Some platforms only)"}),
-    MEMBER(verbose, "v", "Prints more information."));
+REFLECT(CLASS(ARCMake),
+        MEMBER(title, "t", ReflDesc{"Set title for correct archive handling."}),
+        MEMBER(platform, "p",
+               ReflDesc{"Set platform for correct archive handling."}),
+        MEMBERNAME(forceZLIBHeader, "force-zlib-header", "z",
+                   ReflDesc{"Force ZLIB header for files that won't be "
+                            "compressed. (Some platforms only)"}));
 
-es::string_view filters[]{
-    {},
-};
-
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::PACK,
     ArchiveLoadType::ALL,
     ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
                     "Lukas Cone",
     reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+};
+
+AppInfo_s *AppInitModule() {
+  RegisterReflectedType<Platform>();
+  return &appInfo;
+}
+
+struct AFile {
+  std::string path;
+  size_t offset;
+  uint32 hash;
+  uint32 uSize;
+  uint32 cSize;
+};
+
+struct Stream {
+  std::string streamPath;
+  BinWritter_t<BinCoreOpenMode::NoBuffer> streamStore;
+  std::vector<AFile> files;
+
+  Stream(std::string &&path)
+      : streamPath(std::move(path)), streamStore(streamPath) {}
 };
 
 struct ArcMakeContext : AppPackContext {
-  BinWritter<> wr;
-  size_t numFiles = 0;
+  std::string outArc;
+  std::map<std::thread::id, Stream> streams;
   const TitleSupport *ts;
+  static inline std::atomic_uint32_t numFiles; // fugly
+
+  Stream &NewStream() {
+    static std::mutex streamsMutex;
+    auto thisId = std::this_thread::get_id();
+    uint32 threadId = reinterpret_cast<uint32 &>(thisId);
+    std::string path = outArc + std::to_string(threadId) + ".data";
+
+    {
+      std::lock_guard<std::mutex> lg(streamsMutex);
+      streams.emplace(thisId, std::move(path));
+      return streams.at(thisId);
+    }
+  }
 
   ArcMakeContext() = default;
-  ArcMakeContext(const std::string &path, const AppPackStats &stats)
-      : wr(path),
-        ts(revil::GetTitleSupport(settings.title, settings.platform)) {
-    const size_t tocSize =
-        ts->arc.extendedFilePath ? sizeof(ARCExtendedFile) : sizeof(ARCFile);
-    ARC hdr;
-    wr.Write(hdr);
-
-    if (ts->arc.version < 10 || ts->arc.xmemOnly) {
-      wr.Skip(-4);
-    }
-
-    wr.Push();
-    wr.Skip(tocSize * stats.numFiles);
-  }
+  ArcMakeContext(const std::string &path, const AppPackStats &)
+      : outArc(path),
+        ts(revil::GetTitleSupport(settings.title, settings.platform)) {}
   ArcMakeContext &operator=(ArcMakeContext &&) = default;
+
   void SendFile(es::string_view path, std::istream &stream) override {
     const size_t extPos = path.find_last_of('.');
 
@@ -144,11 +156,31 @@ struct ArcMakeContext : AppPackContext {
       return infstream.total_out;
     };
 
+    auto found = streams.find(std::this_thread::get_id());
+    Stream *tStream = nullptr;
+
+    if (es::IsEnd(streams, found)) {
+      tStream = &NewStream();
+    } else {
+      tStream = &found->second;
+    }
+
+    auto &streamStore = tStream->streamStore;
+    AFile curFile;
+    curFile.offset = streamStore.Tell();
+    curFile.hash = hash;
+    curFile.uSize = streamSize;
+    curFile.path = noExt;
+
     bool processed = false;
     size_t compressedSize = streamSize;
-    const size_t beginOffset = wr.Tell();
+    const size_t minFileSize =
+        appInfo.internalSettings->compressSettings.minFileSize;
+    const size_t ratioThreshold =
+        appInfo.internalSettings->compressSettings.ratioThreshold;
+    const size_t verbosityLevel = appInfo.internalSettings->verbosity;
 
-    if (streamSize > settings.minFileSize || settings.forceZLIBHeader) {
+    if (streamSize > minFileSize || settings.forceZLIBHeader) {
       buffer.resize(streamSize);
       stream.read(&buffer[0], streamSize);
     } else {
@@ -157,19 +189,19 @@ struct ArcMakeContext : AppPackContext {
       processed = true;
     }
 
-    if (!processed && streamSize > settings.minFileSize) {
+    if (!processed && streamSize > minFileSize) {
       compressedSize = CompressData(buffer, Z_BEST_COMPRESSION);
 
       uint32 ratio = ((float)compressedSize / (float)streamSize) * 100;
 
-      if (ratio <= settings.compressTreshold) {
+      if (ratio <= ratioThreshold) {
         processed = true;
       }
     }
 
     [&] {
       if (!processed) { // compressed with failed ratio or uncompressed data
-        if (compressedSize != streamSize && settings.verbose) {
+        if (compressedSize != streamSize && verbosityLevel) {
           printline("Ratio fail "
                     << ((float)compressedSize / (float)streamSize) * 100
                     << "%% for " << path);
@@ -179,65 +211,94 @@ struct ArcMakeContext : AppPackContext {
           compressedSize = CompressData(buffer, Z_NO_COMPRESSION);
         } else { // compressed with failed ratio
           compressedSize = streamSize;
-          wr.WriteBuffer(buffer.data(), compressedSize);
+          streamStore.WriteBuffer(buffer.data(), compressedSize);
           return;
         }
       }
 
-      wr.WriteBuffer(outBuffer.data(), compressedSize);
+      streamStore.WriteBuffer(outBuffer.data(), compressedSize);
     }();
 
-    wr.Push(wr.StackIndex1);
-    wr.Pop();
+    curFile.cSize = compressedSize;
+    tStream->files.emplace_back(std::move(curFile));
+  }
 
-    auto WriteFile = [&](auto &cFile) {
-      cFile.offset = beginOffset;
-      cFile.typeHash = hash;
-      memcpy(cFile.fileName, noExt.data(), noExt.size());
-      cFile.uncompressedSize = streamSize;
-      cFile.compressedSize = compressedSize;
+  void Finish() override {
+    BinWritter wr(outArc);
+    ARCBase arc;
+    arc.numFiles = numFiles;
+    arc.version = ts->arc.version;
+
+    if (arc.version < 10 || ts->arc.xmemOnly) {
+      wr.Write(arc);
+    } else {
+      ARC arcEx{arc};
+      wr.Write(arcEx);
+    }
+
+    const size_t dataOffset =
+        wr.Tell() + arc.numFiles * ts->arc.extendedFilePath
+            ? sizeof(ARCExtendedFile)
+            : sizeof(ARCFile);
+
+    std::vector<AFile> files;
+    size_t curOffset = dataOffset;
+
+    for (auto &[_, stream] : streams) {
+      auto &tFiles = stream.files;
+      std::transform(tFiles.begin(), tFiles.end(), std::back_inserter(files),
+                     [&](auto &&item) {
+                       item.offset += curOffset;
+                       return std::move(item);
+                     });
+      curOffset = dataOffset + tFiles.back().cSize + tFiles.back().offset;
+    }
+
+    auto WriteFile = [&](auto cFile, auto &f) {
+      cFile.offset = f.offset;
+      cFile.typeHash = f.hash;
+      memcpy(cFile.fileName, f.path.data(), f.path.size());
+      cFile.uncompressedSize = f.uSize;
+      cFile.compressedSize = f.cSize;
 
       if (settings.platform == Platform::WinPC) {
         std::replace(std::begin(cFile.fileName), std::end(cFile.fileName), '/',
                      '\\');
       }
-
-      wr.Write(cFile);
     };
 
     if (ts->arc.extendedFilePath) {
-      ARCExtendedFile cFile{};
-      WriteFile(cFile);
+      for (auto &f : files) {
+        ARCExtendedFile cFile{};
+        WriteFile(cFile, f);
+      }
     } else {
-      ARCFile cFile{};
-      if (ts->arc.version == 4) {
-        cFile.uncompressedSize.sizeAndFlags.Set<ARCFileSize::Flags>(0);
+      for (auto &f : files) {
+        ARCFile cFile{};
+        WriteFile(cFile, f);
+      }
+    }
+
+    for (auto &[_, stream] : streams) {
+      es::Dispose(stream.streamStore);
+      BinReader_t<BinCoreOpenMode::NoBuffer> rd(stream.streamPath);
+      const size_t fSize = rd.GetSize();
+      char buffer[0x80000];
+      const size_t numBlocks = fSize / sizeof(buffer);
+      const size_t restBytes = fSize % sizeof(buffer);
+
+      for (size_t b = 0; b < numBlocks; b++) {
+        rd.Read(buffer);
+        wr.Write(buffer);
       }
 
-      WriteFile(cFile);
+      if (restBytes) {
+        rd.ReadBuffer(buffer, restBytes);
+        wr.WriteBuffer(buffer, restBytes);
+      }
+
+      es::RemoveFile(stream.streamPath);
     }
-
-    wr.Push();
-    wr.Pop(wr.StackIndex1);
-  }
-
-  void Finish() override {
-    wr.Seek(0);
-    auto Write = [&](auto &what) {
-      what.version = ts->arc.version;
-      what.numFiles = numFiles;
-      wr.Write(what);
-    };
-
-    if (ts->arc.version < 10 || ts->arc.xmemOnly) {
-      ARCBase hdr;
-      Write(hdr);
-    } else {
-      ARC hdr;
-      Write(hdr);
-    }
-
-    es::Dispose(wr);
   }
 };
 

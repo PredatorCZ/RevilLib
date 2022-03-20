@@ -1,5 +1,5 @@
 /*  ARCConvert
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2022 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -128,11 +128,11 @@ REFLECT(CLASS(ARCExtract),
                ReflDesc{"Set platform for correct archive handling."}));
 
 es::string_view filters[]{
-    "$.arc",
+    ".arc$",
     {},
 };
 
-ES_EXPORT AppInfo_s appInfo{
+static AppInfo_s appInfo{
     AppInfo_s::CONTEXT_VERSION,
     AppMode_e::EXTRACT,
     ArchiveLoadType::FILTERED,
@@ -141,6 +141,11 @@ ES_EXPORT AppInfo_s appInfo{
     reinterpret_cast<ReflectorFriend *>(&settings),
     filters,
 };
+
+AppInfo_s *AppInitModule() {
+  RegisterReflectedType<Platform>();
+  return &appInfo;
+}
 
 static const char DDONKey[] =
     "ABB(DF2I8[{Y-oS_CCMy(@<}qR}WYX11M)w[5V.~CbjwM5q<F1Iab+-";
@@ -299,4 +304,24 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
     }
     WriteFiles(files);
   }
+}
+
+size_t AppExtractStat(request_chunk requester) {
+  auto data = requester(0, 32);
+  HFS *hfs = reinterpret_cast<HFS *>(data.data());
+  ARCBase *arcHdr = nullptr;
+
+  if (hfs->id == SFHID) {
+    arcHdr = reinterpret_cast<ARCBase *>(hfs + 1);
+  } else {
+    arcHdr = reinterpret_cast<ARCBase *>(hfs);
+  }
+
+  if (arcHdr->id == CRAID) {
+    arcHdr->SwapEndian();
+  } else if (arcHdr->id != ARCID) {
+    return 0;
+  }
+
+  return arcHdr->numFiles;
 }
