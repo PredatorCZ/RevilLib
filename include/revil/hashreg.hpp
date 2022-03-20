@@ -16,25 +16,27 @@
 */
 
 #pragma once
+#include "datas/flags.hpp"
 #include "datas/string_view.hpp"
 #include "datas/supercore.hpp"
-#include "datas/flags.hpp"
 #include "platform.hpp"
 #include "settings.hpp"
+#include <functional>
 
 namespace revil {
 using PlatformFlags = es::Flags<Platform>;
 PlatformFlags RE_EXTERN GetPlatformSupport(es::string_view title);
-const TitleSupport RE_EXTERN *  GetTitleSupport(es::string_view title, Platform platform);
+const TitleSupport RE_EXTERN *GetTitleSupport(es::string_view title,
+                                              Platform platform);
 es::string_view RE_EXTERN GetExtension(uint32 hash, es::string_view title = {},
                                        Platform platform = Platform::WinPC);
 es::string_view RE_EXTERN GetClassName(uint32 hash,
                                        Platform platform = Platform::WinPC);
 uint32 RE_EXTERN GetHash(es::string_view extension, es::string_view title,
                          Platform platform = Platform::WinPC);
-using TitleCallback = void (*)(es::string_view);
+using TitleCallback = std::function<void(es::string_view)>;
 void RE_EXTERN GetTitles(TitleCallback cb);
-using PrintFunc = void(*)(const char *);
+using PrintFunc = void (*)(const char *);
 void RE_EXTERN LinkLogging(PrintFunc func, bool useColor);
 
 uint32 RE_EXTERN MTHashV1(es::string_view text);

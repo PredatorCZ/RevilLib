@@ -42,7 +42,8 @@ typedef REMotion_t<REMotionTrack78> REMotion78;
 
 class REMotion78Asset final : public REMotion43Asset {
 public:
-  using REMotion43Asset::REMotion43Asset;
+  explicit REMotion78Asset(REAssetBase *base) { Assign(base); }
+  REMotion78Asset() = default;
   REMotion78 &Get() { return REAssetBase::Get<REMotion78>(this->buffer); }
   const REMotion78 &Get() const {
     return REAssetBase::Get<const REMotion78>(this->buffer);

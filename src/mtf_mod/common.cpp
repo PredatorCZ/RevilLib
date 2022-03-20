@@ -25,7 +25,7 @@ size_t MODBoneProxy::Index() const { return index; }
 
 std::string MODBoneProxy::Name() const { return ""; }
 
-void MODBoneProxy::GetTM(esMatrix44 &out) const {
+void MODBoneProxy::GetTM(es::Matrix44 &out) const {
   out = main.refPoses[index.id];
 }
 
@@ -55,7 +55,7 @@ MODPrimitiveDescriptorProxy::UnpackDataType() const {
 
 size_t MODSkinProxy::NumNodes() const { return numRemaps; }
 uni::TransformType MODSkinProxy::TMType() const { return uni::TMTYPE_MATRIX; }
-void MODSkinProxy::GetTM(esMatrix44 &out, size_t index) const {
+void MODSkinProxy::GetTM(es::Matrix44 &out, size_t index) const {
   if (remaps) {
     out = poses[remaps[index]];
   } else {

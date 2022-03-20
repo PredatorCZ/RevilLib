@@ -2,7 +2,7 @@
 #include "revil/mot.hpp"
 
 struct LMTRawTrack {
-  typedef std::vector<esMatrix44> InputRaw;
+  typedef std::vector<es::Matrix44> InputRaw;
 
   const InputRaw &data;
   int32 boneID;

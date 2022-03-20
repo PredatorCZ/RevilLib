@@ -285,7 +285,7 @@ struct XFSData {
         delete static_cast<XFSDataResource *>(data.asPointer);
         break;
       case XFSType::_matrix_:
-        delete static_cast<esMatrix44 *>(data.asPointer);
+        delete static_cast<es::Matrix44 *>(data.asPointer);
         break;
 
       default:
@@ -299,7 +299,7 @@ struct XFSData {
         delete[] static_cast<XFSDataResource *>(data.asPointer);
         break;
       case XFSType::_matrix_:
-        delete[] static_cast<esMatrix44 *>(data.asPointer);
+        delete[] static_cast<es::Matrix44 *>(data.asPointer);
         break;
 
       default:
@@ -425,7 +425,7 @@ void XFSImpl::ReadData(BinReaderRef rd, XFSClassData **root) {
         break;
       }
       case XFSType::_matrix_:
-        rd.Read(*cType.AllocClass<esMatrix44>());
+        rd.Read(*cType.AllocClass<es::Matrix44>());
         break;
       case XFSType::class_:
       case XFSType::classref_:
@@ -504,7 +504,7 @@ void XFSImpl::ReadData(BinReaderRef rd, XFSClassData **root) {
         throw std::runtime_error("Array string!");
       }
       case XFSType::_matrix_: {
-        esMatrix44 *adata = cType.AllocClasses<esMatrix44>(cType.numItems);
+        es::Matrix44 *adata = cType.AllocClasses<es::Matrix44>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }

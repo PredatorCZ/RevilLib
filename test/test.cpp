@@ -1,9 +1,8 @@
 
 #include "lmt_codecs.inl"
-#include "datas/tchar.hpp"
 
 int main() {
-  es::print::AddPrinterFunction(UPrintf);
+  es::print::AddPrinterFunction(es::Print);
 
   TEST_CASES(int testResult, TEST_FUNC(test_lmt_codec00),
              TEST_FUNC(test_lmt_codec01), TEST_FUNC(test_lmt_codec02),

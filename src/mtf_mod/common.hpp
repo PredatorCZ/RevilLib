@@ -45,7 +45,7 @@ struct MODBounds {
 struct MODEnvelope {
   uint32 boneIndex;
   MODBounds bounds;
-  esMatrix44 localTransform;
+  es::Matrix44 localTransform;
   Vector4A16 absolutePosition;
 };
 
@@ -79,7 +79,7 @@ struct MODBoneProxy : uni::Bone {
   MODBoneProxy(const revil::MODImpl &main_, size_t index_, const MODBone &data_)
       : main(main_), index(index_, data_.index), data(data_) {}
   uni::TransformType TMType() const override;
-  void GetTM(esMatrix44 &out) const override;
+  void GetTM(es::Matrix44 &out) const override;
   const Bone *Parent() const override;
   size_t Index() const override;
   std::string Name() const override;
@@ -155,8 +155,8 @@ public:
   uni::VectorList<uni::Bone, MODBoneProxy> boneData;
 
   std::string buffer;
-  std::vector<esMatrix44> refPoses;
-  std::vector<esMatrix44> transforms;
+  std::vector<es::Matrix44> refPoses;
+  std::vector<es::Matrix44> transforms;
   std::vector<MODEnvelope> envelopes;
   std::vector<MODGroup> groups;
   size_t vertexBufferSize;
@@ -172,11 +172,11 @@ public:
 struct MODSkinProxy : uni::Skin {
   size_t numRemaps;
   const uint8 *remaps = nullptr;
-  const esMatrix44 *poses;
+  const es::Matrix44 *poses;
 
   size_t NumNodes() const override;
   uni::TransformType TMType() const override;
-  void GetTM(esMatrix44 &out, size_t index) const override;
+  void GetTM(es::Matrix44 &out, size_t index) const override;
   size_t NodeIndex(size_t index) const override;
   operator uni::Element<const uni::Skin>() const {
     return uni::Element<const uni::Skin>{this, false};

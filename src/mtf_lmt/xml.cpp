@@ -645,7 +645,7 @@ void LMT::Load(pugi::xml_node node, es::string_view outPath,
     } else {
       const char *path = nodeBuffer.get();
       std::string absolutePath = path;
-      BinReader<> rd;
+      BinReader rd;
 
       try {
         rd.Open(absolutePath);

@@ -37,7 +37,8 @@ struct REMotion458 : public REAssetBase {
 
 class REMotion458Asset final : public REMotion43Asset {
 public:
-  using REMotion43Asset::REMotion43Asset;
+  explicit REMotion458Asset(REAssetBase *base) { Assign(base); }
+  REMotion458Asset() = default;
   REMotion458 &Get() { return REAssetBase::Get<REMotion458>(this->buffer); }
   const REMotion458 &Get() const {
     return REAssetBase::Get<const REMotion458>(this->buffer);
