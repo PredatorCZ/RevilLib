@@ -46,7 +46,7 @@ public:
   void Save(BinWritterRef wr, bool standAlone = true) const override;
   void Load(pugi::xml_node node) override;
 
-  static Ptr Load(BinReaderRef rd, LMTConstructorPropertiesBase expected);
+  static Ptr Load(BinReaderRef_e rd, LMTConstructorPropertiesBase expected);
 
   uni::MotionTracksConst Tracks() const override {
     return uni::MotionTracksConst(this, false);

@@ -100,7 +100,7 @@ void AppendToStringRaw(const C *clPtr, std::stringstream &buffer) {
 }
 
 template <class C>
-es::string_view RetreiveFromRawString(C *clPtr, es::string_view buffer) {
+std::string_view RetreiveFromRawString(C *clPtr, std::string_view buffer) {
   uint8 *rawData = reinterpret_cast<uint8 *>(clPtr);
   const size_t buffSize = clPtr->Size() * 2;
   size_t cBuff = 0;
@@ -129,7 +129,7 @@ es::string_view RetreiveFromRawString(C *clPtr, es::string_view buffer) {
   return buffer;
 }
 
-static auto SeekTo(es::string_view buffer, const char T = '\n') {
+static auto SeekTo(std::string_view buffer, const char T = '\n') {
   while (!buffer.empty()) {
     if (buffer.front() == T) {
       buffer.remove_prefix(1);
@@ -150,7 +150,7 @@ void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
   buffer << tRefl.GetReflectedValue(0);
 }
 
-es::string_view Buf_SingleVector3::RetreiveFromString(es::string_view buffer) {
+std::string_view Buf_SingleVector3::RetreiveFromString(std::string_view buffer) {
   buffer = es::SkipStartWhitespace(buffer, true);
 
   ReflectorWrap<Buf_SingleVector3> tRefl(this);
@@ -207,7 +207,7 @@ void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
          << tRefl.GetReflectedValue(1) << " }";
 }
 
-es::string_view Buf_LinearVector3::RetreiveFromString(es::string_view buffer) {
+std::string_view Buf_LinearVector3::RetreiveFromString(std::string_view buffer) {
   buffer = SeekTo(buffer, '{');
   buffer = es::SkipStartWhitespace(buffer, true);
 
@@ -274,7 +274,7 @@ void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
   buffer << " }";
 }
 
-es::string_view Buf_HermiteVector3::RetreiveFromString(es::string_view buffer) {
+std::string_view Buf_HermiteVector3::RetreiveFromString(std::string_view buffer) {
   buffer = SeekTo(buffer, '{');
   buffer = es::SkipStartWhitespace(buffer, true);
 
@@ -298,7 +298,7 @@ es::string_view Buf_HermiteVector3::RetreiveFromString(es::string_view buffer) {
 
   for (size_t f = 0; f < 6; f++) {
     if (flags[static_cast<Buf_HermiteVector3_Flags>(f)]) {
-      tangents[curTang++] = static_cast<float>(std::atof(buffer.c_str()));
+      tangents[curTang++] = static_cast<float>(std::atof(buffer.data()));
       buffer = SeekTo(buffer, ',');
       buffer = es::SkipStartWhitespace(buffer, true);
     }
@@ -390,8 +390,8 @@ void Buf_SphericalRotation::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_SphericalRotation::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_SphericalRotation::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -506,8 +506,8 @@ void Buf_BiLinearVector3_16bit::AppendToString(
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_BiLinearVector3_16bit::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_BiLinearVector3_16bit::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -562,8 +562,8 @@ void Buf_BiLinearVector3_8bit::AppendToString(std::stringstream &buffer) const {
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_BiLinearVector3_8bit::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_BiLinearVector3_8bit::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -674,8 +674,8 @@ void Buf_BiLinearRotationQuat4_7bit::AppendToString(
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_BiLinearRotationQuat4_7bit::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -801,8 +801,8 @@ void Buf_BiLinearRotationQuat4_11bit::AppendToString(
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_BiLinearRotationQuat4_11bit::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -854,8 +854,8 @@ void Buf_BiLinearRotationQuat4_9bit::AppendToString(
   AppendToStringRaw(this, buffer);
 }
 
-es::string_view
-Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(es::string_view buffer) {
+std::string_view
+Buf_BiLinearRotationQuat4_9bit::RetreiveFromString(std::string_view buffer) {
   return RetreiveFromRawString(this, buffer);
 }
 
@@ -925,7 +925,7 @@ void Buff_EvalShared<C>::ToString(std::string &strBuff,
   strBuff = str.str();
 }
 
-template <class C> void Buff_EvalShared<C>::FromString(es::string_view input) {
+template <class C> void Buff_EvalShared<C>::FromString(std::string_view input) {
   for (auto &d : data) {
     input = d.RetreiveFromString(input);
   }
@@ -1070,8 +1070,6 @@ LMTTrackController *LMTTrackController::CreateCodec(size_t type,
   const TrackTypesShared cType = subVersion == -1
                                      ? static_cast<TrackTypesShared>(type)
                                      : buffRemapRegistry[subVersion][type];
-  RegisterReflectedType<Buf_HermiteVector3_Flags>();
-
   if (codecRegistry.count(cType)) {
     return codecRegistry.at(cType)();
   }

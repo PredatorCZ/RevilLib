@@ -2,7 +2,7 @@
 #include <cstring>
 
 // Basically butchered Mersenne Twister
-uint32 revil::MTHashV1(es::string_view text) {
+uint32 revil::MTHashV1(std::string_view text) {
   uint32 retVal = 0;
   uint32 mtData[624];
 
@@ -402,7 +402,7 @@ static const uint32 crc32bBoxes[][0x100] = {
 };
 
 // Basically CRC32B with small adjustments
-uint32 revil::MTHashV2(es::string_view data) {
+uint32 revil::MTHashV2(std::string_view data) {
   uint32 retval = 0xFFFFFFFF;
   const size_t numChunks = data.size() / 8;
   const size_t numRest = data.size() % 8;

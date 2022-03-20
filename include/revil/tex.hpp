@@ -38,7 +38,7 @@ struct RE_EXTERN TEX {
   std::string buffer;
   DDS::Mips mips;
 
-  void Load(BinReaderRef rd, Platform platform = Platform::Auto);
+  void Load(BinReaderRef_e rd, Platform platform = Platform::Auto);
   void SaveAsDDS(BinWritterRef wr, Tex2DdsSettings settings);
 };
 } // namespace revil

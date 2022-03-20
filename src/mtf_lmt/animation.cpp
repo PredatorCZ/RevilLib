@@ -642,7 +642,6 @@ bool LMTAnimation::SupportedVersion(uint16 version) {
 }
 
 ptr_type_ LMTAnimation::Create(const LMTConstructorProperties &props) {
-  RegisterReflectedType<AnimV2Flags>();
   ptr_type_ cAni;
 
   if (props.dataStart) {
@@ -657,9 +656,8 @@ ptr_type_ LMTAnimation::Create(const LMTConstructorProperties &props) {
   return cAni;
 }
 
-bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version) {
+bool IsX64CompatibleAnimationClass(BinReaderRef_e rd, LMTVersion version) {
   LMTConstructorPropertiesBase props{LMTArchType::X64, version};
-  RegisterReflectedType<AnimV2Flags>();
 
   if (!animationRegistry.count(props)) {
     return false;

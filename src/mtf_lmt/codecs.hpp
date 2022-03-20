@@ -37,7 +37,7 @@ struct Buf_SingleVector3 {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -68,7 +68,7 @@ struct Buf_LinearVector3 {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   void Devaluate(const Vector4A16 &in);
 
@@ -105,7 +105,7 @@ struct Buf_HermiteVector3 {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   void Evaluate(Vector4A16 &out) const;
 
@@ -138,7 +138,7 @@ struct Buf_SphericalRotation {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint64 componentMask = (1 << 17) - 1;
   static constexpr uint64 componentMaskW = (1 << 19) - 1;
@@ -177,7 +177,7 @@ struct Buf_BiLinearVector3_16bit {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint64 componentMask = 0xffff;
   static const Vector4A16 componentMultiplier;
@@ -210,7 +210,7 @@ struct Buf_BiLinearVector3_8bit {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint64 componentMask = 0xff;
   static const Vector4A16 componentMultiplier;
@@ -259,7 +259,7 @@ struct Buf_BiLinearRotationQuat4_7bit {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint32 componentMask = (1 << 7) - 1;
   static constexpr float componentMultiplierInv =
@@ -330,7 +330,7 @@ struct Buf_BiLinearRotationQuat4_11bit {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint64 componentMask = (1 << 11) - 1;
   static constexpr float componentMultiplierInv =
@@ -360,7 +360,7 @@ struct Buf_BiLinearRotationQuat4_9bit {
 
   void AppendToString(std::stringstream &buffer) const;
 
-  es::string_view RetreiveFromString(es::string_view buffer);
+  std::string_view RetreiveFromString(std::string_view buffer);
 
   static constexpr uint64 componentMask = (1 << 9) - 1;
   static constexpr float componentMultiplierInv =
@@ -421,7 +421,7 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
 
   void ToString(std::string &strBuff, size_t numIdents) const override;
 
-  void FromString(es::string_view input) override;
+  void FromString(std::string_view input) override;
 
   void Assign(char *ptr, size_t size, bool swapEndian) override;
 

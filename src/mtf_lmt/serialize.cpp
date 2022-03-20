@@ -28,7 +28,7 @@ static constexpr uint32 MTMI = CompileFourCC("MTMI");
 static constexpr uint32 LMT_ID = CompileFourCC("LMT\0");
 static constexpr uint32 TML_ID = CompileFourCC("\0TML");
 
-bool IsX64CompatibleAnimationClass(BinReaderRef rd, LMTVersion version);
+bool IsX64CompatibleAnimationClass(BinReaderRef_e rd, LMTVersion version);
 
 void LMTAnimationEventV1_Internal::SaveBuffer(BinWritterRef wr,
                                               LMTFixupStorage &fixups) const {
@@ -192,7 +192,7 @@ void LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
 }
 
 LMTAnimation::Ptr
-LMTAnimation_internal::Load(BinReaderRef rd,
+LMTAnimation_internal::Load(BinReaderRef_e rd,
                             LMTConstructorPropertiesBase expected) {
   LMTConstructorProperties props;
 
@@ -255,7 +255,7 @@ LMTAnimation_internal::Load(BinReaderRef rd,
 
 thread_local std::vector<void *> ptrStore;
 
-void LMT::Load(BinReaderRef rd) {
+void LMT::Load(BinReaderRef_e rd) {
   uint32 magic;
   rd.Read(magic);
 

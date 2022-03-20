@@ -466,11 +466,6 @@ public:
   }
 };
 
-LMTTrack_internal::LMTTrack_internal() : controller(nullptr) {
-  RegisterReflectedTypes<TrackV1BufferTypes, TrackV1_5BufferTypes,
-                         TrackV2BufferTypes, TrackType_er>();
-}
-
 REFLECT(CLASS(TrackV0<esPointerX86>), MEMBER(compression), MEMBER(trackType),
         MEMBER(boneType), MEMBER(boneID), MEMBER(weight));
 

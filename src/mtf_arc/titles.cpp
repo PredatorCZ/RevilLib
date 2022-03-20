@@ -47,7 +47,7 @@
 
 // #define HRG_DEBUG
 
-const std::map<es::string_view, const MtExtensions *> invertedExtensions{
+const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"ace_attorney_dual_destinies", &extPWAADD},
     {"ace_attorney_spirit_of_justice", &extPWAASOJ},
     {"biohazzard_0", &extRE0},
@@ -113,7 +113,7 @@ const std::map<es::string_view, const MtExtensions *> invertedExtensions{
     {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
 };
 
-const MtExtFixupStorage *GetFixups(es::string_view title) {
+const MtExtFixupStorage *GetFixups(std::string_view title) {
   auto found = invertedExtensions.find(title);
 
   if (es::IsEnd(invertedExtensions, found)) {
@@ -134,7 +134,7 @@ void GetTitles(TitleCallback cb) {
   }
 }
 
-uint32 GetHash(es::string_view extension, es::string_view title,
+uint32 GetHash(std::string_view extension, std::string_view title,
                Platform platform) {
   auto found = invertedExtensions.find(title);
 
@@ -166,7 +166,7 @@ uint32 GetHash(es::string_view extension, es::string_view title,
   return foundSec->GetHash(extTranslated, platform);
 }
 
-PlatformFlags GetPlatformSupport(es::string_view title) {
+PlatformFlags GetPlatformSupport(std::string_view title) {
   auto found = invertedExtensions.find(title);
 
   if (es::IsEnd(invertedExtensions, found)) {
@@ -183,7 +183,7 @@ PlatformFlags GetPlatformSupport(es::string_view title) {
   return flags;
 }
 
-const TitleSupport *GetTitleSupport(es::string_view title, Platform platform) {
+const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
   auto found = invertedExtensions.find(title);
 
   if (es::IsEnd(invertedExtensions, found)) {
@@ -202,7 +202,7 @@ const TitleSupport *GetTitleSupport(es::string_view title, Platform platform) {
 } // namespace revil
 
 #ifdef HRG_DEBUG
-static es::string_view shortNames[]{
+static std::string_view shortNames[]{
     "dd",  "ddon", "dgs",  "dgs2",  "dmc4",   "dr",      "ext",  "lp",  "lp2",
     "mh3", "mh4",  "mhg",  "mhs",   "pwaadd", "pwaasoj", "re0",  "re5", "re6",
     "rem", "rer",  "sbsh", "sbsyd", "sb3",    "sb4",     "sb4s",

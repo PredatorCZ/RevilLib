@@ -36,7 +36,7 @@ struct HFS {
   }
 };
 
-std::stringstream ProcessHFS(BinReaderRef rd) {
+std::stringstream ProcessHFS(BinReaderRef_e rd) {
   std::stringstream str;
   constexpr size_t chunkSize = 0x20000;
   char tempBuffer[chunkSize];

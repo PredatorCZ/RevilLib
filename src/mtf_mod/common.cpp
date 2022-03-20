@@ -336,25 +336,11 @@ MODPrimitiveProxyV1 MODMeshX99::ReflectBE(revil::MODImpl &main_) {
   return retval;
 }
 
-const char *MODPrimitiveProxy::RawIndexBuffer() const { return indexBuffer; }
-const char *MODPrimitiveProxy::RawVertexBuffer(size_t) const {
-  return mainBuffer;
-}
-uni::PrimitiveDescriptorsConst MODPrimitiveProxy::Descriptors() const {
-  return {&descs, false};
-}
-uni::Primitive::IndexType_e MODPrimitiveProxy::IndexType() const {
-  return indexType;
-}
-size_t MODPrimitiveProxy::IndexSize() const { return 2; }
-size_t MODPrimitiveProxy::NumVertices() const { return numVertices; }
-size_t MODPrimitiveProxy::NumVertexBuffers() const { return 1; }
-size_t MODPrimitiveProxy::NumIndices() const { return numIndices; }
 std::string MODPrimitiveProxy::Name() const { return name; }
 size_t MODPrimitiveProxy::SkinIndex() const { return skinIndex; }
-size_t MODPrimitiveProxy::LODIndex() const { return lodIndex; }
+int64 MODPrimitiveProxy::LODIndex() const { return lodIndex; }
 size_t MODPrimitiveProxy::MaterialIndex() const { return materialIndex; }
-
+/*
 const char *MODPrimitiveProxyV1::RawVertexBuffer(size_t id) const {
   if (id == 1 && additionalBuffer) {
     return additionalBuffer;
@@ -369,18 +355,9 @@ const char *MODPrimitiveProxyV1::RawVertexBuffer(size_t id) const {
 
 size_t MODPrimitiveProxyV1::NumVertexBuffers() const {
   return additionalBuffer ? 2 : 1;
-}
+}*/
 
-static bool registered = false;
-void RegisterMaterials();
-
-MOD::MOD() {
-  if (registered) {
-    return;
-  }
-  registered = true;
-  RegisterMaterials();
-}
+MOD::MOD() {}
 MOD::MOD(MOD &&) = default;
 MOD::~MOD() = default;
 

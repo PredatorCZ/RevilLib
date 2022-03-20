@@ -124,18 +124,14 @@ struct MODPrimitiveProxy : uni::Primitive {
   size_t materialIndex = 0;
   std::string name;
 
-  const char *RawIndexBuffer() const override;
-  const char *RawVertexBuffer(size_t id) const override;
-  uni::PrimitiveDescriptorsConst Descriptors() const override;
   IndexType_e IndexType() const override;
-  size_t IndexSize() const override;
-  size_t NumVertices() const override;
-  size_t NumVertexBuffers() const override;
-  size_t NumIndices() const override;
   std::string Name() const override;
   size_t SkinIndex() const override;
-  size_t LODIndex() const override;
+  int64 LODIndex() const override;
   size_t MaterialIndex() const override;
+  size_t VertexArrayIndex(size_t id) const override;
+  size_t IndexArrayIndex() const override;
+  size_t NumVertexArrays() const override;
 
   operator uni::Element<const uni::Primitive>() const {
     return uni::Element<const uni::Primitive>{this, false};
@@ -144,9 +140,6 @@ struct MODPrimitiveProxy : uni::Primitive {
 
 struct MODPrimitiveProxyV1 : MODPrimitiveProxy {
   const char *additionalBuffer;
-
-  const char *RawVertexBuffer(size_t id) const override;
-  size_t NumVertexBuffers() const override;
 };
 
 class revil::MODImpl : public uni::Skeleton, public uni::Model {
@@ -202,7 +195,7 @@ public:
   virtual uni::MetadataConst Metadata() const override;
 
   void Write(BinWritterRef) const;
-  void Read(BinReaderRef);
+  void Read(BinReaderRef_e);
 
   operator uni::Element<const uni::Material>() const {
     return uni::Element<const uni::Material>{this, false};

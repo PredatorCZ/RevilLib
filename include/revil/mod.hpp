@@ -71,7 +71,7 @@ public:
   */
   template <class C> C As() const;
   void Load(const std::string &fileName);
-  void Load(BinReaderRef rd);
+  void Load(BinReaderRef_e rd);
   void Save(BinWritterRef wr);
 
 private:

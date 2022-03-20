@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "datas/string_view.hpp"
+#include <string_view>
 #include "mot.hpp"
 
 namespace revil {
@@ -51,13 +51,13 @@ public:
   void AppendAnimation(LMTAnimation *ani);
   void InsertAnimation(LMTAnimation *ani, size_t at, bool replace = false);
 
-  void Load(BinReaderRef rd);
+  void Load(BinReaderRef_e rd);
   void Load(const std::string &fileName, LMTImportOverrides overrides = {});
-  void Load(pugi::xml_node node, es::string_view outPath,
+  void Load(pugi::xml_node node, std::string_view outPath,
             LMTImportOverrides overrides = {});
   void Save(BinWritterRef wr) const;
   void Save(const std::string &fileName, LMTExportSettings settings = {}) const;
-  void Save(pugi::xml_node node, es::string_view outPath,
+  void Save(pugi::xml_node node, std::string_view outPath,
             LMTExportSettings settings = {}) const;
 
   operator uni::MotionsConst() const;

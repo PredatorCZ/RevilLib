@@ -16,12 +16,12 @@
 */
 
 #pragma once
-#include "datas/string_view.hpp"
+#include <string_view>
 #include "supp_base.hpp"
 #include <map>
 
-using MtExtensionsStorage = std::multimap<es::string_view, uint32>;
-using MtExtFixupStorage = std::map<uint32, es::string_view>;
+using MtExtensionsStorage = std::multimap<std::string_view, uint32>;
+using MtExtFixupStorage = std::map<uint32, std::string_view>;
 
 struct MtExtensions {
   static constexpr size_t NUMSLOTS = 10;
@@ -82,7 +82,7 @@ struct MtExtensions {
 
   auto Base() const { return data[0]; }
 
-  uint32 GetHash(es::string_view extension, Platform platform) const {
+  uint32 GetHash(std::string_view extension, Platform platform) const {
     auto found = Base()->find(extension);
 
     if (!es::IsEnd(*Base(), found)) {

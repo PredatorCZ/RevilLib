@@ -20,15 +20,15 @@
 
 using revil::Platform;
 
-static auto MakeHashV1(es::string_view name) {
+static auto MakeHashV1(std::string_view name) {
   return std::make_pair(revil::MTHashV1(name), name);
 }
 
-static auto MakeHashV2(es::string_view name) {
+static auto MakeHashV2(std::string_view name) {
   return std::make_pair(revil::MTHashV2(name), name);
 }
 
-static const std::map<uint32, es::string_view> classNames{
+static const std::map<uint32, std::string_view> classNames{
     MakeHashV1("MtArray"),
     MakeHashV1("nodeData"),
     MakeHashV1("nodeHead"),
@@ -260,12 +260,12 @@ static const std::map<uint32, es::string_view> classNames{
     MakeHashV2("rThinkPlanAI::cU32"),
 };
 
-using pair_type = std::pair<es::string_view, es::string_view>;
+using pair_type = std::pair<std::string_view, std::string_view>;
 
 std::pair<uint32 const, pair_type> GetPair(uint32 hash, Platform platform);
 
 namespace revil {
-es::string_view GetClassName(uint32 hash, Platform platform) {
+std::string_view GetClassName(uint32 hash, Platform platform) {
   auto pair = GetPair(hash, platform);
 
   if (pair.first) {

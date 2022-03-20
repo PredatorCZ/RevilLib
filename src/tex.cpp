@@ -271,7 +271,7 @@ struct TEXInternal : TEX {
   }
 };
 
-TEX LoadTEXx56(BinReaderRef rd) {
+TEX LoadTEXx56(BinReaderRef_e rd) {
   TEXInternal main;
   TEXx56 header;
   rd.Read(header);
@@ -281,9 +281,10 @@ TEX LoadTEXx56(BinReaderRef rd) {
   }
 
   if (header.type == TextureType::Volume) {
-    rd.Read(static_cast<DDS_Header &>(main.asDDS));
-    rd.Read(static_cast<DDS_PixelFormat &>(main.asDDS));
-    rd.Read(static_cast<DDS_HeaderEnd &>(main.asDDS));
+    BinReaderRef rdn(rd);
+    rdn.Read(static_cast<DDS_Header &>(main.asDDS));
+    rdn.Read(static_cast<DDS_PixelFormat &>(main.asDDS));
+    rdn.Read(static_cast<DDS_HeaderEnd &>(main.asDDS));
   } else if (header.type == TextureType::Cubemap) {
     throw std::runtime_error("Cubemaps are not supported.");
   } else {
@@ -309,7 +310,7 @@ TEX LoadTEXx56(BinReaderRef rd) {
 }
 
 template <class header_type>
-TEX LoadTEXx66(BinReaderRef rd, Platform platform) {
+TEX LoadTEXx66(BinReaderRef_e rd, Platform platform) {
   TEXInternal main;
   header_type header;
   rd.Read(header);
@@ -347,7 +348,7 @@ TEX LoadTEXx66(BinReaderRef rd, Platform platform) {
   return main;
 }
 
-TEX LoadTEXx87(BinReaderRef rd, Platform platform) {
+TEX LoadTEXx87(BinReaderRef_e rd, Platform) {
   TEXInternal main;
   TEXx87 header;
   rd.Read(header);
@@ -386,7 +387,7 @@ TEX LoadTEXx87(BinReaderRef rd, Platform platform) {
 static const std::map<uint16, TEX (*)(BinReaderRef, Platform)> texLoaders{
     {0x66, LoadTEXx66<TEXx66>}, {0x70, LoadTEXx66<TEXx70>}, {0x87, LoadTEXx87}};
 
-void TEX::Load(BinReaderRef rd, Platform platform) {
+void TEX::Load(BinReaderRef_e rd, Platform platform) {
   struct {
     uint32 id;
     union {
@@ -394,6 +395,8 @@ void TEX::Load(BinReaderRef rd, Platform platform) {
       uint16 versionV11;
       uint32 versionV20;
     };
+
+    void NoSwap();
   } header{};
 
   rd.Read(header);

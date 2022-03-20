@@ -75,7 +75,7 @@ struct LMTTrackController {
   virtual void NumFrames(size_t numItems) = 0;
   virtual void ToString(std::string &strBuf, size_t numIdents) const = 0;
 
-  virtual void FromString(es::string_view input) = 0;
+  virtual void FromString(std::string_view input) = 0;
   virtual void Assign(char *ptr, size_t size, bool swapEndian) = 0;
   virtual void SwapEndian() = 0;
   virtual void Devaluate(const Vector4A16 &in, size_t frame) = 0;

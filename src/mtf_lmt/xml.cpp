@@ -520,7 +520,7 @@ void LMTAnimation_internal::Save(pugi::xml_node node, bool standAlone) const {
   }
 }
 
-void LMT::Save(pugi::xml_node node, es::string_view fileName,
+void LMT::Save(pugi::xml_node node, std::string_view fileName,
                LMTExportSettings settings) const {
   pugi::xml_node master = node.append_child("LMT");
   master.append_attribute("version").set_value(static_cast<int>(Version()));
@@ -544,17 +544,17 @@ void LMT::Save(pugi::xml_node node, es::string_view fileName,
         subAni.append_attribute("version").set_value(
             static_cast<int>(Version()));
         a->Save(subAni, true);
-        std::string linkedName = fleInf.GetFilename();
+        std::string linkedName(fleInf.GetFilename());
         linkedName += "_m" + std::to_string(curAniID) + ".mtx";
-        std::string linkedFullName = fleInf.GetFolder();
+        std::string linkedFullName(fleInf.GetFolder());
         linkedFullName += linkedName;
         cAni.append_buffer(linkedName.c_str(), linkedName.size());
         XMLToFile(linkedFullName, linkAni,
                   {XMLFormatFlag::Indent, XMLFormatFlag::WriteBOM});
       } else if (settings.type == LMTExportType::BinaryLinkedXML) {
-        std::string linkedName = fleInf.GetFilename();
+        std::string linkedName(fleInf.GetFilename());
         linkedName += "_m" + std::to_string(curAniID) + ".mti";
-        std::string linkedFullName = fleInf.GetFilename();
+        std::string linkedFullName(fleInf.GetFilename());
         linkedFullName += linkedName;
         cAni.append_buffer(linkedName.c_str(), linkedName.size());
         a->Save(linkedFullName);
@@ -589,7 +589,7 @@ void LMT::Load(const std::string &fileName, LMTImportOverrides overrides) {
   }
 }
 
-void LMT::Load(pugi::xml_node node, es::string_view outPath,
+void LMT::Load(pugi::xml_node node, std::string_view outPath,
                LMTImportOverrides overrides) {
   auto mainNodes = XMLCollectChildren(node, "LMT");
 

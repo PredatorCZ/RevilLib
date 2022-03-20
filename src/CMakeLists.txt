@@ -49,7 +49,7 @@ if(BUILD_SHARED_OBJECTS)
 
   target_include_directories(revil-shared PUBLIC ../include)
 
-  if(PC_SHARED_LIB)
+  if(BUILD_SHARED_LIBS)
     target_link_libraries(revil-shared precore)
   else()
     set_precore_sources(
@@ -62,7 +62,7 @@ if(BUILD_SHARED_OBJECTS)
       uni_format)
   endif()
 
-  if(PUGI_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS)
     target_link_libraries(revil-shared pugixml)
   else()
     target_link_libraries(revil-shared pugixml-shared)

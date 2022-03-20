@@ -442,8 +442,6 @@ static const std::map<LMTConstructorPropertiesBase, decltype(&creator2_)>
     };
 
 ptr_type_ LMTAnimationEvent::Create(const LMTConstructorProperties &props) {
-  RegisterReflectedTypes<EventFrameV2DataType, EventFrameV2Type>();
-
   if (props.dataStart) {
     return eventRegistryLink.at(props)(props.dataStart, props.masterBuffer,
                                        props.swappedEndian);

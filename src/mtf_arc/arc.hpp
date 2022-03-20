@@ -61,6 +61,13 @@ struct ARCExtendedFile {
   uint32 compressedSize;
   ARCFileSize uncompressedSize;
   uint32 offset;
+
+  void SwapEndian() {
+    FByteswapper(typeHash);
+    FByteswapper(compressedSize);
+    FByteswapper(uncompressedSize);
+    FByteswapper(offset);
+  }
 };
 
 static constexpr uint32 ARCID = CompileFourCC("ARC");
@@ -85,7 +92,7 @@ struct ARC : ARCBase {
 using ARCFiles = std::vector<ARCFile>;
 using ARCExtendedFiles = std::vector<ARCExtendedFile>;
 
-auto ReadARC(BinReaderRef rd) {
+auto ReadARC(BinReaderRef_e rd) {
   ARC hdr;
   rd.Read(hdr);
 
@@ -106,7 +113,7 @@ auto ReadARC(BinReaderRef rd) {
   return std::make_tuple(hdr, files);
 }
 
-auto ReadExtendedARC(BinReaderRef rd) {
+auto ReadExtendedARC(BinReaderRef_e rd) {
   ARC hdr;
   rd.Read(hdr);
 

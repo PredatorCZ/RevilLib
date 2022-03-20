@@ -107,12 +107,12 @@ template <class PadType> struct XFSClassMemberRaw {
   XFSSizeAndFlag memberSize;
   PadType null[4];
 
-  void Read(BinReaderRef rd) {
+  void Read(BinReaderRef_e rd) {
     uint32 memNameOffset;
     rd.Read(memNameOffset);
     rd.Read(type);
     rd.Read(flags);
-    rd.Read(memberSize);
+    rd.Read(memberSize.data);
     rd.Read(null);
     rd.Push();
     rd.Seek(memNameOffset);
@@ -126,9 +126,9 @@ template <class PadType> struct XFSClass {
   XFSClassInfo info;
   std::vector<XFSClassMemberRaw<PadType>> members;
 
-  void Read(BinReaderRef rd) {
+  void Read(BinReaderRef_e rd) {
     rd.Read(hash);
-    rd.Read(info);
+    rd.Read(info.data);
     rd.ReadContainer(members, info->Get<XFSClassInfo::NumMembers>());
   }
 };
@@ -154,7 +154,7 @@ REFLECT(CLASS(XFSClassMember), MEMBER(name), MEMBER(type), MEMBER(flags));
 
 struct XFSClassDesc {
   uint32 hash;
-  es::string_view className;
+  std::string_view className;
   std::vector<XFSClassMember> members;
 
   XFSClassDesc() = default;
@@ -194,7 +194,7 @@ struct XFSDataResource {
   std::string type;
   std::string file;
 
-  void Read(BinReaderRef rd) {
+  void Read(BinReaderRef_e rd) {
     uint8 numStrings;
     rd.Read(numStrings); // ctype?
 
@@ -253,7 +253,7 @@ struct XFSData {
     data.asPointer = value;
     return value;
   }
-  void SetString(es::string_view sw) {
+  void SetString(std::string_view sw) {
     if (sw.size() < sizeof(data.raw)) {
       memcpy(data.raw, sw.data(), sw.size());
       stringInRaw = true;
@@ -342,27 +342,25 @@ public:
   std::deque<XFSClassData> dataStore;
   XFSClassData *root;
 
-  XFSImpl() { RegisterReflectedType<XFSType>(); }
-
-  void ReadData(BinReaderRef rd, XFSClassData **root = nullptr);
+  void ReadData(BinReaderRef_e rd, XFSClassData **root = nullptr);
   void ToXML(const XFSClassData &item, pugi::xml_node node);
   void ToXML(pugi::xml_node node);
   void RTTIToXML(pugi::xml_node node);
-  void Load(BinReaderRef rd);
+  void Load(BinReaderRef_e rd);
 };
 
 XFS::XFS() : pi(std::make_unique<XFSImpl>()) {}
 XFS::~XFS() = default;
 
-void XFS::Load(BinReaderRef rd) { pi->Load(rd); }
+void XFS::Load(BinReaderRef_e rd) { pi->Load(rd); }
 
 void XFS::ToXML(pugi::xml_node node) const { pi->ToXML(node); }
 
 void XFS::RTTIToXML(pugi::xml_node node) const { pi->RTTIToXML(node); }
 
-void XFSImpl::ReadData(BinReaderRef rd, XFSClassData **root) {
+void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
   XFSMeta meta;
-  rd.Read(meta);
+  rd.Read(meta.data);
 
   if (!meta->Get<XFSMeta::Active>()) {
     return;
@@ -727,7 +725,7 @@ std::map<uint32, XFSClassDesc> rttiStore;
 static constexpr uint32 XFSID = CompileFourCC("XFS");
 static constexpr uint32 XFSIDBE = CompileFourCC("\0SFX");
 
-template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef rd) {
+template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef_e rd) {
   XFSHeaderV1 header;
   rd.Read(header);
   rd.SetRelativeOrigin(rd.Tell(), false);
@@ -748,7 +746,7 @@ template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef rd) {
                  });
 }
 
-void XFSImpl::Load(BinReaderRef rd) {
+void XFSImpl::Load(BinReaderRef_e rd) {
   using pt = Platform;
   XFSHeaderBase hdr;
   pt platform = pt::WinPC;

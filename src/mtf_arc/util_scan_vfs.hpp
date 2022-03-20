@@ -27,15 +27,15 @@ template <class registry, class reader>
 void ScanVFS(const std::string &path, const registry &reg, Platform platform,
              reader readFc) {
   DirectoryScanner scan;
-  scan.AddFilter(es::string_view(".arc"));
+  scan.AddFilter(std::string_view(".arc"));
   scan.Scan(path);
 
   std::map<uint32, const std::string *> newHashes;
   std::map<uint32, const std::string *> missingHashes;
-  std::map<uint32, es::string_view> usedHashes;
+  std::map<uint32, std::string_view> usedHashes;
 
   for (auto &f : scan) {
-    es::string_view sw(f);
+    std::string_view sw(f);
     BinReader rd(f);
     try {
       uint32 id;

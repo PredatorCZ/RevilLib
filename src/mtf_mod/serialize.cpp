@@ -99,7 +99,7 @@ void MODMaterialProxy<material_type>::Write(BinWritterRef wr) const {
 }
 
 template <class material_type>
-void MODMaterialProxy<material_type>::Read(BinReaderRef rd) {
+void MODMaterialProxy<material_type>::Read(BinReaderRef_e rd) {
   rd.Read(main);
   main.baseTextureIndex--;
   main.normalTextureIndex--;
@@ -175,7 +175,11 @@ template <> void FByteswapper(MODMetaDataV1 &self, bool) {
   FByteswapper(self.middleDistance);
 }
 
-template <size_t s> void FByteswapper(MODSkinRemap<s> &self, bool) {
+template <> void FByteswapper(MODSkinRemap<32> &self, bool) {
+  FByteswapper(self.count);
+}
+
+template <> void FByteswapper(MODSkinRemap<64> &self, bool) {
   FByteswapper(self.count);
 }
 
@@ -523,7 +527,7 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
 #pragma endregion
 #pragma region Loaders
 
-template <class Header, class Traits> MODImpl::ptr LoadMODX70(BinReaderRef rd) {
+template <class Header, class Traits> MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
   Header header;
   MODInner<Traits> main;
   rd.Read(header);
@@ -541,7 +545,7 @@ template <class Header, class Traits> MODImpl::ptr LoadMODX70(BinReaderRef rd) {
 
   rd.Seek(header.textures);
   rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef rd, MODPathProxy &p) {
+                         [](BinReaderRef_e rd, MODPathProxy &p) {
                            MODPath<Traits::pathSize> path;
                            rd.Read(path);
                            p.path = path.path;
@@ -573,7 +577,7 @@ template <class Header, class Traits> MODImpl::ptr LoadMODX70(BinReaderRef rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
-MODImpl::ptr LoadMODXC5(BinReaderRef rd) {
+MODImpl::ptr LoadMODXC5(BinReaderRef_e rd) {
   MODHeaderXC5 header;
   MODInner<MODTraitsXC5> main;
   rd.Read(header);
@@ -596,7 +600,7 @@ MODImpl::ptr LoadMODXC5(BinReaderRef rd) {
 
   rd.Seek(header.textures);
   rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef rd, MODPathProxy &p) {
+                         [](BinReaderRef_e rd, MODPathProxy &p) {
                            MODPath<MODTraitsXC5::pathSize> path;
                            rd.Read(path);
                            p.path = path.path;
@@ -621,7 +625,7 @@ MODImpl::ptr LoadMODXC5(BinReaderRef rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
-template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef rd) {
+template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   MODHeaderX99 header;
   MODInner<Traits> main;
   rd.Read(header);
@@ -646,7 +650,7 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef rd) {
 
   rd.Seek(header.textures);
   rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef rd, MODPathProxy &p) {
+                         [](BinReaderRef_e rd, MODPathProxy &p) {
                            MODPath<Traits::pathSize> path;
                            rd.Read(path);
                            p.path = path.path;
@@ -685,7 +689,7 @@ bool MODMaker::operator<(const MODMaker &i0) const {
          reinterpret_cast<const uint64 &>(i0);
 }
 
-static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef)> modLoaders{
+static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     {{MODVersion::X70, true}, LoadMODX70<MODHeaderX70, MODTraitsX70>},
     //{{0x170, false}, LoadMODX70<MODHeaderX170, MODTraitsX170>},
     {{MODVersion::X99, false}, LoadMODX99<MODTraitsX99LE>},
@@ -717,7 +721,7 @@ void MOD::Load(const std::string &fileName) {
   Load(rd);
 }
 
-void MOD::Load(BinReaderRef rd) {
+void MOD::Load(BinReaderRef_e rd) {
   MODHeaderCommon header;
   rd.Push();
   rd.Read(header);

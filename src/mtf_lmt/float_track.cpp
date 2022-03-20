@@ -138,8 +138,6 @@ static const std::map<LMTConstructorPropertiesBase,
 };
 
 ptr_type_ LMTFloatTrack::Create(const LMTConstructorProperties &props) {
-  RegisterReflectedType<FloatTrackComponentRemap>();
-
   if (props.dataStart) {
     return floatRegistryLink.at(props)(props.dataStart, props.masterBuffer,
                                        props.swappedEndian);

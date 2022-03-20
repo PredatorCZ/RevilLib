@@ -18,13 +18,13 @@
 #include "revil/hashreg.hpp"
 #include "ext_base.hpp"
 
-using pair_type = std::pair<es::string_view, es::string_view>;
+using pair_type = std::pair<std::string_view, std::string_view>;
 
-static auto MakeHashV1(es::string_view ext, es::string_view name) {
+static auto MakeHashV1(std::string_view ext, std::string_view name) {
   return std::make_pair(revil::MTHashV1(name), std::make_pair(ext, name));
 }
 
-static auto MakeHashV2(es::string_view ext, es::string_view name) {
+static auto MakeHashV2(std::string_view ext, std::string_view name) {
   return std::make_pair(revil::MTHashV2(name), std::make_pair(ext, name));
 }
 
@@ -1702,10 +1702,10 @@ decltype(extensions)::value_type GetPair(uint32 hash, Platform platform) {
   return Find(extensions);
 }
 
-const MtExtFixupStorage *GetFixups(es::string_view);
+const MtExtFixupStorage *GetFixups(std::string_view);
 
 namespace revil {
-es::string_view GetExtension(uint32 hash, es::string_view title,
+std::string_view GetExtension(uint32 hash, std::string_view title,
                              Platform platform) {
   if (!title.empty()) {
     auto fixups = GetFixups(title);
