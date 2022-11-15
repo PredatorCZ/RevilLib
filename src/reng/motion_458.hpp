@@ -31,8 +31,6 @@ struct REMotion458 : public REAssetBase {
   uint8 numUnk[3];
   uint32 framesPerSecond;
   uint16 unks00[2];
-
-  void Fixup();
 };
 
 class REMotion458Asset final : public REMotion43Asset {
@@ -50,7 +48,7 @@ public:
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

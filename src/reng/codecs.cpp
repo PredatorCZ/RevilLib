@@ -532,7 +532,7 @@ RETrackController::Ptr RETrackCurve65::GetController() {
   if (curveControllers.count(type)) {
     auto iCon = curveControllers.at(type)();
     iCon->Assign(this);
-    return std::move(iCon);
+    return iCon;
   } else {
     printerror("[RETrackController]: Unhandled curve compression: " << std::hex
                                                                     << type);
@@ -582,7 +582,7 @@ RETrackController::Ptr RETrackCurve78::GetController() {
   if (curveControllers78.count(type)) {
     auto iCon = curveControllers78.at(type)();
     iCon->Assign(this);
-    return std::move(iCon);
+    return iCon;
   } else {
     printerror("[RETrackController]: Unhandled curve compression: " << std::hex
                                                                     << type);
@@ -613,7 +613,7 @@ RETrackController::Ptr RETrackCurve43::GetController() {
   if (curveControllers43.count(type)) {
     auto iCon = curveControllers43.at(type)();
     iCon->Assign(this);
-    return std::move(iCon);
+    return iCon;
   } else {
     printerror("[RETrackController]: Unhandled curve compression: " << std::hex
                                                                     << type);

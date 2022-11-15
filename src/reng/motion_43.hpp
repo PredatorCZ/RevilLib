@@ -34,8 +34,6 @@ struct REMotionBone {
   Vector4A16 position;
   Vector4A16 rotation;
   uint32 boneID, boneHash;
-
-  void Fixup(char *masterBuffer);
 };
 
 struct REMimMaxBounds {
@@ -69,7 +67,6 @@ struct RETrackCurve43 {
   esPointerX64<REMimMaxBounds> minMaxBounds;
 
   RETrackController::Ptr GetController();
-  void Fixup(char *masterBuffer);
 };
 
 struct REMotionTrack43 {
@@ -83,8 +80,6 @@ struct REMotionTrack43 {
   es::Flags<TrackType> usedCurves;
   uint32 boneHash;
   esPointerX64<RETrackCurve43> curves;
-
-  void Fixup(char *masterBuffer);
 };
 
 template <class trackType> struct REMotion_t : public REAssetBase {
@@ -100,8 +95,6 @@ template <class trackType> struct REMotion_t : public REAssetBase {
   uint16 numUNK00;
   uint16 framesPerSecond;
   uint16 unks00[2];
-
-  void Fixup();
 };
 
 class REMotionTrackWorker : public uni::MotionTrack {
@@ -154,7 +147,7 @@ public:
     return uni::Element<const uni::Motion>{this, false};
   }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

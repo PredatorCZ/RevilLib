@@ -29,8 +29,6 @@ struct REMotlist60 : public REAssetBase {
   esPointerX64<char> unkOffset00;
   esPointerX64<char16_t> fileName;
   uint32 numMotions;
-
-  void Fixup();
 };
 
 class REMotionBoneWrap : public uni::Bone {
@@ -90,7 +88,7 @@ class REMotlist60Asset : public REAssetImpl,
     return {static_cast<const MotionList60 *>(this), false};
   }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

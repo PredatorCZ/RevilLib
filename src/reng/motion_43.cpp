@@ -17,49 +17,49 @@
 
 #include "motion_43.hpp"
 
-template <> void REMotion43::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
-
-  if (!es::FixupPointers(masterBuffer, ptrStore, bones, tracks, unkOffset02,
-                         animationName)) {
-    return;
-  }
-
-  if (bones) {
-    bones->ptr.Fixup(masterBuffer);
-  }
-
-  for (size_t b = 0; b < numBones; b++) {
-    bones->ptr[b].Fixup(masterBuffer);
-  }
-
-  for (size_t b = 0; b < numTracks; b++) {
-    tracks[b].Fixup(masterBuffer);
-  }
+template <> void ProcessClass(REMotionBone &item, ProcessFlags flags) {
+  es::FixupPointers(flags.base, *flags.ptrStore, item.boneName,
+                    item.parentBoneNamePtr, item.firstChildBoneNamePtr,
+                    item.lastChildBoneNamePtr);
 }
 
-void REMotionTrack43::Fixup(char *masterBuffer) {
-  if (!es::FixupPointers(masterBuffer, ptrStore, curves)) {
+template <> void ProcessClass(RETrackCurve43 &item, ProcessFlags flags) {
+  es::FixupPointers(flags.base, *flags.ptrStore, item.frames,
+                    item.controlPoints, item.minMaxBounds);
+}
+
+template <> void ProcessClass(REMotionTrack43 &item, ProcessFlags flags) {
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.curves)) {
     return;
   }
 
   uint32 numUsedCurves = 0;
 
   for (uint32 t = 0; t < 3; t++) {
-    if (usedCurves[static_cast<TrackType>(t)]) {
-      curves[numUsedCurves++].Fixup(masterBuffer);
+    if (item.usedCurves[static_cast<REMotionTrack43::TrackType>(t)]) {
+      ProcessClass(item.curves[numUsedCurves++], flags);
     }
   }
 }
 
-void REMotionBone::Fixup(char *masterBuffer) {
-  es::FixupPointers(masterBuffer, ptrStore, boneName, parentBoneNamePtr,
-                    firstChildBoneNamePtr, lastChildBoneNamePtr);
-}
+template <> void ProcessClass(REMotion43 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.bones, item.tracks,
+                         item.unkOffset02, item.animationName)) {
+    return;
+  }
 
-void RETrackCurve43::Fixup(char *masterBuffer) {
-  es::FixupPointers(masterBuffer, ptrStore, frames, controlPoints,
-                    minMaxBounds);
+  if (item.bones) {
+    item.bones->ptr.Fixup(flags.base);
+  }
+
+  for (size_t b = 0; b < item.numBones; b++) {
+    ProcessClass(item.bones->ptr[b], flags);
+  }
+
+  for (size_t b = 0; b < item.numTracks; b++) {
+    ProcessClass(item.tracks[b], flags);
+  }
 }
 
 // https://en.wikipedia.org/wiki/Slerp
@@ -173,8 +173,10 @@ void REMotion43Asset::Build() {
   }
 }
 
-void REMotion43Asset::Fixup() {
-  Get().Fixup();
+void REMotion43Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }
 

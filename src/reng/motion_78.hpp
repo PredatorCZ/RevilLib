@@ -26,7 +26,6 @@ struct RETrackCurve78 {
   esPointerX86<REMimMaxBounds> minMaxBounds;
 
   RETrackController::Ptr GetController();
-  void Fixup(char *masterBuffer);
 };
 
 struct REMotionTrack78 {
@@ -34,8 +33,6 @@ struct REMotionTrack78 {
   es::Flags<REMotionTrack43::TrackType> usedCurves;
   uint32 boneHash;
   esPointerX86<RETrackCurve78> curves;
-
-  void Fixup(char *masterBuffer);
 };
 
 typedef REMotion_t<REMotionTrack78> REMotion78;
@@ -55,7 +52,7 @@ public:
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

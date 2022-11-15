@@ -18,18 +18,18 @@
 #include "motion_list_99.hpp"
 #include "motion_78.hpp"
 
-void REMotlist99::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
+template <> void ProcessClass(REMotlist99 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
 
-  if (!es::FixupPointers(masterBuffer, ptrStore, motions, unkOffset00, fileName,
-                         null)) {
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.motions,
+                         item.unkOffset00, item.fileName, item.null)) {
     return;
   }
 
-  for (uint32 m = 0; m < numMotions; m++) {
-    motions[m].Fixup(masterBuffer, &ptrStore);
+  for (uint32 m = 0; m < item.numMotions; m++) {
+    item.motions[m].Fixup(flags.base, *flags.ptrStore);
 
-    REAssetBase *cMotBase = motions[m];
+    REAssetBase *cMotBase = item.motions[m];
 
     if (!cMotBase || cMotBase->assetID != REMotion78Asset::VERSION ||
         cMotBase->assetFourCC != REMotion78Asset::ID) {
@@ -37,7 +37,8 @@ void REMotlist99::Fixup() {
     }
 
     REMotion78 *cMot = static_cast<REMotion78 *>(cMotBase);
-    cMot->Fixup();
+
+    ProcessClass(*cMot, flags);
 
     char *localBuffer = reinterpret_cast<char *>(cMot);
 
@@ -45,8 +46,8 @@ void REMotlist99::Fixup() {
       continue;
     }
 
-    cMot->bones.Fixup(localBuffer, &ptrStore);
-    cMot->bones->ptr.Fixup(localBuffer, &ptrStore);
+    cMot->bones.Fixup(localBuffer, *flags.ptrStore);
+    cMot->bones->ptr.Fixup(localBuffer, *flags.ptrStore);
     REMotionBone *bonesPtr = cMot->bones->ptr;
 
     if (!bonesPtr) {
@@ -54,7 +55,7 @@ void REMotlist99::Fixup() {
     }
 
     for (size_t b = 0; b < cMot->numBones; b++) {
-      bonesPtr[b].Fixup(localBuffer);
+      ProcessClass(bonesPtr[b], flags);
     }
   }
 }
@@ -85,8 +86,9 @@ void REMotlist99Asset::Build() {
   }
 }
 
-void REMotlist99Asset::Fixup() {
-  REMotlist99 &data = Get();
-  data.Fixup();
+void REMotlist99Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }

@@ -17,38 +17,41 @@
 
 #include "motion_65.hpp"
 
-template <> void REMotion65::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
+template <> void ProcessClass(RETrackCurve65 &item, ProcessFlags flags) {
+  ProcessClass<RETrackCurve43>(item, flags);
+}
 
-  if (!es::FixupPointers(masterBuffer, ptrStore, bones, tracks, unkOffset02,
-                         animationName)) {
+template <> void ProcessClass(REMotionTrack65 &item, ProcessFlags flags) {
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.curves)) {
     return;
   }
 
-  if (bones) {
-    bones->ptr.Fixup(masterBuffer);
-  }
+  uint32 numUsedCurves = 0;
 
-  for (uint32 b = 0; b < numBones; b++) {
-    bones->ptr[b].Fixup(masterBuffer);
-  }
-
-  for (uint32 b = 0; b < numTracks; b++) {
-    tracks[b].Fixup(masterBuffer);
+  for (uint32 t = 0; t < 3; t++) {
+    if (item.usedCurves[static_cast<REMotionTrack43::TrackType>(t)]) {
+      ProcessClass(item.curves[numUsedCurves++], flags);
+    }
   }
 }
 
-void REMotionTrack65::Fixup(char *masterBuffer) {
-  if (!es::FixupPointers(masterBuffer, ptrStore, curves)) {
+template <> void ProcessClass(REMotion65 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.bones, item.tracks,
+                         item.unkOffset02, item.animationName)) {
     return;
   }
 
-  size_t numUsedCurves = 0;
+  if (item.bones) {
+    item.bones->ptr.Fixup(flags.base);
+  }
 
-  for (size_t t = 0; t < 3; t++) {
-    if (usedCurves[static_cast<REMotionTrack43::TrackType>(t)]) {
-      curves[numUsedCurves++].Fixup(masterBuffer);
-    }
+  for (size_t b = 0; b < item.numBones; b++) {
+    ProcessClass(item.bones->ptr[b], flags);
+  }
+
+  for (size_t b = 0; b < item.numTracks; b++) {
+    ProcessClass(item.tracks[b], flags);
   }
 }
 
@@ -91,7 +94,9 @@ void REMotion65Asset::Build() {
   }
 }
 
-void REMotion65Asset::Fixup() {
-  Get().Fixup();
+void REMotion65Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }

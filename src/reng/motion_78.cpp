@@ -17,35 +17,35 @@
 
 #include "motion_78.hpp"
 
-template <> void REMotion78::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
-  if (!es::FixupPointers(masterBuffer, ptrStore, tracks, unkOffset02,
-                         animationName)) {
-    return;
-  }
-
-  for (uint32 b = 0; b < numTracks; b++) {
-    tracks[b].Fixup(masterBuffer);
-  }
+template <> void ProcessClass(RETrackCurve78 &item, ProcessFlags flags) {
+  es::FixupPointers(flags.base, *flags.ptrStore, item.frames,
+                    item.controlPoints, item.minMaxBounds);
 }
 
-void REMotionTrack78::Fixup(char *masterBuffer) {
-  if (!es::FixupPointers(masterBuffer, ptrStore, curves)) {
+template <> void ProcessClass(REMotionTrack78 &item, ProcessFlags flags) {
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.curves)) {
     return;
   }
 
-  size_t numUsedCurves = 0;
+  uint32 numUsedCurves = 0;
 
-  for (size_t t = 0; t < 3; t++) {
-    if (usedCurves[static_cast<REMotionTrack43::TrackType>(t)]) {
-      curves[numUsedCurves++].Fixup(masterBuffer);
+  for (uint32 t = 0; t < 3; t++) {
+    if (item.usedCurves[static_cast<REMotionTrack43::TrackType>(t)]) {
+      ProcessClass(item.curves[numUsedCurves++], flags);
     }
   }
 }
 
-void RETrackCurve78::Fixup(char *masterBuffer) {
-  es::FixupPointers(masterBuffer, ptrStore, frames, controlPoints,
-                    minMaxBounds);
+template <> void ProcessClass(REMotion78 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.tracks,
+                         item.unkOffset02, item.animationName)) {
+    return;
+  }
+
+  for (size_t b = 0; b < item.numTracks; b++) {
+    ProcessClass(item.tracks[b], flags);
+  }
 }
 
 void REMotion78Asset::Build() {
@@ -87,7 +87,9 @@ void REMotion78Asset::Build() {
   }
 }
 
-void REMotion78Asset::Fixup() {
-  Get().Fixup();
+void REMotion78Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }

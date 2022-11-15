@@ -25,8 +25,6 @@
 
 using namespace revil;
 
-thread_local extern std::vector<void*> ptrStore;
-
 template <class C> struct REArray {
   esPointerX64<C> ptr;
   int32 numItems;
@@ -48,10 +46,19 @@ public:
   void Load(BinReaderRef rd);
   static Ptr Create(REAssetBase base);
   void Assign(REAssetBase *data);
-  virtual void Fixup() = 0;
+  virtual void Fixup(std::vector<void *> &ptrStore) = 0;
   virtual void Build() = 0;
   virtual uni::BaseElementConst AsMotion() const { return {}; }
   virtual uni::BaseElementConst AsMotions() const { return {}; }
   virtual uni::BaseElementConst AsSkeletons() const { return {}; }
   virtual ~REAssetImpl() = default;
 };
+
+class ProcessFlags {
+public:
+  char *base;
+  std::vector<void *> *ptrStore;
+};
+
+template <class C>
+void RE_EXTERN ProcessClass(C &input, ProcessFlags flags);

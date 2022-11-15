@@ -17,25 +17,25 @@
 
 #include "motion_list_85.hpp"
 
-void REMotlist85::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
+template <> void ProcessClass(REMotlist85 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
 
-  if (!es::FixupPointers(masterBuffer, ptrStore, motions, unkOffset00, fileName,
-                         null)) {
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.motions,
+                         item.unkOffset00, item.fileName, item.null)) {
     return;
   }
 
-  for (uint32 m = 0; m < numMotions; m++) {
-    motions[m].Fixup(masterBuffer, &ptrStore);
+  for (uint32 m = 0; m < item.numMotions; m++) {
+    item.motions[m].Fixup(flags.base, *flags.ptrStore);
 
-    REAssetBase *cMotBase = motions[m];
+    REAssetBase *cMotBase = item.motions[m];
 
     if (!cMotBase || cMotBase->assetID != REMotion65Asset::VERSION ||
         cMotBase->assetFourCC != REMotion65Asset::ID) {
       continue;
     }
 
-    motions[m]->Fixup();
+    ProcessClass(*item.motions[m], flags);
   }
 }
 
@@ -71,8 +71,9 @@ void REMotlist85Asset::Build() {
   }
 }
 
-void REMotlist85Asset::Fixup() {
-  REMotlist85 &data = Get();
-  data.Fixup();
+void REMotlist85Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }

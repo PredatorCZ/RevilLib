@@ -17,15 +17,15 @@
 
 #include "motion_458.hpp"
 
-void REMotion458::Fixup() {
-  char *masterBuffer = reinterpret_cast<char *>(this);
-
-  if (!es::FixupPointers(masterBuffer, ptrStore, tracks, animationName)) {
+template <> void ProcessClass(REMotion458 &item, ProcessFlags flags) {
+  flags.base = reinterpret_cast<char *>(&item);
+  if (!es::FixupPointers(flags.base, *flags.ptrStore, item.tracks,
+                         item.animationName)) {
     return;
   }
 
-  for (uint32 b = 0; b < numTracks; b++) {
-    tracks[b].Fixup(masterBuffer);
+  for (size_t b = 0; b < item.numTracks; b++) {
+    ProcessClass(item.tracks[b], flags);
   }
 }
 
@@ -68,7 +68,9 @@ void REMotion458Asset::Build() {
   }
 }
 
-void REMotion458Asset::Fixup() {
-  Get().Fixup();
+void REMotion458Asset::Fixup(std::vector<void *> &ptrStore) {
+  ProcessFlags flags;
+  flags.ptrStore = &ptrStore;
+  ProcessClass(Get(), flags);
   Build();
 }

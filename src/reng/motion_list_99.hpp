@@ -21,7 +21,6 @@
 
 class REMotlist99 : public REMotlist85 {
 public:
-  void Fixup();
 };
 
 typedef uni::VectorList<uni::Motion, REMotion78Asset> MotionList99;
@@ -42,7 +41,7 @@ class REMotlist99Asset : public REAssetImpl,
     return {static_cast<const MotionList99 *>(this), false};
   }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

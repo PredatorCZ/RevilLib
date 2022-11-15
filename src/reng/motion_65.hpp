@@ -20,7 +20,6 @@
 
 struct RETrackCurve65 : RETrackCurve43 {
   RETrackController::Ptr GetController();
-  // operator RETrackCurve43() = delete;
 };
 
 struct REMotionTrack65 {
@@ -29,8 +28,6 @@ struct REMotionTrack65 {
   uint32 boneHash;
   float weight;
   esPointerX64<RETrackCurve65> curves;
-
-  void Fixup(char *masterBuffer);
 };
 
 using REMotion65 = REMotion_t<REMotionTrack65>;
@@ -50,7 +47,7 @@ public:
   uint32 FrameRate() const override { return Get().framesPerSecond; }
   float Duration() const override { return Get().intervals[0] / FrameRate(); }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

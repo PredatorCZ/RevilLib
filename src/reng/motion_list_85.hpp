@@ -26,8 +26,6 @@ struct REMotlist85 : public REAssetBase {
   esPointerX64<char16_t> fileName;
   esPointerX64<char> null;
   uint32 numMotions;
-
-  void Fixup();
 };
 
 typedef uni::VectorList<uni::Motion, REMotion65Asset> MotionList85;
@@ -48,7 +46,7 @@ class REMotlist85Asset : public REAssetImpl,
     return {static_cast<const MotionList85 *>(this), false};
   }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:

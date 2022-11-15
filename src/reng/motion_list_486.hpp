@@ -27,7 +27,6 @@ public:
   esPointerX64<char16_t> fileName;
   esPointerX64<char> null;
   uint32 numMotions;
-  void Fixup();
 };
 
 typedef uni::VectorList<uni::Motion, REMotion458Asset> MotionList486;
@@ -48,7 +47,7 @@ class REMotlist486Asset : public REAssetImpl,
     return {static_cast<const MotionList486 *>(this), false};
   }
 
-  void Fixup() override;
+  void Fixup(std::vector<void *> &ptrStore) override;
   void Build() override;
 
 public:
