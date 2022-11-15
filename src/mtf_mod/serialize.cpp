@@ -80,7 +80,7 @@ uni::ResourcesConst MODInner<traits>::Resources() const {
 
 template <class traits>
 uni::MaterialsConst MODInner<traits>::Materials() const {
-  return {nullptr, false};
+  return {&materials, false};
 }
 
 template <class material_type>
@@ -101,15 +101,17 @@ void MODMaterialProxy<material_type>::Write(BinWritterRef wr) const {
 template <class material_type>
 void MODMaterialProxy<material_type>::Read(BinReaderRef_e rd) {
   rd.Read(main);
-  main.baseTextureIndex--;
-  main.normalTextureIndex--;
-  main.maskTextureIndex--;
-  main.lightTextureIndex--;
-  main.shadowTextureIndex--;
-  main.additionalTextureIndex--;
-  main.cubeMapTextureIndex--;
-  main.detailTextureIndex--;
-  main.AOTextureIndex--;
+  if constexpr (!std::is_same_v<material_type, MODMaterialXD3>) {
+    main.baseTextureIndex--;
+    main.normalTextureIndex--;
+    main.maskTextureIndex--;
+    main.lightTextureIndex--;
+    main.shadowTextureIndex--;
+    main.additionalTextureIndex--;
+    main.cubeMapTextureIndex--;
+    main.detailTextureIndex--;
+    main.AOTextureIndex--;
+  }
 }
 
 template <class material_type>
@@ -223,6 +225,20 @@ template <> void FByteswapper(MODHeaderXC5 &self, bool) {
   FByteswapper(self.indices);
 }
 
+template <> void FByteswapper(MODHeaderXD3 &self, bool) {
+  FByteswapper(static_cast<MODHeaderCommon &>(self));
+  FByteswapper(self.vertexBufferSize);
+  FByteswapper(self.numTextures);
+  FByteswapper(self.numGroups);
+  FByteswapper(self.bones);
+  FByteswapper(self.groups);
+  FByteswapper(self.materialHashes);
+  FByteswapper(self.meshes);
+  FByteswapper(self.vertexBuffer);
+  FByteswapper(self.indices);
+  FByteswapper(self.dataEnd);
+}
+
 template <> void FByteswapper(MODHeaderX70 &self, bool) {
   FByteswapper(static_cast<MODHeaderCommon &>(self));
   FByteswapper(self.vertexBufferSize);
@@ -331,7 +347,10 @@ template <> void FByteswapper(MODMaterialXC5 &self, bool way) {
   FByteswapper(self.unk05);
   FByteswapper(self.unk06);
   FByteswapper(self.unk07);
-  FByteswapper(self.unk08);
+}
+
+template <> void FByteswapper(MODMaterialXD3 &self, bool) {
+  FByteswapper(self.hash);
 }
 
 template <> void FByteswapper(MODMeshX99 &self, bool) {
@@ -625,6 +644,58 @@ MODImpl::ptr LoadMODXC5(BinReaderRef_e rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
+MODImpl::ptr LoadMODXC3(BinReaderRef_e rd) {
+  MODHeaderXC5 header;
+  MODInner<MODTraitsXC5> main;
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rd.Seek(header.textures);
+  rd.ReadContainerLambda(main.paths.storage, header.numTextures,
+                         [](BinReaderRef_e rd, MODPathProxy &p) {
+                           MODPath<MODTraitsXC5::pathSize> path;
+                           rd.Read(path);
+                           p.path = path.path;
+                         });
+  rd.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainerLambda(main.meshes, header.numMeshes,
+                         [](BinReaderRef_e rd, auto &m) {
+                           rd.Read(m);
+                           rd.Skip(8);
+                         });
+  rd.ReadContainer(main.envelopes);
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
 template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   MODHeaderX99 header;
   MODInner<Traits> main;
@@ -682,6 +753,47 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
+
+MODImpl::ptr LoadMODXD3(BinReaderRef_e rd) {
+  MODHeaderXD3 header;
+  MODInner<MODTraitsXD3> main;
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rd.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainer(main.meshes, header.numMeshes);
+  rd.ReadContainer(main.envelopes);
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
 #pragma endregion
 
 bool MODMaker::operator<(const MODMaker &i0) const {
@@ -694,6 +806,7 @@ static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     //{{0x170, false}, LoadMODX70<MODHeaderX170, MODTraitsX170>},
     {{MODVersion::X99, false}, LoadMODX99<MODTraitsX99LE>},
     {{MODVersion::X99, true}, LoadMODX99<MODTraitsX99BE>},
+    {{MODVersion::XD3, false}, LoadMODXD3},
     //{{0xC5, false}, LoadMODXC5},
     //{{0xC5, true}, LoadMODXC5},
 };

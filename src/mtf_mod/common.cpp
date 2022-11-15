@@ -39,20 +39,6 @@ std::string MODImpl::Name() const { return ""; }
 
 uni::SkeletonBonesConst MODImpl::Bones() const { return {&boneData, false}; }
 
-const char *MODPrimitiveDescriptorProxy::RawBuffer() const { return rawBuffer; }
-size_t MODPrimitiveDescriptorProxy::Stride() const { return stride; }
-size_t MODPrimitiveDescriptorProxy::Offset() const { return offset; }
-size_t MODPrimitiveDescriptorProxy::Index() const { return index; }
-uni::PrimitiveDescriptor::Usage_e MODPrimitiveDescriptorProxy::Usage() const {
-  return usage;
-}
-uni::FormatDescr MODPrimitiveDescriptorProxy::Type() const { return desc; }
-uni::BBOX MODPrimitiveDescriptorProxy::UnpackData() const { return unpackData; }
-uni::PrimitiveDescriptor::UnpackDataType_e
-MODPrimitiveDescriptorProxy::UnpackDataType() const {
-  return unpackType;
-}
-
 size_t MODSkinProxy::NumNodes() const { return numRemaps; }
 uni::TransformType MODSkinProxy::TMType() const { return uni::TMTYPE_MATRIX; }
 void MODSkinProxy::GetTM(es::Matrix44 &out, size_t index) const {
@@ -88,57 +74,59 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   retval.materialIndex = self.materialIndex;
   // retval.name = "group_" + std::to_string(self.unk);
 
-  retval.mainBuffer =
+  const char *mainBuffer =
       main.buffer.data() + (self.vertexStart * self.buffer0Stride) +
       self.vertexStreamOffset + (self.indexValueOffset * self.buffer0Stride);
-  auto curBuffer = retval.mainBuffer;
+  auto curBuffer = mainBuffer;
+
+  MODVertices vtArray;
+  vtArray.numVertices = self.numVertices;
 
   auto newDesc = [&](uni::FormatDescr type, size_t size) {
-    MODPrimitiveDescriptorProxy desc;
+    MODVertexDescriptor desc;
     desc.stride = stride;
     desc.offset = offset;
-    desc.desc = type;
+    desc.type = type;
     offset += size;
-    desc.rawBuffer = curBuffer + desc.offset;
+    desc.buffer = curBuffer + desc.offset;
     return desc;
   };
 
   auto makeBones = [&](size_t index) {
-    MODPrimitiveDescriptorProxy boneIdx(
+    MODVertexDescriptor boneIdx(
         newDesc({uni::FormatType::UINT, uni::DataType::R8G8B8A8}, 4));
     boneIdx.usage = uni::PrimitiveDescriptor::Usage_e::BoneIndices;
     boneIdx.index = index;
-    retval.descs.storage.emplace_back(boneIdx);
+    vtArray.descs.storage.emplace_back(boneIdx);
   };
 
   auto makeWeights = [&](size_t index) {
-    MODPrimitiveDescriptorProxy boneWt(
+    MODVertexDescriptor boneWt(
         newDesc({uni::FormatType::UNORM, uni::DataType::R8G8B8A8}, 4));
     boneWt.usage = uni::PrimitiveDescriptor::Usage_e::BoneWeights;
     boneWt.index = index;
-    retval.descs.storage.emplace_back(boneWt);
+    vtArray.descs.storage.emplace_back(boneWt);
   };
 
   auto makeNormals = [&](auto type) {
-    MODPrimitiveDescriptorProxy norms(
-        newDesc({uni::FormatType::NORM, type}, 4));
+    MODVertexDescriptor norms(newDesc({uni::FormatType::NORM, type}, 4));
 
     if (laterFormat) {
-      norms.desc.compType = uni::DataType::R8G8B8A8;
-      norms.desc.outType = uni::FormatType::UNORM;
+      norms.type.compType = uni::DataType::R8G8B8A8;
+      norms.type.outType = uni::FormatType::UNORM;
       norms.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Madd;
       norms.unpackData.max = Vector4A16(-1.f);
       norms.unpackData.min = Vector4A16(2.f);
     }
 
     norms.usage = uni::PrimitiveDescriptor::Usage_e::Normal;
-    retval.descs.storage.emplace_back(norms);
+    vtArray.descs.storage.emplace_back(norms);
 
     if (!swap) {
       return;
     }
 
-    auto normBuff = const_cast<char *>(norms.rawBuffer);
+    auto normBuff = const_cast<char *>(norms.buffer);
 
     for (size_t i = 0; i < self.numVertices; i++) {
       FByteswapper(reinterpret_cast<uint32 &>(*normBuff));
@@ -147,16 +135,16 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   };
 
   auto makeTangents = [&] {
-    MODPrimitiveDescriptorProxy tangs(
+    MODVertexDescriptor tangs(
         newDesc({uni::FormatType::NORM, uni::DataType::R10G10B10A2}, 4));
     tangs.usage = uni::PrimitiveDescriptor::Usage_e::Tangent;
-    retval.descs.storage.emplace_back(tangs);
+    vtArray.descs.storage.emplace_back(tangs);
 
     if (!swap) {
       return;
     }
 
-    auto tangBuff = const_cast<char *>(tangs.rawBuffer);
+    auto tangBuff = const_cast<char *>(tangs.buffer);
 
     for (size_t i = 0; i < self.numVertices; i++) {
       FByteswapper(reinterpret_cast<uint32 &>(*tangBuff));
@@ -165,17 +153,17 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   };
 
   auto makeUV = [&](size_t index) {
-    MODPrimitiveDescriptorProxy uvset(
+    MODVertexDescriptor uvset(
         newDesc({uni::FormatType::FLOAT, uni::DataType::R16G16}, 4));
     uvset.usage = uni::PrimitiveDescriptor::Usage_e::TextureCoordiante;
     uvset.index = index;
-    retval.descs.storage.emplace_back(uvset);
+    vtArray.descs.storage.emplace_back(uvset);
 
     if (!swap) {
       return;
     }
 
-    auto uvBuff = const_cast<char *>(uvset.rawBuffer);
+    auto uvBuff = const_cast<char *>(uvset.buffer);
 
     for (size_t i = 0; i < self.numVertices; i++) {
       FByteswapper(reinterpret_cast<SVector2 &>(*uvBuff));
@@ -184,17 +172,17 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   };
 
   auto makeColor = [&](size_t index) {
-    MODPrimitiveDescriptorProxy color(
+    MODVertexDescriptor color(
         newDesc({uni::FormatType::UNORM, uni::DataType::R8G8B8A8}, 4));
     color.usage = uni::PrimitiveDescriptor::Usage_e::VertexColor;
     color.index = index;
-    retval.descs.storage.emplace_back(color);
+    vtArray.descs.storage.emplace_back(color);
 
     if (!swap) {
       return;
     }
 
-    auto colorBuff = const_cast<char *>(color.rawBuffer);
+    auto colorBuff = const_cast<char *>(color.buffer);
 
     for (size_t i = 0; i < self.numVertices; i++) {
       auto &v = reinterpret_cast<uint32 &>(*colorBuff);
@@ -204,7 +192,7 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   };
 
   if (useSkin) {
-    MODPrimitiveDescriptorProxy pos(
+    MODVertexDescriptor pos(
         newDesc({laterFormat ? uni::FormatType::NORM : uni::FormatType::UNORM,
                  uni::DataType::R16G16B16A16},
                 8));
@@ -213,10 +201,10 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
     pos.unpackData.max = main.bounds.bboxMin;
     pos.unpackData.min = main.bounds.bboxMax - main.bounds.bboxMin;
 
-    retval.descs.storage.emplace_back(pos);
+    vtArray.descs.storage.emplace_back(pos);
 
     if (swap) {
-      auto posBuff = const_cast<char *>(pos.rawBuffer);
+      auto posBuff = const_cast<char *>(pos.buffer);
 
       for (size_t i = 0; i < self.numVertices; i++) {
         FByteswapper(reinterpret_cast<USVector4 &>(*posBuff));
@@ -240,13 +228,13 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
       makeUV(1);
     }
   } else {
-    MODPrimitiveDescriptorProxy pos(
+    MODVertexDescriptor pos(
         newDesc({uni::FormatType::FLOAT, uni::DataType::R32G32B32}, 12));
     pos.usage = uni::PrimitiveDescriptor::Usage_e::Position;
-    retval.descs.storage.emplace_back(pos);
+    vtArray.descs.storage.emplace_back(pos);
 
     if (swap) {
-      auto posBuff = const_cast<char *>(pos.rawBuffer);
+      auto posBuff = const_cast<char *>(pos.buffer);
 
       for (size_t i = 0; i < self.numVertices; i++) {
         auto &vec = reinterpret_cast<Vector &>(*posBuff);
@@ -300,7 +288,12 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   uint16 *indexBuffer =
       reinterpret_cast<uint16 *>(&main.buffer[0] + main.vertexBufferSize +
                                  main.unkBufferSize + (self.indexStart * 2));
-  retval.indexBuffer = reinterpret_cast<const char *>(indexBuffer);
+  retval.indexIndex = main.indices.Size();
+  retval.vertexIndex = main.vertices.Size();
+
+  MODIndices idArray;
+  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
+  idArray.numIndices = self.numIndices;
 
   for (size_t i = 0; i < self.numIndices; i++) {
     if (swap) {
@@ -312,8 +305,6 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   }
 
   retval.indexType = uni::Primitive::IndexType_e::Strip;
-  retval.numIndices = self.numIndices;
-  retval.numVertices = self.numVertices;
   return retval;
 };
 
@@ -336,26 +327,429 @@ MODPrimitiveProxyV1 MODMeshX99::ReflectBE(revil::MODImpl &main_) {
   return retval;
 }
 
+MODVertices::MODVertices(std::initializer_list<MODVertexDescriptor> list) {
+  descs.storage.insert(descs.storage.end(), list);
+}
+
+template <std::same_as<MODVertexDescriptor>... T>
+MODVertices BuildVertices(T... items) {
+  size_t offset = 0;
+  static constexpr size_t fmtStrides[]{0,  128, 96, 64, 64, 48, 32, 32, 32,
+                                       32, 32,  32, 24, 16, 16, 16, 16, 8};
+  uint8 indices[0x10]{};
+
+  auto NewDesc = [&](MODVertexDescriptor item) {
+    item.offset = offset;
+    item.index = indices[uint8(item.usage)]++;
+    offset += fmtStrides[uint8(item.type.compType)] / 8;
+    return item;
+  };
+
+  return MODVertices{NewDesc(items)...};
+}
+
+using F = uni::FormatType;
+using D = uni::DataType;
+using U = uni::PrimitiveDescriptor::Usage_e;
+using V = MODVertexDescriptor;
+
+static const MODVertexDescriptor VertexNormal = [] {
+  V retVal{F::UNORM, D::R8G8B8A8, U::Normal};
+  retVal.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Madd;
+  retVal.unpackData.min = Vector4A16{2};
+  retVal.unpackData.max = Vector4A16{-1};
+  return retVal;
+}();
+
+static const MODVertexDescriptor VertexTangent = [] {
+  V retVal{F::UNORM, D::R8G8B8A8, U::Tangent};
+  retVal.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Madd;
+  retVal.unpackData.min = Vector4A16{2};
+  retVal.unpackData.max = Vector4A16{-1};
+  return retVal;
+}();
+
+// clang-format off
+
+static const MODVertexDescriptor TexCoord{F::FLOAT, D::R16G16, U::TextureCoordiante};
+
+static const MODVertexDescriptor VertexQPosition{F::NORM, D::R16G16B16, U::Position};
+
+static const MODVertexDescriptor VertexPosition{F::FLOAT, D::R32G32B32, U::Position};
+
+static const MODVertexDescriptor VertexBoneIndices{F::UINT, D::R8G8B8A8, U::BoneIndices};
+
+static const MODVertexDescriptor VertexColor{F::UNORM, D::R8G8B8A8, U::VertexColor};
+
+std::map<uint32, MODVertices> formats{
+    {
+        0x64593023,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      V{F::UINT, D::R32, U::Undefined},
+                      TexCoord,
+                      V{F::UINT, D::R32, U::Undefined}),
+    },
+    {
+        0x14d40020,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights}),
+    },
+    {
+        0x207d6037,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x2f55c03d,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      V{F::UINT, D::R32, U::Undefined},
+                      V{F::UINT, D::R32G32B32A32, U::Undefined},
+                      V{F::UINT, D::R32G32B32A32, U::Undefined}),
+    },
+    {
+        0x49b4f029,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x5e7f202c,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0x747d1031,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0x75c3e025,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent,
+                      TexCoord),
+    },
+    {
+        0x926fd02e,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0xCBCF7027,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent,
+                      V{F::UINT, D::R32, U::Undefined},
+                      TexCoord,
+                      V{F::UINT, D::R32, U::Undefined}),
+    },
+    {
+        0xbb424024,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent),
+    },
+    {
+        0xb392101f,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices},
+                      TexCoord,
+                      TexCoord,
+                      V{F::UINT, D::R32G32, U::Undefined}),
+    },
+    {
+        0xda55a021,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      TexCoord),
+    },
+    {
+        0xd9e801d,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices},
+                      TexCoord),
+    },
+    {
+        0xc31f201c,
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices}),
+    },
+    {
+        0xd877801b,
+        BuildVertices(VertexQPosition,
+                      V{F::INT, D::R16, U::BoneIndices},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::UINT, D::R32, U::Undefined},
+                      TexCoord,
+                      V{F::UINT, D::R32, U::Undefined}),
+    },
+    {
+        0xcbf6c01a,
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined}, // bone?
+                      VertexTangent,
+                      VertexNormal,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x37a4e035,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0x12553032,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xafa6302d,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xd8297028,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord),
+    },
+    {
+        0x2082f03b,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xc66fa03a,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xa7d7d036,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord),
+    },
+    {
+        0xa14e003c,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x9399c033,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x4325a03e,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      V{F::UINT, D::R32G32B32A32, U::Undefined},
+                      V{F::UINT, D::R32G32B32A32, U::Undefined},
+                      V{F::UINT, D::R32, U::Undefined}),
+    },
+    {
+        0xb6681034,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor,
+                      TexCoord),
+    },
+    {
+        0xa14e003c,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x63b6c02f,
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      TexCoord,
+                      V{F::UINT, D::R32, U::Undefined}),
+    },
+    {
+        0xa8fab018,
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined}, // bone?
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord),
+    },
+};
+
+// clang-format on
+
+MODPrimitiveProxy MODMeshXD3::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD3> &>(main_);
+  MODPrimitiveProxy retval;
+  uint8 visibleLOD = data0.Get<MODMeshXC5::VisibleLOD>();
+  retval.lodIndex =
+      convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
+  retval.materialIndex = data0.Get<MODMeshXC5::MaterialIndex>();
+  retval.indexType = uni::Primitive::IndexType_e::Triangle;
+  retval.indexIndex = main.indices.Size();
+  retval.vertexIndex = main.vertices.Size();
+  retval.skinIndex = 0;
+  retval.name = std::to_string(meshIndex) + ":" + std::to_string(data0.Get<MODMeshXC5::GroupIndex>());
+
+  const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
+                           vertexStreamOffset +
+                           (indexValueOffset * vertexStride);
+
+  auto foundFormat = formats.find(vertexFormat);
+
+  if (!es::IsEnd(formats, foundFormat)) {
+    MODVertices tmpl = foundFormat->second;
+    tmpl.numVertices = numVertices;
+    for (auto &d : tmpl.descs.storage) {
+      d.buffer = mainBuffer + d.offset;
+      d.stride = vertexStride;
+
+      if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
+          skinBoneBegin) {
+        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
+        d.unpackData.min = Vector4A16(skinBoneBegin);
+      }
+    }
+    main.vertices.storage.emplace_back(std::move(tmpl));
+  } else {
+    main.vertices.storage.emplace_back();
+    // throw std::runtime_error("Unregistered vertex format: " +
+    //         std::to_string(vertexFormat));
+  }
+
+  uint16 *indexBuffer = reinterpret_cast<uint16 *>(
+      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
+
+  MODIndices idArray;
+  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
+  idArray.numIndices = numIndices;
+
+  for (size_t i = 0; i < numIndices; i++) {
+    if (indexBuffer[i] != 0xffff) {
+      indexBuffer[i] -= vertexStart;
+    }
+  }
+
+  main_.indices.storage.emplace_back(idArray);
+
+  return retval;
+}
+
 std::string MODPrimitiveProxy::Name() const { return name; }
 size_t MODPrimitiveProxy::SkinIndex() const { return skinIndex; }
 int64 MODPrimitiveProxy::LODIndex() const { return lodIndex; }
 size_t MODPrimitiveProxy::MaterialIndex() const { return materialIndex; }
-/*
-const char *MODPrimitiveProxyV1::RawVertexBuffer(size_t id) const {
-  if (id == 1 && additionalBuffer) {
-    return additionalBuffer;
-  }
-
-  if (id) {
-    throw std::out_of_range("RawVertexBuffer out of range.");
-  }
-
-  return mainBuffer;
+uni::Primitive::IndexType_e MODPrimitiveProxy::IndexType() const {
+  return indexType;
 }
-
-size_t MODPrimitiveProxyV1::NumVertexBuffers() const {
-  return additionalBuffer ? 2 : 1;
-}*/
+size_t MODPrimitiveProxy::VertexArrayIndex(size_t) const { return vertexIndex; }
+size_t MODPrimitiveProxy::IndexArrayIndex() const { return indexIndex; }
+size_t MODPrimitiveProxy::NumVertexArrays() const { return 1; }
 
 MOD::MOD() {}
 MOD::MOD(MOD &&) = default;

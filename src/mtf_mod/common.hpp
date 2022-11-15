@@ -88,41 +88,14 @@ struct MODBoneProxy : uni::Bone {
   }
 };
 
-struct MODPrimitiveDescriptorProxy : uni::PrimitiveDescriptor {
-  const char *rawBuffer;
-  size_t stride;
-  size_t offset;
-  size_t index = 0;
-  Usage_e usage;
-  uni::FormatDescr desc;
-  uni::BBOX unpackData;
-  UnpackDataType_e unpackType = UnpackDataType_e::None;
-
-  const char *RawBuffer() const override;
-  size_t Stride() const override;
-  size_t Offset() const override;
-  size_t Index() const override;
-  Usage_e Usage() const override;
-  uni::FormatDescr Type() const override;
-  uni::BBOX UnpackData() const override;
-  UnpackDataType_e UnpackDataType() const override;
-
-  operator uni::Element<const uni::PrimitiveDescriptor>() const {
-    return uni::Element<const uni::PrimitiveDescriptor>{this, false};
-  }
-};
-
 struct MODPrimitiveProxy : uni::Primitive {
-  uni::VectorList<uni::PrimitiveDescriptor, MODPrimitiveDescriptorProxy> descs;
-  const char *mainBuffer;
-  const char *indexBuffer;
   IndexType_e indexType;
-  size_t numVertices;
-  size_t numIndices;
   size_t skinIndex = 0;
   size_t lodIndex = 0;
   size_t materialIndex = 0;
   std::string name;
+  size_t indexIndex;
+  size_t vertexIndex;
 
   IndexType_e IndexType() const override;
   std::string Name() const override;
@@ -142,10 +115,72 @@ struct MODPrimitiveProxyV1 : MODPrimitiveProxy {
   const char *additionalBuffer;
 };
 
+struct MODIndices : uni::IndexArray {
+  const char *indexData;
+  size_t numIndices;
+  const char *RawIndexBuffer() const override { return indexData; }
+  size_t IndexSize() const override { return 2; }
+  size_t NumIndices() const override { return numIndices; }
+
+  operator uni::Element<const uni::IndexArray>() const {
+    return uni::Element<const uni::IndexArray>{this, false};
+  }
+};
+
+struct MODVertexDescriptor : uni::PrimitiveDescriptor {
+  const char *buffer;
+  size_t stride;
+  size_t offset;
+  size_t index = 0;
+  Usage_e usage;
+  uni::FormatDescr type;
+  uni::BBOX unpackData;
+  UnpackDataType_e unpackType = UnpackDataType_e::None;
+
+  MODVertexDescriptor() = default;
+  MODVertexDescriptor(uni::FormatType fmtType, uni::DataType dtType,
+                      Usage_e usage_)
+      : usage{usage_}, type{fmtType, dtType} {}
+
+  const char *RawBuffer() const { return buffer; }
+  size_t Stride() const { return stride; }
+  size_t Offset() const { return offset; }
+  size_t Index() const { return index; }
+  Usage_e Usage() const { return usage; }
+  uni::FormatDescr Type() const { return type; }
+  uni::BBOX UnpackData() const { return unpackData; }
+  UnpackDataType_e UnpackDataType() const { return unpackType; }
+
+  operator uni::Element<const uni::PrimitiveDescriptor>() const {
+    return uni::Element<const uni::PrimitiveDescriptor>{this, false};
+  }
+};
+
+struct MODVertices : uni::VertexArray {
+  uni::VectorList<uni::PrimitiveDescriptor, MODVertexDescriptor> descs;
+  size_t numVertices = 0;
+
+  MODVertices(MODVertices &&) = default;
+  MODVertices(const MODVertices &) = default;
+  MODVertices() = default;
+  MODVertices(std::initializer_list<MODVertexDescriptor> list);
+
+  uni::PrimitiveDescriptorsConst Descriptors() const override {
+    return {&descs, false};
+  }
+  size_t NumVertices() const override { return numVertices; }
+
+  operator uni::Element<const uni::VertexArray>() const {
+    return uni::Element<const uni::VertexArray>{this, false};
+  }
+};
+
 class revil::MODImpl : public uni::Skeleton, public uni::Model {
 public:
   using ptr = std::unique_ptr<MODImpl>;
   uni::VectorList<uni::Bone, MODBoneProxy> boneData;
+  uni::VectorList<uni::IndexArray, MODIndices> indices;
+  uni::VectorList<uni::VertexArray, MODVertices> vertices;
 
   std::string buffer;
   std::vector<es::Matrix44> refPoses;
@@ -160,6 +195,10 @@ public:
   std::string Name() const override;
   uni::SkeletonBonesConst Bones() const override;
   virtual void Reflect(bool) = 0;
+  uni::IndexArraysConst Indices() const override { return {&indices, false}; }
+  uni::VertexArraysConst Vertices() const override {
+    return {&vertices, false};
+  }
 };
 
 struct MODSkinProxy : uni::Skin {
@@ -189,10 +228,10 @@ public:
   material_type main;
   ReflectorWrap<material_type> asMetadata{main};
 
-  virtual size_t Version() const override;
-  virtual std::string Name() const override;
-  virtual std::string TypeName() const override;
-  virtual uni::MetadataConst Metadata() const override;
+  size_t Version() const override;
+  std::string Name() const override;
+  std::string TypeName() const override;
+  uni::MetadataConst Metadata() const override;
 
   void Write(BinWritterRef) const;
   void Read(BinReaderRef_e);

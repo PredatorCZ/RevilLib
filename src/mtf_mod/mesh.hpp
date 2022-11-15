@@ -118,3 +118,28 @@ struct MODMeshXC5 {
   MODPrimitiveProxy ReflectLE(const revil::MODImpl &) const { return {}; }
   MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
 };
+
+struct MODMeshXD3 {
+  int16 unk; // somehow essential, must be an odd number
+  uint16 numVertices;
+  MODMeshXC5::BitField00 data0;
+  MODMeshXC5::BitField01 data1;
+  uint8 unk01;
+  uint8 vertexStride;
+  uint8 primitiveType;
+  uint32 vertexStart;
+  uint32 vertexStreamOffset;
+  uint32 vertexFormat;
+  uint32 indexStart;
+  uint32 numIndices;
+  uint32 indexValueOffset;
+  uint8 skinBoneBegin;
+  uint8 numEnvelopes;
+  uint16 meshIndex;
+  uint16 minVertex;
+  uint16 maxVertex;
+  uint32 unk02; // envelopes ptr?
+
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
+};

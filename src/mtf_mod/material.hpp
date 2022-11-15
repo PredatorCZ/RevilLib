@@ -163,3 +163,8 @@ struct MODMaterialXC5 {
   uint32 unk07;
   uint8 unk08;
 };
+
+struct MODMaterialXD3 {
+  uint32 hash;
+  static constexpr size_t Version() { return 1; }
+};

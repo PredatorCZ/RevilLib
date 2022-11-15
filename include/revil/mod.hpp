@@ -28,6 +28,7 @@ class MODImpl;
 enum MODVersion : uint16 {
   X70 = 0x70,
   X99 = 0x99,
+  XD3 = 0xD3,
 };
 
 struct alignas(8) MODMaker {

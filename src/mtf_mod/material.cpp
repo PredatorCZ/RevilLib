@@ -62,3 +62,5 @@ REFLECT(CLASS(MODMaterialXC5), MEMBER(pshData), MEMBER(vshData),
         MEMBER(detailFactor), MEMBER(detailWrap), MEMBER(envMapBias),
         MEMBER(normalBias), MEMBER(unk02), MEMBER(unk03), MEMBER(unk04),
         MEMBER(unk05), MEMBER(unk06), MEMBER(unk07), MEMBER(unk08));
+
+REFLECT(CLASS(MODMaterialXD3), MEMBER(hash));
