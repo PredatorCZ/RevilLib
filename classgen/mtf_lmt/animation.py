@@ -17,7 +17,7 @@ Animation.members = [
 ]
 Animation.patches = [
     ClassPatch('LMT40', ClassPatchType.insert_after, 'endFrameAdditiveScenePosition', ClassMember('endFrameAdditiveSceneRotation', TYPES.Vector4A16)),
-    ClassPatch('LMT66', ClassPatchType.insert_after, 'endFrameAdditiveScenePosition', ClassMember('flags', AnimV2Flags),
+    ClassPatch('LMT66', ClassPatchType.insert_after, 'endFrameAdditiveSceneRotation', ClassMember('flags', AnimV2Flags),
                         ClassPatchType.replace, ClassMember('events', Pointer(AnimationEvent)),
                         ClassPatchType.append, ClassMember('floats', Pointer(FloatTracks))),
     ClassPatch('LMT92', ClassPatchType.delete, 'floats', ClassPatchType.insert_after, 'flags', ClassMember('nullPtr', InlineArray(Pointer(TYPES.char), 2))),

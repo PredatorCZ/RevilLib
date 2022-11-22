@@ -20,128 +20,66 @@
 #include "fixup_storage.hpp"
 #include "pugixml.hpp"
 
-#include <array>
-#include <map>
+#include "float_track.inl"
 
-MAKE_ENUM(ENUMSCOPE(class FloatTrackComponentRemap
-                    : uint8, FloatTrackComponentRemap),
-          EMEMBER(NONE), EMEMBER(X_COMP), EMEMBER(Y_COMP), EMEMBER(Z_COMP));
+REFLECT(ENUMERATION(FloatTrackComponentRemap), ENUM_MEMBER(NONE),
+        ENUM_MEMBER(X_COMP), ENUM_MEMBER(Y_COMP), ENUM_MEMBER(Z_COMP));
 
-template <template <class C> class PtrType> struct FloatTrack {
-  FloatTrackComponentRemap componentRemaps[4];
-  uint32 numFloats;
-  PtrType<FloatFrame> frames;
+void FByteswapper(FloatFrame &item) {
+  FByteswapper(item.data);
+  FByteswapper(item.value);
+}
 
-  void SwapEndian() {
-    FByteswapper(frames);
-    FByteswapper(numFloats);
+class FloatTracksMidInterface : public LMTFloatTrack_internal {
+  clgen::FloatTracks::Interface interface;
+
+public:
+  FloatTracksMidInterface(clgen::LayoutLookup rules, char *data) : interface {
+    data, rules
+  } {
   }
 
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
+  void Fixup(char *root, bool swapEndian, std::vector<void *> &ptrStore) {
+    for (auto g : interface.Groups()) {
+      if (g.FramesPtr().Check(ptrStore)) {
+        return;
+      }
+
       if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, frames)) {
-      return;
-    }
-  }
-};
-
-REFLECT(CLASS(FloatTrack<esPointerX86>), MEMBER(componentRemaps));
-REFLECT(CLASS(FloatTrack<esPointerX64>), MEMBER(componentRemaps));
-
-template <class C> class FloatTracks_shared : public LMTFloatTrack_internal {
-public:
-  using GroupArray = std::array<C, 4>;
-
-private:
-  uni::Element<GroupArray> groups;
-
-public:
-  FloatTracks_shared() : groups(new GroupArray) {}
-  FloatTracks_shared(C *fromPtr, char *masterBuffer, bool swapEndian) {
-    groups = {reinterpret_cast<GroupArray *>(fromPtr), false};
-
-    GroupArray &groupArray = *groups.get();
-    size_t currentGroup = 0;
-
-    for (auto &g : groupArray) {
-      g.Fixup(masterBuffer, swapEndian);
-      FloatFrame *groupFrames = g.frames;
-
-      if (!groupFrames) {
-        continue;
+        clgen::EndianSwap(interface);
       }
 
-      es::allocator_hybrid_base::LinkStorage(frames[currentGroup++],
-                                             groupFrames, g.numFloats);
+      g.FramesPtr().Fixup(root, ptrStore);
+
+      if (swapEndian) {
+        auto frames = g.Frames();
+        for (size_t t = 0; t < g.NumFloats(); t++) {
+          FByteswapper(frames[t]);
+        }
+      }
     }
   }
 
-  void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
-    ReflectorWrap<const C> reflEvent((*groups)[groupID]);
-    ReflectorXMLUtil::Save(reflEvent, node);
+  bool Is64bit() const { return interface.lookup.x64; }
+
+  size_t GetGroupTrackCount(size_t groupID) const override {
+    return interface.Groups().at(groupID).NumFloats();
   }
 
-  void ReflectFromXML(pugi::xml_node node, size_t groupID) override {
-    ReflectorWrap<C> reflEvent(&(*groups)[groupID]);
-    ReflectorXMLUtil::Load(reflEvent, node);
+  const FloatFrame *GetFrames(size_t groupID) const override {
+    return interface.Groups().at(groupID).Frames();
   }
 
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-    size_t curGroup = 0;
-
-    for (auto &g : *groups) {
-      wr.Write(g);
-      storage.SaveFrom(cOff + offsetof(C, frames) + sizeof(C) * curGroup++);
-    }
-  }
-
-  bool Is64bit() const override {
-    return sizeof(std::declval<C>().frames) == 8;
+  FloatFrame *GetFrames(size_t groupID) override {
+    return interface.Groups().at(groupID).Frames();
   }
 };
 
 using ptr_type_ = std::unique_ptr<LMTFloatTrack>;
 
-template <class C> struct f_ {
-  static ptr_type_ creatorBase() {
-    return std::make_unique<FloatTracks_shared<C>>();
-  }
-
-  static ptr_type_ creator(void *ptr, char *buff, bool endi) {
-    return std::make_unique<FloatTracks_shared<C>>(static_cast<C *>(ptr), buff,
-                                                   endi);
-  }
-};
-
-static const std::map<LMTConstructorPropertiesBase,
-                      decltype(&f_<void>::creatorBase)>
-    floatRegistry = {
-        {{LMTArchType::X64, LMTVersion::Auto},
-         f_<FloatTrack<esPointerX64>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::Auto},
-         f_<FloatTrack<esPointerX86>>::creatorBase},
-};
-
-static const std::map<LMTConstructorPropertiesBase,
-                      decltype(&f_<void>::creator)>
-    floatRegistryLink = {
-        {{LMTArchType::X64, LMTVersion::Auto},
-         f_<FloatTrack<esPointerX64>>::creator},
-        {{LMTArchType::X86, LMTVersion::Auto},
-         f_<FloatTrack<esPointerX86>>::creator},
-};
-
 ptr_type_ LMTFloatTrack::Create(const LMTConstructorProperties &props) {
-  if (props.dataStart) {
-    return floatRegistryLink.at(props)(props.dataStart, props.masterBuffer,
-                                       props.swappedEndian);
-  } else {
-    return floatRegistry.at(props)();
-  }
+  return std::make_unique<FloatTracksMidInterface>(
+      clgen::LayoutLookup{static_cast<uint8>(props.version),
+                          props.arch == LMTArchType::X64, false},
+      static_cast<char *>(props.dataStart));
 }

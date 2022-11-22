@@ -28,7 +28,10 @@ class MODImpl;
 enum MODVersion : uint16 {
   X70 = 0x70,
   X99 = 0x99,
-  XD3 = 0xD3,
+  XD3 = 0xD3,     // RE6 PC
+  X2CFF = 0x2CFF, // RE6 PS3
+  XC5 = 0xC5,     // LP2 PC
+  XC3 = 0xC3,     // LP2 PS3
 };
 
 struct alignas(8) MODMaker {

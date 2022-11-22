@@ -16,11 +16,13 @@
 */
 
 #pragma once
-#include "datas/pugi_fwd.hpp"
 #include "datas/bincore_fwd.hpp"
-#include "uni/motion.hpp"
+#include "datas/pugi_fwd.hpp"
 #include "settings.hpp"
+#include "uni/motion.hpp"
+#include <variant>
 #include <vector>
+#include <map>
 
 namespace revil {
 
@@ -68,40 +70,35 @@ class LMTFloatTrack {
 public:
   virtual size_t GetNumGroups() const = 0;
   virtual size_t GetGroupTrackCount(size_t groupID) const = 0;
-  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
-  virtual void Load(pugi::xml_node node) = 0;
   virtual ~LMTFloatTrack() = default;
 
-  static RE_EXTERN std::unique_ptr<LMTFloatTrack> 
+  static RE_EXTERN std::unique_ptr<LMTFloatTrack>
   Create(const LMTConstructorProperties &props);
+};
+
+class LMTAnimationEventV1 {
+public:
+  using EventCollection = std::map<float, std::vector<short>>;
+
+  virtual EventCollection GetEvents(size_t groupID) const = 0;
+};
+
+class LMTAnimationEventV2 {
+public:
+  virtual uint32 GetHash() const = 0;
+  virtual uint32 GetGroupHash(size_t groupID) const = 0;
 };
 
 class LMTAnimationEvent {
 public:
-  virtual size_t GetVersion() const = 0;
-  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
-  virtual void Load(pugi::xml_node node) = 0;
+  using EventVariant =
+      std::variant<const LMTAnimationEventV1 *, const LMTAnimationEventV2 *>;
+  virtual EventVariant Get() const = 0;
   virtual size_t GetNumGroups() const = 0;
-  virtual size_t GetGroupEventCount(size_t groupID) const = 0;
   virtual ~LMTAnimationEvent() = default;
 
   static RE_EXTERN std::unique_ptr<LMTAnimationEvent>
   Create(const LMTConstructorProperties &props);
-};
-
-class LMTAnimationEventV1 : public LMTAnimationEvent {
-public:
-  using EventCollection = std::vector<short>;
-
-  virtual EventCollection GetEvents(size_t groupID, size_t eventID) const = 0;
-  virtual int32 GetEventFrame(size_t groupID, size_t eventID) const = 0;
-};
-
-class LMTAnimationEventV2 : public LMTAnimationEvent {
-public:
-  virtual uint32 GetHash() const = 0;
-  virtual void SetHash(uint32 nHash) = 0;
-  virtual uint32 GetGroupHash(size_t groupID) const = 0;
 };
 
 class LMTTrack : public uni::MotionTrack {
@@ -121,8 +118,6 @@ public:
                            size_t frame) const = 0;
   virtual void Evaluate(Vector4A16 &out, size_t frame) const = 0;
   virtual int32 GetFrame(size_t frame) const = 0;
-  virtual void Load(pugi::xml_node node) = 0;
-  virtual void Save(pugi::xml_node node, bool standAlone) const = 0;
   virtual size_t Stride() const = 0;
   virtual uint32 BoneType() const = 0;
 
@@ -143,10 +138,8 @@ public:
   virtual size_t GetVersion() const = 0;
   virtual size_t NumFrames() const = 0;
   virtual int32 LoopFrame() const = 0;
+  virtual const LMTAnimationEvent *Events() const = 0;
 
-  virtual void Load(pugi::xml_node node) = 0;
-  virtual void Save(pugi::xml_node node, bool standAlone = false) const = 0;
-  virtual void Save(BinWritterRef wr, bool standAlone = true) const = 0;
   void Save(const std::string &fileName, bool asXML = false) const;
   virtual ~LMTAnimation() = default;
 

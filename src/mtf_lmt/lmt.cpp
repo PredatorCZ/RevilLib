@@ -26,9 +26,13 @@ LMT::~LMT() = default;
 
 LMTVersion LMT::Version() const { return pi->props.version; }
 LMTArchType LMT::Architecture() const { return pi->props.arch; }
-auto LMT::CreateAnimation() const { return LMTAnimation::Create(pi->props); }
+auto LMT::CreateAnimation() const {
+  std::vector<void *> ptrStore;
+  LMTConstructorProperties cProps(pi->props, ptrStore);
+  return LMTAnimation::Create(cProps);
+}
 
-LMT::operator uni::MotionsConst() const { return uni::MotionsConst{pi.get()}; }
+LMT::operator uni::MotionsConst() const { return uni::MotionsConst{pi.get(), false}; }
 
 void LMT::Version(LMTVersion _version, LMTArchType _arch) {
   if (!pi->masterBuffer.empty()) {

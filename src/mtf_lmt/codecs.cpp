@@ -58,7 +58,7 @@ static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
   const float s0 = cos(theta01) - dot * theta02 * theta03;
   const float s1 = theta02 * theta03;
 
-  return (v0 * s0) + (v1 * s1);
+  return ((v0 * s0) + (v1 * s1)).Normalized();
 }
 
 template <typename T>
@@ -1020,56 +1020,7 @@ static const std::unordered_map<TrackTypesShared, float> fracRegistry = {
               BiLinearRotationQuatYW_14bit, BiLinearRotationQuatZW_14bit,
               BiLinearRotationQuat4_11bit, BiLinearRotationQuat4_9bit)};
 
-static const TrackTypesShared buffRemapRegistry[][16] = {
-    {
-        TrackTypesShared::None,              //
-        TrackTypesShared::SingleVector3,     //
-        TrackTypesShared::SingleVector3,     //
-        TrackTypesShared::None,              //
-        TrackTypesShared::StepRotationQuat3, //
-        TrackTypesShared::HermiteVector3,    //
-        TrackTypesShared::SphericalRotation, //
-        TrackTypesShared::None,              //
-        TrackTypesShared::None,              //
-        TrackTypesShared::LinearVector3,     //
-    },
-    {
-        TrackTypesShared::None,                      //
-        TrackTypesShared::SingleVector3,             //
-        TrackTypesShared::SingleVector3,             //
-        TrackTypesShared::None,                      //
-        TrackTypesShared::StepRotationQuat3,         //
-        TrackTypesShared::HermiteVector3,            //
-        TrackTypesShared::LinearRotationQuat4_14bit, //
-        TrackTypesShared::None,                      //
-        TrackTypesShared::None,                      //
-        TrackTypesShared::LinearVector3,             //
-    },
-    {
-        TrackTypesShared::None,                         //
-        TrackTypesShared::SingleVector3,                //
-        TrackTypesShared::StepRotationQuat3,            //
-        TrackTypesShared::LinearVector3,                //
-        TrackTypesShared::BiLinearVector3_16bit,        //
-        TrackTypesShared::BiLinearVector3_8bit,         //
-        TrackTypesShared::LinearRotationQuat4_14bit,    //
-        TrackTypesShared::BiLinearRotationQuat4_7bit,   //
-        TrackTypesShared::None,                         //
-        TrackTypesShared::None,                         //
-        TrackTypesShared::None,                         //
-        TrackTypesShared::BiLinearRotationQuatXW_14bit, //
-        TrackTypesShared::BiLinearRotationQuatYW_14bit, //
-        TrackTypesShared::BiLinearRotationQuatZW_14bit, //
-        TrackTypesShared::BiLinearRotationQuat4_11bit,  //
-        TrackTypesShared::BiLinearRotationQuat4_9bit,   //
-    },
-};
-
-LMTTrackController *LMTTrackController::CreateCodec(size_t type,
-                                                    size_t subVersion) {
-  const TrackTypesShared cType = subVersion == -1
-                                     ? static_cast<TrackTypesShared>(type)
-                                     : buffRemapRegistry[subVersion][type];
+LMTTrackController *LMTTrackController::CreateCodec(TrackTypesShared cType) {
   if (codecRegistry.count(cType)) {
     return codecRegistry.at(cType)();
   }

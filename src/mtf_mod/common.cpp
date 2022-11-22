@@ -381,9 +381,13 @@ static const MODVertexDescriptor VertexBoneIndices{F::UINT, D::R8G8B8A8, U::Bone
 
 static const MODVertexDescriptor VertexColor{F::UNORM, D::R8G8B8A8, U::VertexColor};
 
+static const MODVertexDescriptor VertexNormalSigned{F::NORM, D::R8G8B8A8, U::Normal};
+
+static const MODVertexDescriptor VertexTangentSigned{F::NORM, D::R8G8B8A8, U::Tangent};
+
 std::map<uint32, MODVertices> formats{
     {
-        0x64593023,
+        0x64593023, // P3s_W1s_N4c_T4c_B4c_U2h_W2h_unk_U2h_unk
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -396,7 +400,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32, U::Undefined}),
     },
     {
-        0x14d40020,
+        0x14d40020, // P3s_W1s_N4c_T4c_B4c_U2h_W2h
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -406,14 +410,91 @@ std::map<uint32, MODVertices> formats{
                       V{F::FLOAT, D::R16G16, U::BoneWeights}),
     },
     {
-        0x207d6037,
+        0x14d40019, // P3s_W1s_N4c_T4c_B4c_U2h_W2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights}),
+    },
+    {
+        0x14d40021, // P3s_W1s_N4c_T4c_B4c_U2h_W2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights}),
+    },
+    {
+        0xbde5301a, // P3s_W1s_N4c_T4c_B4c_U2h_W2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights}),
+    },
+    {
+        0xd86ca01c, // P3s_W1s_N4c_T4c_B4c_U2h_W2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexColor),
+    },
+    {
+        0x77d87022, // P3s_W1s_N4c_T4c_B4c_U2h_W2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexColor),
+    },
+    {
+        0x77d87023, // P3s_W1s_N4c_T4c_B4c_U2h_W2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexColor),
+    },
+    {
+        0x207d6037, // P3f_N4c_U2h_VC4c
         BuildVertices(VertexPosition,
                       VertexNormal,
                       TexCoord,
                       VertexColor),
     },
     {
-        0x2f55c03d,
+        0x207d6030, // P3f_N4c_U2h_VC4c
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x207d6038, // P3f_N4c_U2h_VC4c
+        BuildVertices(VertexPosition,
+                      VertexNormalSigned,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x2f55c03d, // P3s_W1s_N4c_T4c_B4c_U2h_W2h_unk36c
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -426,7 +507,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32G32B32A32, U::Undefined}),
     },
     {
-        0x49b4f029,
+        0x49b4f029, // P3f_N4c_T4c_U2h_VC4c
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -434,7 +515,23 @@ std::map<uint32, MODVertices> formats{
                       VertexColor),
     },
     {
-        0x5e7f202c,
+        0x49b4f022, // P3f_N4c_T4c_U2h_VC4c
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x49b4f02a, // P3f_N4c_T4c_U2h_VC4c
+        BuildVertices(VertexPosition,
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x5e7f202c, // P3f_N4c_T4c_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -442,7 +539,15 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0x747d1031,
+        0x5e7f202d, // P3f_N4c_T4c_U2h_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0x747d1031, // P3f_N4c_T4c_U2h_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -451,7 +556,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0x75c3e025,
+        0x75c3e025, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c_U2h
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -464,7 +569,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0x926fd02e,
+        0x926fd02e, // P3f_N4c_T4c_U2h_U2h_VC4c
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -473,7 +578,16 @@ std::map<uint32, MODVertices> formats{
                       VertexColor),
     },
     {
-        0xCBCF7027,
+        0xb86de02a, // P3f_N4c_T4c_U2h_U2h_VC4c
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0xCBCF7027, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c_unk1i_U2h_unk1i
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -488,7 +602,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32, U::Undefined}),
     },
     {
-        0xbb424024,
+        0xbb424024, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -500,7 +614,43 @@ std::map<uint32, MODVertices> formats{
                       VertexTangent),
     },
     {
-        0xb392101f,
+        0x1273701e, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent),
+    },
+    {
+        0xbb42401d, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent),
+    },
+    {
+        0xbb424025, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangentSigned),
+    },
+    {
+        0xb392101f, // P3s_W1s_N4c_T4c_B2h_U2h_U2h_unk2i
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -511,7 +661,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32G32, U::Undefined}),
     },
     {
-        0xda55a021,
+        0xda55a021, // P3s_W1s_N4c_T4c_B4c_U2h_W2s_U2h
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -522,7 +672,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xd9e801d,
+        0xd9e801d, // P3s_W1s_N4c_T4c_U2h_B2h_U2h
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -532,7 +682,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xc31f201c,
+        0xc31f201c, // P3s_W1s_N4c_T4c_U2h_B2h
         BuildVertices(VertexQPosition,
                       V{F::NORM, D::R16, U::BoneWeights},
                       VertexNormal,
@@ -541,7 +691,54 @@ std::map<uint32, MODVertices> formats{
                       V{F::FLOAT, D::R16G16, U::BoneIndices}),
     },
     {
-        0xd877801b,
+        0x6a2e1016, // P3s_W1s_N4c_T4c_U2h_B2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices}),
+    },
+    {
+        0xc31f2014, // P3s_W1s_N4c_T4c_U2h_B2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices}),
+    },
+    {
+        0xc31f201d, // P3s_W1s_N4c_T4c_U2h_B2h
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices}),
+    },
+    {
+        0xa013501e, // P3s_W1s_N4c_T4c_U2h_B2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices},
+                      VertexColor),
+    },
+    {
+        0xa013501f, // P3s_W1s_N4c_T4c_U2h_B2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneIndices},
+                      VertexColor),
+    },
+    {
+        0xd877801b, // P3s_B1s_N4c_T4c_U2h_unk1i_U2h_unk1i
         BuildVertices(VertexQPosition,
                       V{F::INT, D::R16, U::BoneIndices},
                       VertexNormal,
@@ -552,7 +749,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32, U::Undefined}),
     },
     {
-        0xcbf6c01a,
+        0xcbf6c01a, // P3s_unk1s_T4c_N4c_U2h_VC4c
         BuildVertices(VertexQPosition,
                       V{F::UINT, D::R16, U::Undefined}, // bone?
                       VertexTangent,
@@ -561,7 +758,16 @@ std::map<uint32, MODVertices> formats{
                       VertexColor),
     },
     {
-        0x37a4e035,
+        0xcbf6c01b, // P3s_unk1s_T4c_N4c_U2h_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined}, // bone?
+                      VertexTangentSigned,
+                      VertexNormalSigned,
+                      TexCoord,
+                      VertexColor),
+    },
+    {
+        0x37a4e035, // P3s_N4c_T4c_U2h_U2h_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -571,7 +777,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0x12553032,
+        0x12553032, // P3s_N4c_T4c_U2h_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -580,7 +786,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xafa6302d,
+        0xafa6302d, // P3f_N4c_T4c_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -588,14 +794,28 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xd8297028,
+        0xd8297028, // P3f_N4c_T4c_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
                       TexCoord),
     },
     {
-        0x2082f03b,
+        0xd8297021, // P3f_N4c_T4c_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord),
+    },
+    {
+        0xd8297029, // P3f_N4c_T4c_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord),
+    },
+    {
+        0x2082f03b, // P3f_N4c_U2h_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       TexCoord,
@@ -603,20 +823,39 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xc66fa03a,
+        0xc66fa03a, // P3f_N4c_U2h_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       TexCoord,
                       TexCoord),
     },
     {
-        0xa7d7d036,
+        0xd1a47038, // P3f_N4c_U2h_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xa7d7d036, // P3f_N4c_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       TexCoord),
     },
     {
-        0xa14e003c,
+        0xa7d7d02f, // P3f_N4c_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormal,
+                      TexCoord),
+    },
+    {
+        0xa7d7d037, // P3f_N4c_U2h
+        BuildVertices(VertexPosition,
+                      VertexNormalSigned,
+                      TexCoord),
+    },
+    {
+        0xa14e003c, // P3f_N4c_U2h_U2h_VC4c
         BuildVertices(VertexPosition,
                       VertexNormal,
                       TexCoord,
@@ -624,7 +863,7 @@ std::map<uint32, MODVertices> formats{
                       VertexColor),
     },
     {
-        0x9399c033,
+        0x9399c033, // P3f_N4c_T4c_U2h_U2h_VC4c
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -633,7 +872,7 @@ std::map<uint32, MODVertices> formats{
                       VertexColor),
     },
     {
-        0x4325a03e,
+        0x4325a03e, // P3f_N4c_T4c_U2h_U2h_unk3h_unk1s_unki7
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -644,7 +883,7 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32, U::Undefined}),
     },
     {
-        0xb6681034,
+        0xb6681034, // P3f_N4c_T4c_U2h_U2h_VC4c_U2h
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -654,15 +893,7 @@ std::map<uint32, MODVertices> formats{
                       TexCoord),
     },
     {
-        0xa14e003c,
-        BuildVertices(VertexPosition,
-                      VertexNormal,
-                      TexCoord,
-                      TexCoord,
-                      VertexColor),
-    },
-    {
-        0x63b6c02f,
+        0x63b6c02f, // P3f_N4c_T4c_U2h_U2h_U2h_unk1i
         BuildVertices(VertexPosition,
                       VertexNormal,
                       VertexTangent,
@@ -672,12 +903,71 @@ std::map<uint32, MODVertices> formats{
                       V{F::UINT, D::R32, U::Undefined}),
     },
     {
-        0xa8fab018,
+        0xa8fab018, // P3f_1s_N4c_T4c_U2h
         BuildVertices(VertexQPosition,
                       V{F::UINT, D::R16, U::Undefined}, // bone?
                       VertexNormal,
                       VertexTangent,
                       TexCoord),
+    },
+    {
+        0xa8fab010, // P3f_1s_N4c_T4c_U2h
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined}, // bone?
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord),
+    },
+    {
+        0xa8fab019, // P3f_1s_N4c_T4c_U2h
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined}, // bone?
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      TexCoord),
+    },
+    {
+        0x1cb8011, // P3s_B1s_N4c_T4c_U2h
+        BuildVertices(VertexQPosition,
+                      V{F::INT, D::R16, U::BoneIndices},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord),
+    },
+    {
+        0x1cb8011, // P3s_B1s_N4c_T4c_U2h_U2h
+        BuildVertices(VertexQPosition,
+                      V{F::INT, D::R16, U::BoneIndices},
+                      VertexNormal,
+                      VertexTangent,
+                      TexCoord,
+                      TexCoord),
+    },
+    {
+        0xd84e3026, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormal,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangent,
+                      VertexColor),
+    },
+    {
+        0xd84e3027, // P3s_W1s_N4c_W4c_B8c_U2h_W2h_T4c_VC4c
+        BuildVertices(VertexQPosition,
+                      V{F::NORM, D::R16, U::BoneWeights},
+                      VertexNormalSigned,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      VertexBoneIndices,
+                      VertexBoneIndices,
+                      TexCoord,
+                      V{F::FLOAT, D::R16G16, U::BoneWeights},
+                      VertexTangentSigned,
+                      VertexColor),
     },
 };
 
@@ -694,7 +984,9 @@ MODPrimitiveProxy MODMeshXD3::ReflectLE(revil::MODImpl &main_) {
   retval.indexIndex = main.indices.Size();
   retval.vertexIndex = main.vertices.Size();
   retval.skinIndex = 0;
-  retval.name = std::to_string(meshIndex) + ":" + std::to_string(data0.Get<MODMeshXC5::GroupIndex>());
+  retval.name = std::to_string(meshIndex) + ":" +
+                std::to_string(data0.Get<MODMeshXC5::GroupID>());
+  const size_t vertexStride = data1.Get<MODMeshXC5::VertexBufferStride>();
 
   const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
                            vertexStreamOffset +
@@ -714,6 +1006,59 @@ MODPrimitiveProxy MODMeshXD3::ReflectLE(revil::MODImpl &main_) {
         d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
         d.unpackData.min = Vector4A16(skinBoneBegin);
       }
+    }
+    main.vertices.storage.emplace_back(std::move(tmpl));
+  } else {
+    main.vertices.storage.emplace_back();
+    // throw std::runtime_error("Unregistered vertex format: " +
+    //         std::to_string(vertexFormat));
+  }
+
+  uint16 *indexBuffer = reinterpret_cast<uint16 *>(
+      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
+
+  MODIndices idArray;
+  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
+  idArray.numIndices = numIndices;
+
+  for (size_t i = 0; i < numIndices; i++) {
+    if (indexBuffer[i] != 0xffff) {
+      indexBuffer[i] -= vertexStart;
+    }
+  }
+
+  main_.indices.storage.emplace_back(idArray);
+
+  return retval;
+}
+
+MODPrimitiveProxy MODMeshXC5::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXC5> &>(main_);
+  MODPrimitiveProxy retval;
+  uint8 visibleLOD = data0.Get<VisibleLOD>();
+  retval.lodIndex =
+      convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
+  retval.materialIndex = data0.Get<MaterialIndex>();
+  retval.indexType = uni::Primitive::IndexType_e::Triangle;
+  retval.indexIndex = main.indices.Size();
+  retval.vertexIndex = main.vertices.Size();
+  retval.skinIndex = 0;
+  retval.name = std::to_string(meshIndex) + ":" +
+                std::to_string(data0.Get<GroupID>());
+  const size_t vertexStride = data1.Get<VertexBufferStride>();
+
+  const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
+                           vertexStreamOffset +
+                           (indexValueOffset * vertexStride);
+
+  auto foundFormat = formats.find(vertexFormat);
+
+  if (!es::IsEnd(formats, foundFormat)) {
+    MODVertices tmpl = foundFormat->second;
+    tmpl.numVertices = numVertices;
+    for (auto &d : tmpl.descs.storage) {
+      d.buffer = mainBuffer + d.offset;
+      d.stride = vertexStride;
     }
     main.vertices.storage.emplace_back(std::move(tmpl));
   } else {

@@ -36,47 +36,17 @@ struct FloatFrame {
     data |= input & 0xff;
   }
 
-  void SwapEndian() {
-    FByteswapper(data);
-    FByteswapper(value);
-  }
-
   void Save(pugi::xml_node node) const;
   void Load(pugi::xml_node node);
 };
 
 class LMTFloatTrack_internal : public LMTFloatTrack {
-  virtual void ReflectToXML(pugi::xml_node node, size_t groupID) const = 0;
-  virtual void ReflectFromXML(pugi::xml_node node, size_t groupID) = 0;
-  virtual void SaveInternal(BinWritterRef wr,
-                            LMTFixupStorage &storage) const = 0;
-  virtual bool Is64bit() const = 0;
-
-public:
-  typedef std::vector<FloatFrame, es::allocator_hybrid<FloatFrame>>
-      FramesCollection;
-
-protected:
-  FramesCollection frames[4];
-
 public:
   size_t GetNumGroups() const override { return 4; }
+  virtual const FloatFrame *GetFrames(size_t groupID) const = 0;
+  virtual FloatFrame *GetFrames(size_t groupID) = 0;
+};
 
-  size_t GetGroupTrackCount(size_t groupID) const override {
-    return frames[groupID].size();
-  }
-
-  const FloatFrame *GetFrames(size_t groupID) const {
-    return frames[groupID].data();
-  }
-
-  FloatFrame *GetFrames(size_t groupID) { return frames[groupID].data(); }
-
-  void SetNumFrames(size_t groupID, size_t newSize) {
-    frames[groupID].resize(newSize);
-  }
-
-  void Save(BinWritterRef wr) const;
-  void Save(pugi::xml_node node, bool standAlone) const override;
-  void Load(pugi::xml_node node) override;
+enum class FloatTrackComponentRemap : uint8 {
+  NONE, X_COMP, Y_COMP, Z_COMP
 };

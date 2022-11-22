@@ -29,7 +29,6 @@
 using namespace revil;
 
 struct LMTFixupStorage;
-thread_local extern std::vector<void*> ptrStore;
 
 static const char *idents[] = {
     "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
@@ -83,23 +82,21 @@ struct LMTTrackController {
 
   virtual ~LMTTrackController() = default;
 
-  static LMTTrackController *CreateCodec(size_t type, size_t subVersion);
-  static LMTTrackController *CreateCodec(TrackTypesShared type) {
-    return CreateCodec(static_cast<size_t>(type), -1);
-  }
+  static LMTTrackController *CreateCodec(TrackTypesShared type);
   static float GetTrackMaxFrac(TrackTypesShared type);
 };
 
 namespace revil {
 
 struct LMTConstructorProperties : LMTConstructorPropertiesBase {
-  bool swappedEndian; // optional, assign only
-  void *dataStart;
-  char *masterBuffer;
+  bool swapEndian = false; // optional, assign only
+  void *dataStart = nullptr;
+  char *base = nullptr;
+  std::vector<void *> &ptrStore;
 
-  LMTConstructorProperties() : dataStart(nullptr), masterBuffer(nullptr) {}
-  LMTConstructorProperties(const LMTConstructorPropertiesBase &base)
-      : LMTConstructorProperties() {
+  LMTConstructorProperties(const LMTConstructorPropertiesBase &base,
+                           std::vector<void *> &store)
+      : ptrStore(store) {
     operator=(base);
   }
 
@@ -115,3 +112,6 @@ public:
   LMTConstructorPropertiesBase props;
 };
 } // namespace revil
+
+template <class C>
+void RE_EXTERN ProcessClass(C &input, LMTConstructorProperties flags);

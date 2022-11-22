@@ -386,17 +386,34 @@ template <> void FByteswapper(MODMeshXC5 &self, bool way) {
   FByteswapper(self.numVertices);
   FByteswapper(self.data0, way);
   FByteswapper(self.data1, way);
-  FByteswapper(self.vertexBaseOffset);
-  FByteswapper(self.vertexOffset);
+  FByteswapper(self.vertexStart);
+  FByteswapper(self.vertexStreamOffset);
   FByteswapper(self.vertexFormat);
-  FByteswapper(self.faceBaseOffset);
-  FByteswapper(self.numFaces);
-  FByteswapper(self.faceOffset);
+  FByteswapper(self.indexStart);
+  FByteswapper(self.numIndices);
+  FByteswapper(self.indexValueOffset);
   FByteswapper(self.numEnvelopes);
   FByteswapper(self.meshIndex);
   FByteswapper(self.minVertex);
   FByteswapper(self.maxVertex);
   FByteswapper(self.hash);
+}
+
+template <> void FByteswapper(MODMeshXD3 &self, bool way) {
+  FByteswapper(self.unk);
+  FByteswapper(self.numVertices);
+  FByteswapper(self.data0, way);
+  FByteswapper(self.data1, way);
+  FByteswapper(self.vertexStart);
+  FByteswapper(self.vertexStreamOffset);
+  FByteswapper(self.vertexFormat);
+  FByteswapper(self.indexStart);
+  FByteswapper(self.numIndices);
+  FByteswapper(self.indexValueOffset);
+  FByteswapper(self.meshIndex);
+  FByteswapper(self.minVertex);
+  FByteswapper(self.maxVertex);
+  FByteswapper(self.unk);
 }
 
 #pragma endregion
@@ -807,8 +824,8 @@ static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     {{MODVersion::X99, false}, LoadMODX99<MODTraitsX99LE>},
     {{MODVersion::X99, true}, LoadMODX99<MODTraitsX99BE>},
     {{MODVersion::XD3, false}, LoadMODXD3},
-    //{{0xC5, false}, LoadMODXC5},
-    //{{0xC5, true}, LoadMODXC5},
+    {{MODVersion::XC5, false}, LoadMODXC5},
+    {{MODVersion::XC3, true}, LoadMODXC3},
 };
 
 template <class C> MODImpl::ptr makeMod() {

@@ -76,19 +76,22 @@ struct MODMeshX70 {
 };
 
 struct MODMeshXC5 {
-  using GroupIndex = BitMemberDecl<0, 12>;
+  using GroupID = BitMemberDecl<0, 12>;
   using MaterialIndex = BitMemberDecl<1, 12>;
   using VisibleLOD = BitMemberDecl<2, 8>;
-  using BitField00 =
-      BitFieldType<uint32, GroupIndex, MaterialIndex, VisibleLOD>;
+  using BitField00 = BitFieldType<uint32, GroupID, MaterialIndex, VisibleLOD>;
 
   using Visible = BitMemberDecl<0, 1>;
   using Flag0 = BitMemberDecl<1, 1>;
   using Flag1 = BitMemberDecl<2, 1>;
   using Unk00 = BitMemberDecl<3, 5>;
-  using BitField01 = BitFieldType<uint8, Visible, Flag0, Flag1, Unk00>;
+  using Unk01 = BitMemberDecl<4, 8>;
+  using VertexBufferStride = BitMemberDecl<5, 8>;
+  using PrimitiveType = BitMemberDecl<6, 8>;
+  using BitField01 = BitFieldType<uint32, Visible, Flag0, Flag1, Unk00, Unk01,
+                                  VertexBufferStride, PrimitiveType>;
 
-  enum class PrimitiveType : uint8 {
+  enum class PrimitiveType_e : uint8 {
     Points,
     Lines,
     LineStrips,
@@ -100,22 +103,19 @@ struct MODMeshXC5 {
   uint16 numVertices;
   BitField00 data0;
   BitField01 data1;
-  uint8 unk02;
-  uint8 bufferStride;
-  PrimitiveType primitiveType;
-  uint32 vertexBaseOffset;
-  uint32 vertexOffset;
+  uint32 vertexStart;
+  uint32 vertexStreamOffset;
   uint32 vertexFormat;
-  uint32 faceBaseOffset;
-  uint32 numFaces;
-  uint32 faceOffset;
+  uint32 indexStart;
+  uint32 numIndices;
+  uint32 indexValueOffset;
   uint16 numEnvelopes;
   uint16 meshIndex;
   uint16 minVertex;
   uint16 maxVertex;
   uint32 hash;
 
-  MODPrimitiveProxy ReflectLE(const revil::MODImpl &) const { return {}; }
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
   MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
 };
 
@@ -124,9 +124,6 @@ struct MODMeshXD3 {
   uint16 numVertices;
   MODMeshXC5::BitField00 data0;
   MODMeshXC5::BitField01 data1;
-  uint8 unk01;
-  uint8 vertexStride;
-  uint8 primitiveType;
   uint32 vertexStart;
   uint32 vertexStreamOffset;
   uint32 vertexFormat;

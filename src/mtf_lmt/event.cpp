@@ -16,450 +16,257 @@
 */
 
 #include "event.hpp"
-#include "datas/reflector_xml.hpp"
-#include "fixup_storage.hpp"
-#include "pugixml.hpp"
+#include "datas/reflector.hpp"
 
-#include <array>
-#include <map>
-
-REFLECT(CLASS(AnimEvents<esPointerX86>), MEMBER(eventRemaps));
-REFLECT(CLASS(AnimEvents<esPointerX64>), MEMBER(eventRemaps));
-
-template <class C, size_t numGroups>
-class AnimEvents_shared : public LMTAnimationEventV1_Internal {
-public:
-  using GroupArray = std::array<C, numGroups>;
-  using GroupsPtr = uni::Element<GroupArray>;
-  using EventsCollection =
-      std::vector<AnimEvent, es::allocator_hybrid<AnimEvent>>;
-
-private:
-  GroupsPtr groups;
-  EventsCollection events[numGroups];
-  std::vector<int16> eventFrames[numGroups];
-
-public:
-  AnimEvents_shared() : groups(new GroupArray()) {}
-  AnimEvents_shared(C *fromPtr, char *masterBuffer, bool swapEndian) {
-    groups = GroupsPtr(reinterpret_cast<GroupArray *>(fromPtr), false);
-
-    GroupArray &groupArray = *groups.get();
-    size_t currentGroup = 0;
-
-    for (auto &g : groupArray) {
-      g.Fixup(masterBuffer, swapEndian);
-      AnimEvent *groupEvents = g.events;
-
-      if (!groupEvents) {
-        continue;
-      }
-
-      es::allocator_hybrid_base::LinkStorage(events[currentGroup], groupEvents,
-                                             g.numEvents);
-
-      size_t currentFrame = 0;
-
-      eventFrames[currentGroup].reserve(events[currentGroup].size());
-
-      for (auto &e : events[currentGroup]) {
-        eventFrames[currentGroup].push_back(currentFrame);
-        currentFrame += e.numFrames;
-      }
-
-      currentGroup++;
-    }
-  }
-
-  void ReflectToXML(pugi::xml_node node, size_t groupID) const override {
-    ReflectorWrap<const C> reflEvent((*groups)[groupID]);
-    ReflectorXMLUtil::Save(reflEvent, node);
-  }
-
-  void ReflectFromXML(pugi::xml_node node, size_t groupID) override {
-    ReflectorWrap<C> reflEvent((*groups)[groupID]);
-    ReflectorXMLUtil::Load(reflEvent, node);
-  }
-
-  size_t GetNumGroups() const override { return numGroups; }
-
-  size_t GetGroupEventCount(size_t groupID) const override {
-    return events[groupID].size();
-  }
-
-  const EventsCollection &GetEvents(size_t groupID) const override {
-    return events[groupID];
-  }
-
-  EventsCollection &GetEvents(size_t groupID) override {
-    return events[groupID];
-  }
-
-  const uint16 *GetRemaps(size_t groupID) const override {
-    return (*groups)[groupID].eventRemaps;
-  }
-
-  int32 GetEventFrame(size_t groupID, size_t eventID) const override {
-    return eventFrames[groupID][eventID];
-  }
-
-  void SetNumEvents(size_t groupID, size_t newSize) override {
-    events[groupID].resize(newSize);
-    (*groups)[groupID].numEvents = newSize;
-  }
-
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-    size_t curGroup = 0;
-
-    for (auto &g : *groups) {
-      wr.Write(g);
-      storage.SaveFrom(cOff + offsetof(C, events) + sizeof(C) * curGroup++);
-    }
-  }
-
-  bool Is64bit() const override {
-    return sizeof(std::declval<C>().events) == 8;
-  }
-};
-
-void AnimEvent::SwapEndian() {
-  FByteswapper(runEventBit);
-  FByteswapper(numFrames);
-}
-
-template <template <class C> class PtrType>
-void AnimEvents<PtrType>::SwapEndian() {
-  for (auto &v : eventRemaps) {
-    FByteswapper(v);
-  }
-
-  FByteswapper(numEvents);
-  FByteswapper(events);
-}
-
-template <template <class C> class PtrType>
-void AnimEvents<PtrType>::Fixup(char *masterBuffer, bool swapEndian) {
-  auto cb = [&] {
-    if (swapEndian) {
-      SwapEndian();
-    }
-  };
-
-  if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, events) || !swapEndian) {
-    return;
-  }
-
-  AnimEvent *events_ = events;
-
-  for (size_t e = 0; e < numEvents; e++) {
-    events_[e].SwapEndian();
-  }
-}
-
-template struct AnimEvents<esPointerX64>;
-template struct AnimEvents<esPointerX86>;
-
-size_t LMTAnimationEventV1_Internal::GetVersion() const { return 1; }
-
-LMTAnimationEventV1::EventCollection
-LMTAnimationEventV1_Internal::GetEvents(size_t groupID, size_t eventID) const {
-  const AnimEvent &cEvent = GetEvents(groupID)[eventID];
-  EventCollection result;
-
-  if (!cEvent.runEventBit) {
-    return result;
-  }
-
-  using TriggerType = decltype(AnimEvent::runEventBit);
-  const size_t numEvents = sizeof(TriggerType) * 8;
-
-  for (size_t i = 0; i < numEvents; i++) {
-    if (cEvent.runEventBit & (TriggerType(1) << i)) {
-      result.push_back(GetRemaps(groupID)[i]);
-    }
-  }
-
-  return result;
-}
-
-/************************************************************************/
-/***************************** EVENTS V2 ********************************/
-/************************************************************************/
+#include "event.inl"
+#include <optional>
 
 REFLECT(CLASS(AnimEventFrameV2), MEMBER(frame), MEMBER(type), MEMBER(dataType));
 
-struct AnimEventV2 {
-  using FramesPtr = esPointerX64<AnimEventFrameV2>;
+REFLECT(CLASS(AnimEventV2), MEMBER(eventHash), MEMBER(dataType));
 
-  FramesPtr frames;
-  uint64 numFrames;
-  uint32 eventHash;
-  EventFrameV2DataType dataType;
+REFLECT(CLASS(AnimEventGroupV2), MEMBER(groupHash));
 
-  void SwapEndian() {
-    FByteswapper(frames);
-    FByteswapper(numFrames);
-    FByteswapper(eventHash);
-    FByteswapper(dataType);
-  }
+REFLECT(CLASS(AnimEventsHeaderV2), MEMBER(totalNumEvents),
+        MEMBER(totalNumEventFrames), MEMBER(numFrames), MEMBER(loopFrame),
+        MEMBER(null00), MEMBER(collectionHash));
 
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, frames) ||
-        !swapEndian) {
-      return;
-    }
-
-    AnimEventFrameV2 *frames_ = frames;
-
-    for (size_t e = 0; e < numFrames; e++) {
-      frames_[e].SwapEndian();
-    }
-  }
-};
-
-struct AnimEventGroupV2 {
-  using EventPtr = esPointerX64<AnimEventV2>;
-
-  EventPtr events;
-  uint64 numEvents;
-  uint32 groupHash;
-
-  void SwapEndian() {
-    FByteswapper(events);
-    FByteswapper(numEvents);
-    FByteswapper(groupHash);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, events)) {
-      return;
-    }
-
-    AnimEventV2 *events_ = events;
-
-    for (size_t e = 0; e < numEvents; e++) {
-      events_[e].Fixup(masterBuffer, swapEndian);
-    }
-  }
-};
-
-struct AnimEventsHeaderV2 {
-  using GroupPtr = esPointerX64<AnimEventGroupV2>;
-
-  GroupPtr eventGroups;
-  uint64 numGroups;
-  uint32 totalNumEvents;
-  uint32 totalNumEventFrames;
-  float numFrames;
-  float loopFrame;
-  uint32 null00;
-  uint32 collectionHash;
-
-  void SwapEndian() {
-    FByteswapper(eventGroups);
-    FByteswapper(numGroups);
-    FByteswapper(collectionHash);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, eventGroups)) {
-      return;
-    }
-
-    AnimEventGroupV2 *groups = eventGroups;
-
-    for (size_t e = 0; e < numGroups; e++) {
-      groups[e].Fixup(masterBuffer, swapEndian);
-    }
-  }
-};
-
-class AnimEventV2_wrapper : public LMTAnimationEventV2Event {
-public:
-  using EventPtr = uni::Element<AnimEventV2>;
-
-private:
-  EventPtr data;
-
-public:
-  AnimEventV2_wrapper() : data(new AnimEventV2) {}
-  AnimEventV2_wrapper(AnimEventV2 *fromPtr, char *masterBuffer,
-                      bool swapEndian) {
-    data = EventPtr(fromPtr, false);
-    data->Fixup(masterBuffer, swapEndian);
-
-    AnimEventFrameV2 *rawFrames = data->frames;
-    es::allocator_hybrid_base::LinkStorage(frames, rawFrames, data->numFrames);
-  }
-
-  uint32 GetHash() const override { return data->eventHash; }
-  void SetHash(uint32 nHash) override { data->eventHash = nHash; }
-
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-
-    wr.Write(*data);
-    storage.SaveFrom(cOff + offsetof(AnimEventV2, frames));
-  }
-};
-
-class AnimEventV2Group_wrapper : public LMTAnimationEventV2Group {
-public:
-  using GroupPtr = uni::Element<AnimEventGroupV2>;
-
-private:
-  GroupPtr group;
-
-public:
-  AnimEventV2Group_wrapper() : group(new AnimEventGroupV2) {}
-  AnimEventV2Group_wrapper(AnimEventGroupV2 *fromPtr, char *masterBuffer,
-                           bool swapEndian) {
-    group = GroupPtr(fromPtr, false);
-    group->Fixup(masterBuffer, swapEndian);
-
-    AnimEventV2 *rawEvents = group->events;
-
-    for (size_t e = 0; e < group->numEvents; e++) {
-      events.emplace_back(std::make_unique<AnimEventV2_wrapper>(
-          rawEvents + e, masterBuffer, swapEndian));
-    }
-  }
-
-  uint32 GetHash() const override { return group->groupHash; }
-  void SetHash(uint32 nHash) override { group->groupHash = nHash; }
-
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-
-    wr.Write(*group);
-    storage.SaveFrom(cOff + offsetof(AnimEventGroupV2, events));
-  }
-};
-
-class AnimEventsV2_wrapper : public LMTAnimationEventV2_Internal {
-public:
-  using HeaderPtr = uni::Element<AnimEventsHeaderV2>;
-
-private:
-  HeaderPtr header;
-
-public:
-  AnimEventsV2_wrapper() : header(new AnimEventsHeaderV2) {}
-  AnimEventsV2_wrapper(AnimEventsHeaderV2 *fromPtr, char *masterBuffer,
-                       bool swapEndian) {
-    header = HeaderPtr(fromPtr, false);
-    header->Fixup(masterBuffer, swapEndian);
-
-    AnimEventGroupV2 *rawGroups = header->eventGroups;
-
-    for (size_t g = 0; g < header->numGroups; g++) {
-      groups.emplace_back(std::make_unique<AnimEventV2Group_wrapper>(
-          rawGroups + g, masterBuffer, swapEndian));
-    }
-  }
-
-  uint32 GetHash() const override { return header->collectionHash; }
-  void SetHash(uint32 nHash) override { header->collectionHash = nHash; }
-
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-
-    wr.Write(*header);
-    storage.SaveFrom(cOff + offsetof(AnimEventsHeaderV2, eventGroups));
-  }
-};
-
-void AnimEventFrameV2::SwapEndian() { FByteswapper(frame); }
-
-LMTAnimationEventV2Group::Ptr LMTAnimationEventV2Group::Create() {
-  return std::make_unique<AnimEventV2Group_wrapper>();
+void FByteswapper(AnimEventFrameV2 &item) {
+  FByteswapper(item.frame);
+  FByteswapper(item.dataType);
+  FByteswapper(item.fdata);
+  FByteswapper(item.type);
 }
 
-LMTAnimationEventV2Event::Ptr LMTAnimationEventV2Event::Create() {
-  return std::make_unique<AnimEventV2_wrapper>();
+void FByteswapper(AnimEvent &item) {
+  FByteswapper(item.runEventBit);
+  FByteswapper(item.numFrames);
+}
+
+void FByteswapper(AnimEventV2 &item) {
+  FByteswapper(item.frames);
+  FByteswapper(item.numFrames);
+  FByteswapper(item.eventHash);
+  FByteswapper(item.dataType);
+}
+
+void FByteswapper(AnimEventGroupV2 &item) {
+  FByteswapper(item.events);
+  FByteswapper(item.numEvents);
+  FByteswapper(item.groupHash);
+}
+
+void FByteswapper(AnimEventsHeaderV2 &item) {
+  FByteswapper(item.eventGroups);
+  FByteswapper(item.numGroups);
+  FByteswapper(item.collectionHash);
+}
+
+template <>
+void ProcessClass(AnimEventV2 &item, LMTConstructorProperties flags) {
+  if (item.frames.Check(flags.ptrStore)) {
+    return;
+  }
+
+  if (flags.swapEndian) {
+    FByteswapper(item);
+  }
+
+  item.frames.Fixup(flags.base, flags.ptrStore);
+
+  AnimEventFrameV2 *frames_ = item.frames;
+
+  for (size_t e = 0; e < item.numFrames; e++) {
+    FByteswapper(frames_[e]);
+  }
+}
+
+template <>
+void ProcessClass(AnimEventGroupV2 &item, LMTConstructorProperties flags) {
+  if (item.events.Check(flags.ptrStore)) {
+    return;
+  }
+
+  if (flags.swapEndian) {
+    FByteswapper(item);
+  }
+
+  item.events.Fixup(flags.base, flags.ptrStore);
+
+  AnimEventV2 *events_ = item.events;
+
+  for (size_t e = 0; e < item.numEvents; e++) {
+    ProcessClass(events_[e], flags);
+  }
+}
+
+template <>
+void ProcessClass(AnimEventsHeaderV2 &item, LMTConstructorProperties flags) {
+  if (item.eventGroups.Check(flags.ptrStore)) {
+    return;
+  }
+
+  if (flags.swapEndian) {
+    FByteswapper(item);
+  }
+
+  item.eventGroups.Fixup(flags.base, flags.ptrStore);
+
+  AnimEventGroupV2 *groups = item.eventGroups;
+
+  for (size_t e = 0; e < item.numGroups; e++) {
+    ProcessClass(groups[e], flags);
+  }
+}
+
+struct LMTAnimationEventV2MidInterface : LMTAnimationEventV2 {
+  AnimEventsHeaderV2 *header;
+  LMTAnimationEventV2MidInterface(AnimEventsHeaderV2 *hdr) : header(hdr) {}
+
+  uint32 GetHash() const override { return header->collectionHash; }
+  uint32 GetGroupHash(size_t groupID) const override {
+    AnimEventGroupV2 *groups_ = header->eventGroups;
+    return groups_[groupID].groupHash;
+  }
+};
+
+struct LMTAnimationEventMidInterface : LMTAnimationEventInterface {
+  clgen::AnimationEvent::Interface interface;
+  std::optional<LMTAnimationEventV2MidInterface> v2;
+
+  LMTAnimationEventMidInterface(clgen::LayoutLookup rules, char *data)
+      : interface {
+    data, rules
+  } {
+  }
+
+  bool Is64bit() const { return interface.lookup.x64; }
+
+  std::span<AnimEvent> GetFrames(size_t groupID) const {
+    auto groupSpan = interface.Groups();
+
+    if (interface.LayoutVersion() >= LMT56) {
+      groupSpan = interface.GroupsLMT56();
+    }
+
+    auto group = groupSpan.at(groupID);
+
+    return {group.Events(), group.NumEvents()};
+  }
+
+  std::span<uint16> GetRemaps(size_t groupID) const {
+    auto groupSpan = interface.Groups();
+
+    if (interface.LayoutVersion() >= LMT56) {
+      groupSpan = interface.GroupsLMT56();
+    }
+
+    auto group = groupSpan.at(groupID);
+
+    return group.EventRemaps();
+  }
+
+  EventVariant Get() const override {
+    if (interface.LayoutVersion() >= LMT92) {
+      return {(const LMTAnimationEventV2 *)(&v2)};
+    }
+
+    return {static_cast<const LMTAnimationEventV1 *>(this)};
+  }
+
+  EventCollection GetEvents(size_t groupID) const override {
+    auto frames = GetFrames(groupID);
+    auto remaps = GetRemaps(groupID);
+    EventCollection result;
+    uint32 curFrame = 0;
+    using TriggerType = decltype(AnimEvent::runEventBit);
+    const size_t numEvents = sizeof(TriggerType) * 8;
+
+    for (auto &f : frames) {
+      if (f.runEventBit) {
+        std::vector<int16> events;
+        for (size_t i = 0; i < numEvents; i++) {
+          if (f.runEventBit & (TriggerType(1) << i)) {
+            events.push_back(remaps[i]);
+          }
+        }
+
+        result.emplace(curFrame / frameRate, std::move(events));
+      }
+
+      curFrame += f.numFrames;
+    }
+
+    return result;
+  }
+
+  size_t GetNumGroups() const override {
+    if (v2) {
+      return v2->header->numGroups;
+    }
+
+    if (interface.LayoutVersion() >= LMT56) {
+      return interface.GroupsLMT56().count;
+    }
+
+    return interface.Groups().count;
+  }
+};
+
+template <>
+void ProcessClass(LMTAnimationEventMidInterface &item,
+                  LMTConstructorProperties flags) {
+  if (item.interface.LayoutVersion() >= LMT92) {
+    auto ptr = item.interface.GroupsPtr();
+
+    if (ptr.Check(flags.ptrStore)) {
+      return;
+    }
+
+    if (flags.swapEndian) {
+      clgen::EndianSwap(item.interface);
+    }
+
+    ptr.Fixup(flags.base, flags.ptrStore);
+    ProcessClass(**ptr, flags);
+    item.v2.emplace(*ptr);
+    return;
+  }
+
+  auto groupSpan = item.interface.Groups();
+
+  if (item.interface.LayoutVersion() >= LMT56) {
+    groupSpan = item.interface.GroupsLMT56();
+  }
+
+  for (size_t gindex = 0; auto g : groupSpan) {
+    if (g.EventsPtr().Check(flags.ptrStore)) {
+      return;
+    }
+
+    if (flags.swapEndian) {
+      clgen::EndianSwap(g);
+    }
+
+    g.EventsPtr().Fixup(flags.base, flags.ptrStore);
+
+    if (flags.swapEndian) {
+      for (auto &a : item.GetFrames(gindex++)) {
+        FByteswapper(a);
+      }
+    }
+  }
 }
 
 using ptr_type_ = std::unique_ptr<LMTAnimationEvent>;
 
-template <class C, uint32 numG> static ptr_type_ creatorBase_() {
-  return std::make_unique<AnimEvents_shared<C, numG>>();
-}
-
-template <class C, uint32 numG>
-static ptr_type_ creator_(void *ptr, char *buff, bool endi) {
-  return std::make_unique<AnimEvents_shared<C, numG>>(static_cast<C *>(ptr),
-                                                      buff, endi);
-}
-
-static ptr_type_ creatorBase2_() {
-  return std::make_unique<AnimEventsV2_wrapper>();
-}
-
-static ptr_type_ creator2_(void *ptr, char *buff, bool endi) {
-  return std::make_unique<AnimEventsV2_wrapper>(
-      static_cast<AnimEventsHeaderV2 *>(ptr), buff, endi);
-}
-
-static const std::map<LMTConstructorPropertiesBase, decltype(&creatorBase2_)>
-    eventRegistry{
-        // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, creatorBase_<AnimEvents<esPointerX64>, 2>},
-        {{LMTArchType::X86, LMTVersion::V_22}, creatorBase_<AnimEvents<esPointerX86>, 2>},
-        {{LMTArchType::X64, LMTVersion::V_56}, creatorBase_<AnimEvents<esPointerX64>, 4>},
-        {{LMTArchType::X86, LMTVersion::V_56}, creatorBase_<AnimEvents<esPointerX86>, 4>},
-        {{LMTArchType::X64, LMTVersion::V_66}, creatorBase2_},
-        // clang-format on
-    };
-
-static const std::map<LMTConstructorPropertiesBase, decltype(&creator2_)>
-    eventRegistryLink{
-        // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, creator_<AnimEvents<esPointerX64>, 2>},
-        {{LMTArchType::X86, LMTVersion::V_22}, creator_<AnimEvents<esPointerX86>, 2>},
-        {{LMTArchType::X64, LMTVersion::V_56}, creator_<AnimEvents<esPointerX64>, 4>},
-        {{LMTArchType::X86, LMTVersion::V_56}, creator_<AnimEvents<esPointerX86>, 4>},
-        {{LMTArchType::X64, LMTVersion::V_66}, creator2_},
-        // clang-format on
-    };
-
 ptr_type_ LMTAnimationEvent::Create(const LMTConstructorProperties &props) {
-  if (props.dataStart) {
-    return eventRegistryLink.at(props)(props.dataStart, props.masterBuffer,
-                                       props.swappedEndian);
-  } else {
-    return eventRegistry.at(props)();
-  }
-}
+  auto instance = std::make_unique<LMTAnimationEventMidInterface>(
+      clgen::LayoutLookup{static_cast<uint8>(props.version),
+                          props.arch == LMTArchType::X64, false},
+      static_cast<char *>(props.dataStart));
 
-size_t LMTAnimationEventV2_Internal::GetVersion() const { return 2; }
+  ProcessClass(*instance, props);
 
-size_t LMTAnimationEventV2_Internal::GetNumGroups() const {
-  return groups.size();
-}
-
-uint32 LMTAnimationEventV2_Internal::GetGroupHash(size_t groupID) const {
-  return groups[groupID]->GetHash();
-}
-
-size_t LMTAnimationEventV2_Internal::GetGroupEventCount(size_t groupID) const {
-  return groups[groupID]->events.size();
+  return instance;
 }

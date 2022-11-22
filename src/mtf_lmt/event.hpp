@@ -18,6 +18,7 @@
 #pragma once
 #include "datas/reflector.hpp"
 #include "internal.hpp"
+#include <span>
 
 class AnimEvent {
 public:
@@ -29,37 +30,12 @@ public:
   void SwapEndian();
 };
 
-template <template <class C> class PtrType> struct AnimEvents {
-  uint16 eventRemaps[32];
-  uint32 numEvents;
-  PtrType<AnimEvent> events;
-
-  void SwapEndian();
-  void Fixup(char *masterBuffer, bool swapEndian);
-};
-
-class LMTAnimationEventV1_Internal : public LMTAnimationEventV1 {
-  virtual void ReflectToXML(pugi::xml_node node, size_t groupID) const = 0;
-  virtual void ReflectFromXML(pugi::xml_node node, size_t groupID) = 0;
-  virtual void SaveInternal(BinWritterRef wr,
-                            LMTFixupStorage &fixups) const = 0;
-  virtual bool Is64bit() const = 0;
-
+class LMTAnimationEventInterface : public LMTAnimationEvent,
+                                   public LMTAnimationEventV1 {
 public:
-  using EventsCollection =
-      std::vector<AnimEvent, es::allocator_hybrid<AnimEvent>>;
-
-  virtual const EventsCollection &GetEvents(size_t groupID) const = 0;
-  virtual EventsCollection &GetEvents(size_t groupID) = 0;
-  virtual const uint16 *GetRemaps(size_t groupID) const = 0;
-  virtual void SetNumEvents(size_t groupID, size_t newSize) = 0;
-
-  size_t GetVersion() const override;
-  void Save(pugi::xml_node node, bool standAlone) const override;
-  void Load(pugi::xml_node node) override;
+  float frameRate = 60.f;
   void Save(BinWritterRef wr) const;
   void SaveBuffer(BinWritterRef wr, LMTFixupStorage &fixups) const;
-  EventCollection GetEvents(size_t groupID, size_t eventID) const override;
 };
 
 MAKE_ENUM(ENUMSCOPE(class EventFrameV2DataType
@@ -84,61 +60,34 @@ struct AnimEventFrameV2 {
 
   void Save(pugi::xml_node node) const;
   void Load(pugi::xml_node node);
-  void SwapEndian();
 };
 
-class LMTAnimationEventV2Event {
-public:
-  using FramesCollection =
-      std::vector<AnimEventFrameV2, es::allocator_hybrid<AnimEventFrameV2>>;
-  using Ptr = std::unique_ptr<LMTAnimationEventV2Event>;
+struct AnimEventV2 {
+  using FramesPtr = esPointerX64<AnimEventFrameV2>;
 
-  FramesCollection frames;
-
-  virtual uint32 GetHash() const = 0;
-  virtual void SetHash(uint32 nHash) = 0;
-  virtual void SaveInternal(BinWritterRef wr,
-                            LMTFixupStorage &storage) const = 0;
-  virtual ~LMTAnimationEventV2Event() {}
-
-  void Load(pugi::xml_node node);
-
-  static Ptr Create();
+  FramesPtr frames;
+  uint64 numFrames;
+  uint32 eventHash;
+  EventFrameV2DataType dataType;
 };
 
-class LMTAnimationEventV2Group {
-public:
-  using EventsCollection = std::vector<LMTAnimationEventV2Event::Ptr>;
-  using Ptr = std::unique_ptr<LMTAnimationEventV2Group>;
+struct AnimEventGroupV2 {
+  using EventPtr = esPointerX64<AnimEventV2>;
 
-  EventsCollection events;
-
-  virtual uint32 GetHash() const = 0;
-  virtual void SetHash(uint32 nHash) = 0;
-  virtual void SaveInternal(BinWritterRef wr,
-                            LMTFixupStorage &storage) const = 0;
-  virtual ~LMTAnimationEventV2Group() {}
-
-  void Load(pugi::xml_node node);
-
-  static Ptr Create();
+  EventPtr events;
+  uint64 numEvents;
+  uint32 groupHash;
 };
 
-class LMTAnimationEventV2_Internal : public LMTAnimationEventV2 {
-  void Save(pugi::xml_node node, bool standAlone) const override;
-  void Load(pugi::xml_node node) override;
-  virtual void SaveInternal(BinWritterRef wr,
-                            LMTFixupStorage &storage) const = 0;
+struct AnimEventsHeaderV2 {
+  using GroupPtr = esPointerX64<AnimEventGroupV2>;
 
-public:
-  using GroupsCollection = std::vector<LMTAnimationEventV2Group::Ptr>;
-
-  GroupsCollection groups;
-
-  size_t GetVersion() const override;
-  size_t GetNumGroups() const override;
-  size_t GetGroupEventCount(size_t groupID) const override;
-  uint32 GetGroupHash(size_t groupID) const override;
-
-  void Save(BinWritterRef wr) const;
+  GroupPtr eventGroups;
+  uint64 numGroups;
+  uint32 totalNumEvents;
+  uint32 totalNumEventFrames;
+  float numFrames;
+  float loopFrame;
+  uint32 null00;
+  uint32 collectionHash;
 };

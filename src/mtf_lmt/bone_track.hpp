@@ -18,16 +18,10 @@
 #pragma once
 #include "internal.hpp"
 
-class LMTTrack_internal : public LMTTrack {
-  virtual void ReflectFromXML(pugi::xml_node node) = 0;
-  virtual void ReflectToXML(pugi::xml_node node) const = 0;
+struct LMTTrackInterface : LMTTrack {
   virtual bool UseTrackExtremes() const = 0;
-  virtual bool CreateController() = 0;
-  virtual void SetTrackType(TrackType_e type) noexcept = 0;
-  virtual void BoneID(int boneID) noexcept = 0;
-  virtual const Vector4 *GetRefData() const = 0;
+  virtual const Vector4A16 GetRefData() const = 0;
 
-public:
   using LMTTrackControllerPtr = std::unique_ptr<LMTTrackController>;
 
   TrackMinMax minMax;
@@ -46,12 +40,4 @@ public:
   int32 GetFrame(size_t frame) const override;
 
   MotionTrack::TrackType_e TrackType() const override;
-
-  void Load(pugi::xml_node node) override;
-  void Save(pugi::xml_node node, bool standAlone) const override;
-
-  void SaveBuffers(BinWritterRef wr, LMTFixupStorage &storage) const;
-  virtual void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const = 0;
-
-  LMTTrack_internal();
 };

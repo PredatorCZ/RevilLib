@@ -65,13 +65,4 @@ public:
 private:
   std::unique_ptr<LMTImpl> pi;
 };
-
-// TODO:
-/*
-add header sanitizers
-
-low priority:
-conversion system << super low
-encoder, exporting utility
-*/
 } // namespace revil

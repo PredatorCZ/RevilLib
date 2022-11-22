@@ -28,7 +28,7 @@ set(CMAKE_CXX_STANDARD 23)
 add_subdirectory(3rd_party/PreCore)
 include(targetex)
 
-# add_subdirectory(classgen)
+add_subdirectory(classgen)
 add_subdirectory(src)
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})

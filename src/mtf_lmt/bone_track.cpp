@@ -21,9 +21,6 @@
 #include "fixup_storage.hpp"
 #include "pugixml.hpp"
 
-#include <map>
-#include <memory>
-
 MAKE_ENUM(ENUMSCOPE(class TrackType_er
                     : uint8, TrackType_er),
           EMEMBER(LocalRotation), EMEMBER(LocalPosition), EMEMBER(LocalScale),
@@ -53,200 +50,20 @@ MAKE_ENUM(ENUMSCOPE(class TrackV2BufferTypes
           EMEMBER(BiLinearRotationQuat4_11bit),
           EMEMBER(BiLinearRotationQuat4_9bit))
 
-template <template <class C> class PtrType> struct TrackV0 {
-  static constexpr uint32 SUBVERSION = 0;
-  static constexpr size_t NUMPOINTERS = 1;
+#include "bone_track.inl"
 
-  TrackV1BufferTypes compression;
-  TrackType_er trackType;
-  uint8 boneType;
-  uint8 boneID;
-  float weight;
-  uint32 bufferSize;
-  PtrType<char> bufferOffset;
-
-  void SwapEndian() {
-    FByteswapper(bufferOffset);
-    FByteswapper(weight);
-    FByteswapper(bufferSize);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset)) {
-      return;
-    }
-  }
-
-  static const size_t *Pointers() {
-    static const size_t ptrs[]{
-        offsetof(TrackV0, bufferOffset),
-    };
-
-    return ptrs;
-  }
-};
-
-template <class C> struct BufferVersion {};
-template <> struct BufferVersion<TrackV1BufferTypes> {
-  static constexpr uint32 value = 0;
-};
-template <> struct BufferVersion<TrackV1_5BufferTypes> {
-  static constexpr uint32 value = 1;
-};
-
-template <template <class C> class PtrType, class BufferType> struct TrackV1 {
-  static constexpr uint32 SUBVERSION = BufferVersion<BufferType>::value;
-  static constexpr size_t NUMPOINTERS = 1;
-
-  BufferType compression;
-  TrackType_er trackType;
-  uint8 boneType;
-  uint8 boneID;
-  float weight;
-  uint32 bufferSize;
-  PtrType<char> bufferOffset;
-  Vector4 referenceData;
-
-  void SwapEndian() {
-    FByteswapper(weight);
-    FByteswapper(bufferSize);
-    FByteswapper(bufferOffset);
-    FByteswapper(referenceData);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset)) {
-      return;
-    }
-  }
-
-  static const size_t *Pointers() {
-    static const size_t ptrs[]{
-        offsetof(TrackV1, bufferOffset),
-    };
-
-    return ptrs;
-  }
-};
-
-template <template <class C> class PtrType> struct TrackV2 {
-  static constexpr uint32 SUBVERSION = 2;
-  static constexpr size_t NUMPOINTERS = 2;
-
-  TrackV2BufferTypes compression;
-  TrackType_er trackType;
-  uint8 boneType;
-  uint8 boneID;
-  float weight;
-  uint32 bufferSize;
-  PtrType<char> bufferOffset;
-  Vector4 referenceData;
-  PtrType<TrackMinMax> extremes;
-
-  void SwapEndian() {
-    FByteswapper(reinterpret_cast<uint32 &>(compression));
-    FByteswapper(weight);
-    FByteswapper(bufferSize);
-    FByteswapper(bufferOffset);
-    FByteswapper(referenceData);
-    FByteswapper(extremes);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset,
-                             extremes)) {
-      return;
-    }
-  }
-
-  static const size_t *Pointers() {
-    static const size_t ptrs[]{
-        offsetof(TrackV2, bufferOffset),
-        offsetof(TrackV2, extremes),
-    };
-
-    return ptrs;
-  }
-};
-
-template <template <class C> class PtrType> struct TrackV3 {
-  static constexpr uint32 SUBVERSION = 2;
-  static constexpr size_t NUMPOINTERS = 2;
-
-  TrackV2BufferTypes compression;
-  TrackType_er trackType;
-  uint8 boneType;
-  uint8 boneID2;
-  int32 boneID;
-  float weight;
-  uint32 bufferSize;
-  PtrType<char> bufferOffset;
-  Vector4 referenceData;
-  PtrType<TrackMinMax> extremes;
-
-  void SwapEndian() {
-    FByteswapper(reinterpret_cast<uint32 &>(compression));
-    FByteswapper(boneID);
-    FByteswapper(weight);
-    FByteswapper(bufferSize);
-    FByteswapper(bufferOffset);
-    FByteswapper(referenceData);
-    FByteswapper(extremes);
-  }
-
-  void Fixup(char *masterBuffer, bool swapEndian) {
-    auto cb = [&] {
-      if (swapEndian) {
-        SwapEndian();
-      }
-    };
-
-    if (!es::FixupPointersCB(masterBuffer, ptrStore, cb, bufferOffset,
-                             extremes)) {
-      return;
-    }
-  }
-
-  static const size_t *Pointers() {
-    static const size_t ptrs[]{
-        offsetof(TrackV3, bufferOffset),
-        offsetof(TrackV3, extremes),
-    };
-
-    return ptrs;
-  }
-};
-
-size_t LMTTrack_internal::NumFrames() const {
+size_t LMTTrackInterface::NumFrames() const {
   return controller->NumFrames() + useRefFrame;
 }
 
-bool LMTTrack_internal::LMTTrack_internal::IsCubic() const {
+bool LMTTrackInterface::LMTTrackInterface::IsCubic() const {
   return controller->IsCubic();
 }
 
-void LMTTrack_internal::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
+void LMTTrackInterface::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                                     size_t frame) const {
   if (useRefFrame && !frame) {
-    inTangs = Vector4A16(*GetRefData());
+    inTangs = GetRefData();
     outTangs = inTangs;
     return;
   }
@@ -254,9 +71,9 @@ void LMTTrack_internal::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
   controller->GetTangents(inTangs, outTangs, frame);
 }
 
-void LMTTrack_internal::Evaluate(Vector4A16 &out, size_t frame) const {
+void LMTTrackInterface::Evaluate(Vector4A16 &out, size_t frame) const {
   if (useRefFrame && !frame) {
-    out = Vector4A16(*GetRefData());
+    out = GetRefData();
     return;
   }
 
@@ -267,7 +84,7 @@ void LMTTrack_internal::Evaluate(Vector4A16 &out, size_t frame) const {
   }
 }
 
-int32 LMTTrack_internal::GetFrame(size_t frame) const {
+int32 LMTTrackInterface::GetFrame(size_t frame) const {
   if (useRefFrame && !frame) {
     return 0;
   }
@@ -275,7 +92,7 @@ int32 LMTTrack_internal::GetFrame(size_t frame) const {
   return controller->GetFrame(frame - useRefFrame) + useRefFrame;
 }
 
-void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
+void LMTTrackInterface::GetValue(Vector4A16 &out, float time) const {
   float frameDelta = time * frameRate;
   const int32 frame = static_cast<int32>(frameDelta);
   const size_t numCtrFrames = controller->NumFrames();
@@ -285,7 +102,7 @@ void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
   }
 
   if ((!frame || !numCtrFrames) && useRefFrame) {
-    Vector4A16 refFrame(*GetRefData());
+    Vector4A16 refFrame(GetRefData());
 
     if (frameDelta < 0.0001f || !numCtrFrames) {
       out = refFrame;
@@ -319,7 +136,7 @@ void LMTTrack_internal::GetValue(Vector4A16 &out, float time) const {
   }
 }
 
-uni::MotionTrack::TrackType_e LMTTrack_internal::TrackType() const {
+uni::MotionTrack::TrackType_e LMTTrackInterface::TrackType() const {
   const auto iType = this->GetTrackType();
 
   switch (iType) {
@@ -336,226 +153,137 @@ uni::MotionTrack::TrackType_e LMTTrack_internal::TrackType() const {
   }
 }
 
-template <class C> class LMTTrackShared : public LMTTrack_internal {
-public:
-  typedef C value_type;
+static const TrackTypesShared buffRemapRegistry[][16] = {
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::None,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::HermiteVector3,
+        TrackTypesShared::SphericalRotation,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::LinearVector3,
+    },
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::None,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::HermiteVector3,
+        TrackTypesShared::LinearRotationQuat4_14bit,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::LinearVector3,
+    },
+    {
+        TrackTypesShared::None,
+        TrackTypesShared::SingleVector3,
+        TrackTypesShared::StepRotationQuat3,
+        TrackTypesShared::LinearVector3,
+        TrackTypesShared::BiLinearVector3_16bit,
+        TrackTypesShared::BiLinearVector3_8bit,
+        TrackTypesShared::LinearRotationQuat4_14bit,
+        TrackTypesShared::BiLinearRotationQuat4_7bit,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::None,
+        TrackTypesShared::BiLinearRotationQuatXW_14bit,
+        TrackTypesShared::BiLinearRotationQuatYW_14bit,
+        TrackTypesShared::BiLinearRotationQuatZW_14bit,
+        TrackTypesShared::BiLinearRotationQuat4_11bit,
+        TrackTypesShared::BiLinearRotationQuat4_9bit,
+    },
+};
 
-  std::unique_ptr<C, es::deleter_hybrid> data;
+struct LMTTrackMidInterface : LMTTrackInterface {
+  clgen::BoneTrack::Interface interface;
 
-  LMTTrackShared() : data(new C) { useRefFrame = USE_REF_FRAME; }
-  LMTTrackShared(C *_data, char *masterBuffer, bool swapEndian)
-      : data(_data, false) {
-    useRefFrame = USE_REF_FRAME;
-    data->Fixup(masterBuffer, swapEndian);
-
-    if (CreateController()) {
-      controller->Assign(data->bufferOffset, data->bufferSize, swapEndian);
-    }
-
-    if constexpr (USE_EXTREMES) {
-      useMinMax = true;
-      memcpy(&minMax, data->extremes, sizeof(TrackMinMax));
-    }
-  }
-
-  // SFINAE ACCESSORS
-  template <class SC>
-  using UseTrackExtremes_ = decltype(std::declval<SC>().extremes);
-
-  template <class SC>
-  using UseRefFrane_ = decltype(std::declval<SC>().referenceData);
-
-  template <class SC> using UseBoneID2_ = decltype(std::declval<SC>().boneID2);
-
-  // OVERRIDDES
-  bool CreateController() override {
-    controller = LMTTrackControllerPtr(LMTTrackController::CreateCodec(
-        static_cast<uint32>(data->compression), C::SUBVERSION));
-
-    return static_cast<bool>(controller);
+  LMTTrackMidInterface(clgen::LayoutLookup rules, char *data) : interface {
+    data, rules
+  } {
+    useRefFrame = (interface.m(clgen::BoneTrack::referenceData) >= 0) + 1;
   }
 
   TrackType_e GetTrackType() const noexcept override {
-    return static_cast<TrackType_e>(data->trackType);
+    return static_cast<TrackType_e>(interface.TrackType());
   }
 
-  void SetTrackType(TrackType_e type) noexcept override {
-    data->trackType = static_cast<TrackType_er>(type);
-  }
-
-  size_t Stride() const override { return sizeof(C); }
+  size_t Stride() const override { return interface.layout->totalSize; }
 
   size_t BoneIndex() const noexcept override {
-    auto boneID = data->boneID;
-
-    if constexpr (USE_BONEID2) {
-      return boneID;
-    } else {
-      return boneID == 0xff ? -1 : boneID;
+    if (interface.m(clgen::BoneTrack::boneID2) >= 0) {
+      return interface.BoneID2();
     }
+
+    auto boneID = interface.BoneID();
+    return boneID == 0xff ? -1 : boneID;
   }
 
-  uint32 BoneType() const noexcept override { return data->boneType; }
+  uint32 BoneType() const noexcept override { return interface.BoneType(); }
 
-  void BoneID(int32 boneID) noexcept override {
-    if constexpr (USE_BONEID2) {
-      data->boneID = boneID;
-    } else {
-      if (boneID == -1) {
-        data->boneID = 0xff;
-      } else {
-        data->boneID = boneID;
-      }
-    }
+  const Vector4A16 GetRefData() const override {
+    return interface.ReferenceData();
   }
 
-  const Vector4 *GetRefData() const override {
-    if constexpr (USE_REF_FRAME) {
-      return data->referenceData;
-    } else {
-      return nullptr;
-    }
-  }
-
-  // research this
-  /*enabledFunction(noMHBone, int32) MirroredBoneID() const noexcept {
-    return data->boneID2;
-  }
-
-  disabledFunction(noMHBone, int32) MirroredBoneID() const noexcept {
-    return -1;
-  }
-
-  enabledFunction(noMHBone, void) MirroredBoneID(int32 boneID) noexcept {
-    data->boneID2 = boneID;
-  }
-
-  disabledFunction(noMHBone, void) MirroredBoneID(int32 boneID) noexcept {}*/
-
-  static constexpr bool USE_EXTREMES =
-      es::is_detected_v<UseTrackExtremes_, LMTTrackShared>;
-
-  static constexpr bool USE_REF_FRAME =
-      es::is_detected_v<UseRefFrane_, LMTTrackShared>;
-
-  static constexpr bool USE_BONEID2 =
-      es::is_detected_v<UseBoneID2_, LMTTrackShared>;
-
-  bool UseTrackExtremes() const override { return USE_EXTREMES; }
-
-  void ReflectToXML(pugi::xml_node node) const override {
-    ReflectorWrap<C> refl(data.get());
-    ReflectorXMLUtil::Save(refl, node);
-  }
-
-  void ReflectFromXML(pugi::xml_node node) override {
-    ReflectorWrap<C> refl(data.get());
-    ReflectorXMLUtil::Load(refl, node);
-  }
-
-  void SaveInternal(BinWritterRef wr, LMTFixupStorage &storage) const override {
-    const size_t cOff = wr.Tell();
-    constexpr size_t numPointers = C::NUMPOINTERS;
-    const auto pointers = C::Pointers();
-
-    wr.Write(*data);
-
-    for (size_t p = 0; p < numPointers; p++) {
-      storage.SaveFrom(cOff + pointers[p]);
-    }
+  bool UseTrackExtremes() const override {
+    return interface.m(clgen::BoneTrack::extremes) >= 0;
   }
 };
 
-REFLECT(CLASS(TrackV0<esPointerX86>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(weight));
+template <>
+void ProcessClass(LMTTrackMidInterface &item, LMTConstructorProperties flags) {
+  if (item.interface.BufferPtr().Check(flags.ptrStore)) {
+    return;
+  }
 
-REFLECT(CLASS(TrackV0<esPointerX64>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(weight));
+  if (flags.swapEndian) {
+    clgen::EndianSwap(item.interface);
+  }
 
-REFLECT(CLASS(TrackV1<esPointerX86, TrackV1BufferTypes>), MEMBER(compression),
-        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+  item.interface.BufferPtr().Fixup(flags.base, flags.ptrStore);
+  item.interface.ExtremesPtr().Fixup(flags.base, flags.ptrStore);
 
-REFLECT(CLASS(TrackV1<esPointerX64, TrackV1BufferTypes>), MEMBER(compression),
-        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+  if (auto extr = item.interface.Extremes(); extr) {
+    if (flags.swapEndian) {
+      FByteswapper(*extr);
+    }
 
-REFLECT(CLASS(TrackV1<esPointerX86, TrackV1_5BufferTypes>), MEMBER(compression),
-        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+    item.useMinMax = true;
+    memcpy(&item.minMax, extr, sizeof(TrackMinMax));
+  }
 
-REFLECT(CLASS(TrackV1<esPointerX64, TrackV1_5BufferTypes>), MEMBER(compression),
-        MEMBER(trackType), MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+  uint32 version = 0;
 
-REFLECT(CLASS(TrackV2<esPointerX86>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+  if (item.interface.LayoutVersion() >= LMT56) {
+    version = 2;
+  } else if (item.interface.LayoutVersion() >= LMT51) {
+    version = 1;
+  }
 
-REFLECT(CLASS(TrackV2<esPointerX64>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(weight),
-        MEMBER(referenceData));
+  uint8 compression = uint8(item.interface.Compression());
 
-REFLECT(CLASS(TrackV3<esPointerX86>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(boneID2), MEMBER(weight),
-        MEMBER(referenceData));
+  item.controller = LMTTrackInterface::LMTTrackControllerPtr(
+      LMTTrackController::CreateCodec(buffRemapRegistry[version][compression]));
 
-REFLECT(CLASS(TrackV3<esPointerX64>), MEMBER(compression), MEMBER(trackType),
-        MEMBER(boneType), MEMBER(boneID), MEMBER(boneID2), MEMBER(weight),
-        MEMBER(referenceData));
+  if (item.controller) {
+    item.controller->Assign(item.interface.Buffer(),
+                            item.interface.BufferSize(), flags.swapEndian);
+  }
+}
+
+template <>
+void ProcessClass(LMTTrackInterface &item, LMTConstructorProperties flags) {
+  ProcessClass(static_cast<LMTTrackMidInterface &>(item), flags);
+}
 
 using ptr_type_ = std::unique_ptr<LMTTrack>;
 
-template <class C> struct f_ {
-  static ptr_type_ creatorBase() {
-    return std::make_unique<LMTTrackShared<C>>();
-  }
-
-  static ptr_type_ creator(void *ptr, char *buff, bool endi) {
-    return std::make_unique<LMTTrackShared<C>>(static_cast<C *>(ptr), buff,
-                                               endi);
-  }
-};
-
-static const std::map<LMTConstructorPropertiesBase,
-                      decltype(&f_<void>::creatorBase)>
-    trackRegistry = {
-        // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, f_<TrackV0<esPointerX64>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::V_22}, f_<TrackV0<esPointerX86>>::creatorBase},
-        {{LMTArchType::X64, LMTVersion::V_40}, f_<TrackV1<esPointerX64, TrackV1BufferTypes>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::V_40}, f_<TrackV1<esPointerX86, TrackV1BufferTypes>>::creatorBase},
-        {{LMTArchType::X64, LMTVersion::V_51}, f_<TrackV1<esPointerX64, TrackV1_5BufferTypes>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::V_51}, f_<TrackV1<esPointerX86, TrackV1_5BufferTypes>>::creatorBase},
-        {{LMTArchType::X64, LMTVersion::V_56}, f_<TrackV2<esPointerX64>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::V_56}, f_<TrackV2<esPointerX86>>::creatorBase},
-        {{LMTArchType::X64, LMTVersion::V_92}, f_<TrackV3<esPointerX64>>::creatorBase},
-        {{LMTArchType::X86, LMTVersion::V_92}, f_<TrackV3<esPointerX86>>::creatorBase},
-        // clang-format on
-};
-
-static const std::map<LMTConstructorPropertiesBase,
-                      decltype(&f_<void>::creator)>
-    trackRegistryLink = {
-        // clang-format off
-        {{LMTArchType::X64, LMTVersion::V_22}, f_<TrackV0<esPointerX64>>::creator},
-        {{LMTArchType::X86, LMTVersion::V_22}, f_<TrackV0<esPointerX86>>::creator},
-        {{LMTArchType::X64, LMTVersion::V_40}, f_<TrackV1<esPointerX64, TrackV1BufferTypes>>::creator},
-        {{LMTArchType::X86, LMTVersion::V_40}, f_<TrackV1<esPointerX86, TrackV1BufferTypes>>::creator},
-        {{LMTArchType::X64, LMTVersion::V_51}, f_<TrackV1<esPointerX64, TrackV1_5BufferTypes>>::creator},
-        {{LMTArchType::X86, LMTVersion::V_51}, f_<TrackV1<esPointerX86, TrackV1_5BufferTypes>>::creator},
-        {{LMTArchType::X64, LMTVersion::V_56}, f_<TrackV2<esPointerX64>>::creator},
-        {{LMTArchType::X86, LMTVersion::V_56}, f_<TrackV2<esPointerX86>>::creator},
-        {{LMTArchType::X64, LMTVersion::V_92}, f_<TrackV3<esPointerX64>>::creator},
-        {{LMTArchType::X86, LMTVersion::V_92}, f_<TrackV3<esPointerX86>>::creator},
-        // clang-format on
-};
-
 ptr_type_ LMTTrack::Create(const LMTConstructorProperties &props) {
-  if (props.dataStart) {
-    return trackRegistryLink.at(props)(props.dataStart, props.masterBuffer,
-                                       props.swappedEndian);
-  } else {
-    return trackRegistry.at(props)();
-  }
+  return std::make_unique<LMTTrackMidInterface>(
+      clgen::LayoutLookup{static_cast<uint8>(props.version),
+                          props.arch == LMTArchType::X64, false},
+      static_cast<char *>(props.dataStart));
 }

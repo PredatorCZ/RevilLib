@@ -30,171 +30,10 @@ static constexpr uint32 TML_ID = CompileFourCC("\0TML");
 
 bool IsX64CompatibleAnimationClass(BinReaderRef_e rd, LMTVersion version);
 
-void LMTAnimationEventV1_Internal::SaveBuffer(BinWritterRef wr,
-                                              LMTFixupStorage &fixups) const {
-  const size_t numGroups = GetNumGroups();
-
-  for (size_t g = 0; g < numGroups; g++) {
-    wr.ApplyPadding();
-    fixups.SaveTo(wr);
-
-    wr.WriteContainer(GetEvents(g));
-  }
-}
-
-void LMTAnimationEventV1_Internal::Save(BinWritterRef wr) const {
-  LMTFixupStorage localStorage;
-
-  SaveInternal(wr, localStorage);
-  SaveBuffer(wr, localStorage);
-  localStorage.FixupPointers(wr, Is64bit());
-}
-
-void LMTAnimationEventV2_Internal::Save(BinWritterRef wr) const {
-  LMTFixupStorage localFixups;
-
-  SaveInternal(wr, localFixups);
-  wr.ApplyPadding();
-  localFixups.SaveTo(wr);
-
-  for (auto &g : groups) {
-    g->SaveInternal(wr, localFixups);
-  }
-
-  for (auto &g : groups) {
-    wr.ApplyPadding();
-    localFixups.SaveTo(wr);
-
-    LMTFixupStorage semilocalFixups;
-
-    for (auto &e : g->events) {
-      e->SaveInternal(wr, semilocalFixups);
-    }
-
-    for (auto &e : g->events) {
-      wr.ApplyPadding();
-      semilocalFixups.SaveTo(wr);
-      wr.WriteContainer(e->frames);
-    }
-
-    semilocalFixups.FixupPointers(wr, true);
-  }
-
-  localFixups.FixupPointers(wr, true);
-}
-
-void LMTTrack_internal::SaveBuffers(BinWritterRef wr,
-                                    LMTFixupStorage &storage) const {
-  if (controller->NumFrames()) {
-    wr.ApplyPadding();
-    storage.SaveTo(wr);
-    controller->Save(wr);
-  } else {
-    storage.SkipTo();
-  }
-
-  if (useMinMax) {
-    wr.ApplyPadding();
-    storage.SaveTo(wr);
-    wr.Write(minMax);
-  }
-
-  if (!useMinMax && UseTrackExtremes()) {
-    storage.SkipTo();
-  }
-}
-
-void LMTFloatTrack_internal::Save(BinWritterRef wr) const {
-  LMTFixupStorage localStorage;
-
-  SaveInternal(wr, localStorage);
-  wr.ApplyPadding();
-
-  for (auto &f : frames) {
-    if (f.size()) {
-      localStorage.SaveTo(wr);
-      wr.WriteContainer(f);
-    } else {
-      localStorage.SkipTo();
-    }
-  }
-
-  localStorage.FixupPointers(wr, Is64bit());
-}
-
-void LMTAnimation_internal::Save(BinWritterRef wr, bool standAlone) const {
-  LMTFixupStorage fixups;
-  size_t saveposBuffSize;
-
-  if (standAlone) {
-    wr.Write(MTMI);
-    wr.Write(reinterpret_cast<const uint16 &>(props));
-    saveposBuffSize = wr.Tell();
-    wr.ApplyPadding();
-  }
-
-  SaveInternal(wr, fixups);
-  wr.ApplyPadding();
-  fixups.SaveTo(wr);
-
-  for (auto &t : storage) {
-    static_cast<LMTTrack_internal *>(t.get())->SaveInternal(wr, fixups);
-  }
-
-  const size_t aniVersion = GetVersion();
-
-  if (aniVersion == 1) {
-    static_cast<LMTAnimationEventV1_Internal *>(events.get())
-        ->SaveBuffer(wr, fixups);
-  } else if (aniVersion == 2) {
-    auto cEvent = static_cast<LMTAnimationEventV1_Internal *>(events.get());
-
-    if (cEvent) {
-      wr.ApplyPadding();
-      fixups.SaveTo(wr);
-      cEvent->Save(wr);
-    } else {
-      fixups.SkipTo();
-    }
-
-    auto cFloatTracks =
-        static_cast<LMTFloatTrack_internal *>(floatTracks.get());
-
-    if (cFloatTracks) {
-      wr.ApplyPadding();
-      fixups.SaveTo(wr);
-      cFloatTracks->Save(wr);
-    } else {
-      fixups.SkipTo();
-    }
-  } else {
-    auto cEvent = static_cast<LMTAnimationEventV2_Internal *>(events.get());
-
-    if (cEvent) {
-      wr.ApplyPadding();
-      fixups.SaveTo(wr);
-      cEvent->Save(wr);
-    } else {
-      fixups.SkipTo();
-    }
-  }
-
-  for (auto &t : storage) {
-    static_cast<LMTTrack_internal *>(t.get())->SaveBuffers(wr, fixups);
-  }
-
-  if (standAlone) {
-    fixups.SaveFrom(saveposBuffSize);
-    fixups.SaveTo(wr);
-  }
-
-  fixups.FixupPointers(wr, Is64bit());
-}
-
 LMTAnimation::Ptr
-LMTAnimation_internal::Load(BinReaderRef_e rd,
+LMTAnimationInterface::Load(BinReaderRef_e rd,
                             LMTConstructorPropertiesBase expected) {
-  LMTConstructorProperties props;
+  LMTConstructorPropertiesBase props;
 
   uint32 magic;
   rd.Read(magic);
@@ -240,20 +79,19 @@ LMTAnimation_internal::Load(BinReaderRef_e rd,
   rd.Seek(0);
   rd.ReadContainer(*buff, bufferSize);
 
-  props.masterBuffer = &(*buff.get())[0];
-  props.dataStart = props.masterBuffer + dataStart;
-  props.swappedEndian = rd.SwappedEndian();
+  std::vector<void *> ptrStore;
+  LMTConstructorProperties cProps(props, ptrStore);
 
-  auto out = LMTAnimation::Create(props);
-  static_cast<LMTAnimation_internal *>(out.get())->masterBuffer =
-      uni::ToElement(buff);
+  cProps.base = buff.get()->data();
+  cProps.dataStart = cProps.base + dataStart;
+  cProps.swapEndian = rd.SwappedEndian();
 
-  ptrStore.clear();
+  auto out = LMTAnimation::Create(cProps);
+  static_cast<LMTAnimationInterface *>(out.get())->standAloneHolder =
+      std::move(buff);
 
   return out;
 }
-
-thread_local std::vector<void *> ptrStore;
 
 void LMT::Load(BinReaderRef_e rd) {
   uint32 magic;
@@ -321,11 +159,11 @@ void LMT::Load(BinReaderRef_e rd) {
   uint32 *lookupTable = reinterpret_cast<uint32 *>(buffer + lookupTableOffset);
 
   pi->storage.resize(numBlocks);
+  std::vector<void *> ptrStore;
 
-  LMTConstructorProperties cProps;
-  cProps = pi->props;
-  cProps.masterBuffer = buffer;
-  cProps.swappedEndian = rd.SwappedEndian();
+  LMTConstructorProperties cProps(pi->props, ptrStore);
+  cProps.base = buffer;
+  cProps.swapEndian = rd.SwappedEndian();
 
   for (uint32 a = 0; a < numBlocks; a++) {
     uint32 &cOffset = *(lookupTable + (a * multiplier));
@@ -346,8 +184,6 @@ void LMT::Load(BinReaderRef_e rd) {
 
     pi->storage[a] = uni::ToElement(LMTAnimation::Create(cProps));
   }
-
-  ptrStore.clear();
 }
 
 void LMT::Save(BinWritterRef wr) const {
@@ -380,7 +216,7 @@ void LMT::Save(BinWritterRef wr) const {
 
     wr.ApplyPadding();
     fixups.SaveTo(wr);
-    a->Save(wr, false);
+    // a->Save(wr, false);
   }
 
   fixups.FixupPointers(wr, isX64);
