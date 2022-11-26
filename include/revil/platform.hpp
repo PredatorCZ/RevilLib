@@ -27,6 +27,7 @@ enum class Platform {
   N3DS,
   CAFE,
   NSW,
+  PS4,
 };
 
 struct ArcSupport {
@@ -45,6 +46,7 @@ struct ModSupport {
 
 struct TexSupport {
   uint16 version = 0;
+  bool x64 = false;
 };
 
 struct LmtSupport {

@@ -167,7 +167,17 @@ static const TitleSupport suppPS3{
     LmtSupport{67},
 };
 
-static const TitleSupports supp{Platform::PS3, suppPS3};
+static const TitleSupport suppPS4{
+    ARC_WINPC_GENERIC,
+    ModSupport{0xD3, true},
+    TexSupport{0x9D, true},
+    LmtSupport{67, true},
+};
+
+static const TitleSupports supp{
+    Platform::PS3, suppPS3, //
+    Platform::PS4, suppPS4, //
+};
 } // namespace MT_SBSYD
 
 static const MtExtensions extSBSYD{MT_SBSYD::extCommon, MT_SBSYD::fixups,
