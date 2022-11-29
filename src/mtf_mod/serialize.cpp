@@ -101,7 +101,8 @@ void MODMaterialProxy<material_type>::Write(BinWritterRef wr) const {
 template <class material_type>
 void MODMaterialProxy<material_type>::Read(BinReaderRef_e rd) {
   rd.Read(main);
-  if constexpr (!std::is_same_v<material_type, MODMaterialXD3>) {
+  if constexpr (!std::is_same_v<material_type, MODMaterialHash> &&
+                !std::is_same_v<material_type, MODMaterialName>) {
     main.baseTextureIndex--;
     main.normalTextureIndex--;
     main.maskTextureIndex--;
@@ -119,9 +120,17 @@ std::string MODMaterialProxy<material_type>::TypeName() const {
   return "";
 }
 
+template <class T> using use_name = decltype(std::declval<T>().Name());
+template <class C>
+constexpr static bool use_name_v = es::is_detected_v<use_name, C>;
+
 template <class material_type>
 std::string MODMaterialProxy<material_type>::Name() const {
-  return "";
+  if constexpr (use_name_v<material_type>) {
+    return main.Name();
+  } else {
+    return "";
+  }
 }
 
 template <class material_type>
@@ -349,7 +358,7 @@ template <> void FByteswapper(MODMaterialXC5 &self, bool way) {
   FByteswapper(self.unk07);
 }
 
-template <> void FByteswapper(MODMaterialXD3 &self, bool) {
+template <> void FByteswapper(MODMaterialHash &self, bool) {
   FByteswapper(self.hash);
 }
 
@@ -414,6 +423,10 @@ template <> void FByteswapper(MODMeshXD3 &self, bool way) {
   FByteswapper(self.minVertex);
   FByteswapper(self.maxVertex);
   FByteswapper(self.unk);
+}
+
+template <> void FByteswapper(MODMeshXD3PSN &self, bool way) {
+  FByteswapper(static_cast<MODMeshXD3 &>(self), way);
 }
 
 #pragma endregion
@@ -563,7 +576,8 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
 #pragma endregion
 #pragma region Loaders
 
-template <class Header, class Traits> MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
+template <class Header, class Traits>
+MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
   Header header;
   MODInner<Traits> main;
   rd.Read(header);
@@ -771,9 +785,9 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
-MODImpl::ptr LoadMODXD3(BinReaderRef_e rd) {
+template <class Traits> MODImpl::ptr LoadMODXD3x32(BinReaderRef_e rd) {
   MODHeaderXD3 header;
-  MODInner<MODTraitsXD3> main;
+  MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
   rd.Read(main.bounds);
@@ -811,6 +825,61 @@ MODImpl::ptr LoadMODXD3(BinReaderRef_e rd) {
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
+
+MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
+  MODHeaderXD3X64 header;
+  MODInner<MODTraitsXD3PSN> main;
+  BinReaderRef rd(rdn);
+  rd.Push();
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+  {
+    uint64 maxPtr = header.bones | header.groups | header.materialNames |
+                    header.meshes | header.vertexBuffer | header.indices |
+                    header.dataEnd;
+    size_t fileSize = rd.GetSize() << 1;
+
+    if (maxPtr > fileSize) {
+      rd.Pop();
+      return LoadMODXD3x32<MODTraitsXD3>(rdn);
+    }
+  }
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rdn.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainer(main.meshes, header.numMeshes);
+  // rd.ReadContainer(main.envelopes); there isn't counter
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
 #pragma endregion
 
 bool MODMaker::operator<(const MODMaker &i0) const {
@@ -823,7 +892,8 @@ static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     //{{0x170, false}, LoadMODX70<MODHeaderX170, MODTraitsX170>},
     {{MODVersion::X99, false}, LoadMODX99<MODTraitsX99LE>},
     {{MODVersion::X99, true}, LoadMODX99<MODTraitsX99BE>},
-    {{MODVersion::XD3, false}, LoadMODXD3},
+    {{MODVersion::XD3, false}, LoadMODXD3x64},
+    {{MODVersion::XD3, true}, LoadMODXD3x32<MODTraitsXD3PSN>},
     {{MODVersion::XC5, false}, LoadMODXC5},
     {{MODVersion::XC3, true}, LoadMODXC3},
 };

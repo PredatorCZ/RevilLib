@@ -1,5 +1,6 @@
 #include "material.hpp"
 #include "datas/reflector.hpp"
+#include <charconv>
 
 REFLECT(CLASS(MODMaterialX70::VSHData),
         BITMEMBERNAME(MODMaterialX70::Unk00, "unknown00"),
@@ -63,4 +64,14 @@ REFLECT(CLASS(MODMaterialXC5), MEMBER(pshData), MEMBER(vshData),
         MEMBER(normalBias), MEMBER(unk02), MEMBER(unk03), MEMBER(unk04),
         MEMBER(unk05), MEMBER(unk06), MEMBER(unk07), MEMBER(unk08));
 
-REFLECT(CLASS(MODMaterialXD3), MEMBER(hash));
+REFLECT(CLASS(MODMaterialHash), MEMBER(hash));
+
+REFLECT(CLASS(MODMaterialName), MEMBER(name));
+
+std::string MODMaterialHash::Name() const {
+  char buffer[0x10]{};
+  std::to_chars(std::begin(buffer), std::end(buffer), hash, 0x10);
+  return std::string("Material_") + buffer;
+}
+
+std::string MODMaterialName::Name() const { return name; }

@@ -57,6 +57,7 @@ enum class TEXFormat : uint32 {
 
 enum class TEXFormatV2 : uint8 {
   RGBA16F = 0x2,
+  DXT5_YUV = 0xA,
   BC7 = 0x10,
   DXT1 = 0x13,
   DXT3 = 0x15,
@@ -71,9 +72,15 @@ enum class TEXFormatV2 : uint8 {
 };
 
 enum class TEXFormatV2PS4 : uint8 {
+  R8 = 0x7,
+  DXT5_YUV = 0xA,
   BC7 = 0x10,
   DXT1 = 0x13,
+  DXT3 = 0x15,
+  DXT5 = 0x17,
+  DXT1_NM = 0x1e,
   BC5S = 0x1f,
+  BC4 = 0x19,
 };
 
 static constexpr uint32 TEXID = CompileFourCC("TEX");
@@ -253,6 +260,7 @@ DDS_HeaderDX10 ConvertTEXFormat(TEXFormatV2 fmt) {
   case TEXFormatV2::DXT5_LM:
   case TEXFormatV2::DXT5_PM:
   case TEXFormatV2::DXT5_ID:
+  case TEXFormatV2::DXT5_YUV:
     return DXGI_FORMAT_BC3_UNORM;
   case TEXFormatV2::RGBA16F:
     return DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -267,12 +275,21 @@ DDS_HeaderDX10 ConvertTEXFormat(TEXFormatV2 fmt) {
 DDS_HeaderDX10 ConvertTEXFormat(TEXFormatV2PS4 fmt) {
   switch (fmt) {
   case TEXFormatV2PS4::DXT1:
+  case TEXFormatV2PS4::DXT1_NM:
     return DXGI_FORMAT_BC1_UNORM;
+  case TEXFormatV2PS4::DXT3:
+    return DXGI_FORMAT_BC2_UNORM;
+  case TEXFormatV2PS4::DXT5:
+  case TEXFormatV2PS4::DXT5_YUV:
+    return DXGI_FORMAT_BC3_UNORM;
+  case TEXFormatV2PS4::BC4:
+    return DXGI_FORMAT_BC4_UNORM;
   case TEXFormatV2PS4::BC5S:
     return DXGI_FORMAT_BC5_SNORM;
   case TEXFormatV2PS4::BC7:
     return DXGI_FORMAT_BC7_UNORM;
-
+  case TEXFormatV2PS4::R8:
+    return DXGI_FORMAT_R8_UNORM;
   default:
     throw std::runtime_error("Unknown texture format!");
   }

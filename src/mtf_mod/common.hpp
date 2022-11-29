@@ -68,7 +68,7 @@ template <size_t numRemaps> struct MODSkinRemap {
 
 template <size_t size> struct MODPath {
   char path[size];
-  void SwapEndian() {}
+  void NoSwap();
 };
 
 struct MODBoneProxy : uni::Bone {

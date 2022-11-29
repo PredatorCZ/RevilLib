@@ -140,3 +140,10 @@ struct MODMeshXD3 {
   MODPrimitiveProxy ReflectLE(revil::MODImpl &);
   MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
 };
+
+struct MODMeshXD3PSN : MODMeshXD3 {
+  uint32 null[2];
+
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+};

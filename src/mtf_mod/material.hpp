@@ -164,7 +164,15 @@ struct MODMaterialXC5 {
   uint8 unk08;
 };
 
-struct MODMaterialXD3 {
+struct MODMaterialHash {
   uint32 hash;
   static constexpr size_t Version() { return 1; }
+  std::string Name() const;
+};
+
+struct MODMaterialName {
+  char name[0x80];
+  static constexpr size_t Version() { return 1; }
+  std::string Name() const;
+  void NoSwap();
 };
