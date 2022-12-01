@@ -16,9 +16,10 @@
 */
 
 #pragma once
-#include <string_view>
+#include "revil/settings.hpp"
 #include "supp_base.hpp"
 #include <map>
+#include <string_view>
 
 using MtExtensionsStorage = std::multimap<std::string_view, uint32>;
 using MtExtFixupStorage = std::map<uint32, std::string_view>;
@@ -39,7 +40,7 @@ struct MtExtensions {
 
   template <class... type>
   void Assign(Platform platform, const MtExtensionsStorage &storage,
-              type&&... types) {
+              type &&...types) {
     Assign(platform, storage);
     Assign(std::forward<type>(types)...);
   }
@@ -49,7 +50,7 @@ struct MtExtensions {
   void Assign(const MtExtFixupStorage &storage) { fixups = &storage; }
 
   template <class... type>
-  void Assign(const MtExtFixupStorage &storage, type&&... types) {
+  void Assign(const MtExtFixupStorage &storage, type &&...types) {
     Assign(storage);
     Assign(std::forward<type>(types)...);
   }
@@ -57,13 +58,13 @@ struct MtExtensions {
   void Assign(const TitleSupports &storage) { support = &storage; }
 
   template <class... type>
-  void Assign(const TitleSupports &storage, type&&... types) {
+  void Assign(const TitleSupports &storage, type &&...types) {
     Assign(storage);
     Assign(std::forward<type>(types)...);
   }
 
   template <class... type>
-  MtExtensions(const MtExtensionsStorage &base, type&&... types) : data{&base} {
+  MtExtensions(const MtExtensionsStorage &base, type &&...types) : data{&base} {
     Assign(std::forward<type>(types)...);
   }
 
@@ -101,3 +102,7 @@ struct MtExtensions {
     return 0;
   }
 };
+
+namespace revil {
+const MtExtensions RE_EXTERN *GetTitleRegistry(std::string_view title);
+}

@@ -8,6 +8,7 @@
 #include "datas/vectors_simd.hpp"
 #include "pugixml.hpp"
 #include "revil/hashreg.hpp"
+#include <algorithm>
 #include <deque>
 #include <vector>
 

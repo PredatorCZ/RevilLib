@@ -17,6 +17,7 @@
 
 #pragma once
 #include "revil/platform.hpp"
+#include <stdexcept>
 
 using namespace revil;
 

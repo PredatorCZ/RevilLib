@@ -124,8 +124,14 @@ const MtExtFixupStorage *GetFixups(std::string_view title) {
 }
 
 namespace revil {
-void LinkLogging(PrintFunc func, bool useColor) {
-  es::print::AddPrinterFunction(func, useColor);
+const MtExtensions *GetTitleRegistry(std::string_view title) {
+  auto found = invertedExtensions.find(title);
+
+  if (es::IsEnd(invertedExtensions, found)) {
+    throw std::runtime_error("Coundn't find title.");
+  }
+
+  return found->second;
 }
 
 void GetTitles(TitleCallback cb) {

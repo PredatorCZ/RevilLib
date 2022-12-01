@@ -18,19 +18,11 @@ if(BUILD_STATIC_OBJECTS)
     ${CORE_SOURCE_FILES}
     LINKS
     pugixml-objects
+    precore-objects
     NO_VERINFO
     NO_PROJECT_H)
 
   target_include_directories(revil-objects PUBLIC ../include)
-
-  set_precore_sources(
-    revil-objects
-    master_printer
-    matrix44
-    reflector
-    reflector_xml
-    no_rtti
-    uni_format)
 endif()
 
 if(BUILD_SHARED_OBJECTS)
@@ -50,22 +42,9 @@ if(BUILD_SHARED_OBJECTS)
   target_include_directories(revil-shared PUBLIC ../include)
 
   if(BUILD_SHARED_LIBS)
-    target_link_libraries(revil-shared precore)
+    target_link_libraries(revil-shared precore pugixml)
   else()
-    set_precore_sources(
-      revil-shared
-      master_printer
-      matrix44
-      reflector
-      reflector_xml
-      no_rtti
-      uni_format)
-  endif()
-
-  if(BUILD_SHARED_LIBS)
-    target_link_libraries(revil-shared pugixml)
-  else()
-    target_link_libraries(revil-shared pugixml-shared)
+    target_link_libraries(revil-shared precore-objects pugixml-objects)
   endif()
 endif()
 

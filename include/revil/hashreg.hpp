@@ -36,8 +36,6 @@ uint32 RE_EXTERN GetHash(std::string_view extension, std::string_view title,
                          Platform platform = Platform::WinPC);
 using TitleCallback = std::function<void(std::string_view)>;
 void RE_EXTERN GetTitles(TitleCallback cb);
-using PrintFunc = void (*)(const char *);
-void RE_EXTERN LinkLogging(PrintFunc func, bool useColor);
 
 uint32 RE_EXTERN MTHashV1(std::string_view text);
 uint32 RE_EXTERN MTHashV2(std::string_view text);
