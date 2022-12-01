@@ -119,6 +119,7 @@ static const std::map<uint32, pair_type> extensions{
     MakeHashV1("xml", "rItemLayout"),
     MakeHashV1("xml", "rMapLink"),
     MakeHashV2("17d", "rEm017Data"),
+    MakeHashV2("aac", "rSoundSourceAAC"),
     MakeHashV2("abd", "rAcquirement::rAbilityData"),
     MakeHashV2("abd", "rArmorBuildData"),
     MakeHashV2("abe", "rAreaBarrierEdit"),
@@ -434,8 +435,8 @@ static const std::map<uint32, pair_type> extensions{
     MakeHashV2("dptev", "rDungeonPassEventTbl"),
     MakeHashV2("dptch", "rDungeonPassChallengeTbl"),
     MakeHashV2("dptra", "rDungeonPassRareTbl"),
-    MakeHashV2("dptrm", "rDungeonPassTreasureTbl"),
-    MakeHashV2("dpttr", "rDungeonPassRoomMaxTbl"),
+    MakeHashV2("dpttr", "rDungeonPassTreasureTbl"),
+    MakeHashV2("dptrm", "rDungeonPassRoomMaxTbl"),
     MakeHashV2("dqt", "rDungeonQuestData"),
     MakeHashV2("drm", "rDarumaPattern"),
     MakeHashV2("drp", "rWeaponDrop"),
@@ -794,6 +795,7 @@ static const std::map<uint32, pair_type> extensions{
     MakeHashV2("igs", "rInGameSound"),
     MakeHashV2("ich", "rLch"),
     MakeHashV2("ik", "rCnsIK"),
+    MakeHashV2("ima", "rSoundSourceIMA"),
     MakeHashV2("imx", "rItemMix"),
     MakeHashV2("insectabirity", "rInsectAbirity"),
     MakeHashV2("insectessenceskill", "rInsectEssenceSkill"),
@@ -1377,6 +1379,7 @@ static const std::map<uint32, pair_type> extensions{
     MakeHashV2("snd", "rSoundNpcDataNative"),
     MakeHashV2("snd", "rTalkDemoSound"),
     MakeHashV2("sngw", "rSoundSourceMusic"),
+    MakeHashV2("sngw", "rSoundSourceOggVorbis"),
     MakeHashV2("sntt", "rSubstituteNpcTblNative"),
     MakeHashV2("sod", "rSoundObjectData"),
     MakeHashV2("sod", "rSoundObjectDataNative"),
@@ -1670,6 +1673,26 @@ static decltype(extensions) extensionsNSW{
     MakeHashV2("adpcm", "rSoundSourceADPCM"),
 };
 
+static decltype(extensions) extensionsAND{
+    /**/ //
+    MakeHashV2("lyt", "rLayout"),
+    MakeHashV2("revr_and", "rSoundReverb"),
+    MakeHashV2("equr", "rSoundEQ"),
+    MakeHashV2("mfx", "rShader"),
+    MakeHashV2("mix", "rItemMix"),
+    MakeHashV2("scsr", "rSoundCurveSet"),
+    MakeHashV2("sew", "rSoundSourceADPCM"),
+};
+
+static decltype(extensions) extensionsIOS{
+    /**/ //
+    MakeHashV2("lyt", "rLayout"),
+    MakeHashV2("revr_appl", "rSoundReverb"),
+    MakeHashV2("equr", "rSoundEQ"),
+    MakeHashV2("mix", "rItemMix"),
+    MakeHashV2("mfx", "rShader"),
+};
+
 static const std::map<Platform, decltype(extensions) *> extensionSlots{
     /**/ //
     {Platform::Auto, &extensions},
@@ -1678,6 +1701,8 @@ static const std::map<Platform, decltype(extensions) *> extensionSlots{
     {Platform::CAFE, &extensionsCAFE},
     {Platform::N3DS, &extensionsN3DS},
     {Platform::NSW, &extensionsNSW},
+    {Platform::Android, &extensionsAND},
+    {Platform::IOS, &extensionsIOS},
 };
 
 decltype(extensions)::value_type GetPair(uint32 hash, Platform platform) {

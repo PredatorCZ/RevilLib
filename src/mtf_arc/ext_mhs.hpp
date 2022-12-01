@@ -64,8 +64,8 @@ static const MtExtensionsStorage extCommon{
     {"dptev", 0x20E0A843},
     {"dptch", 0x3718B9C7},
     {"dptra", 0x5C89DEE},
-    {"dptrm", 0x677EDC52},
-    {"dpttr", 0x2AC7B904},
+    {"dpttr", 0x677EDC52},
+    {"dptrm", 0x2AC7B904},
     {"dqt", 0x344FD684},
     {"dtt", 0xAF34367},
     {"e2d", 0x276DE8B7},
@@ -132,12 +132,10 @@ static const MtExtensionsStorage extCommon{
     {"lanl", 0x708E0028},
     {"lcm", 0x39C52040},
     {"lfd", 0x3516C3D2},
-    {"lfx", 0x682B1925},
     {"lmd", 0x62440501},
     {"lmt", 0x76820D81},
     {"lsnl", 0x5A7A72DE},
     {"lyt", 0x15302EF4},
-    {"mca", 0x79C47B59},
     {"mcd", 0x6CACB310},
     {"mdl", 0x7A23F10F},
     {"mea", 0x7534679E},
@@ -153,7 +151,6 @@ static const MtExtensionsStorage extCommon{
     {"mrt", 0xB842B37},
     {"msgm", 0x48DFD78B},
     {"nasl", 0x1FA3FF7A},
-    {"nasl", 0x4C2446BF},
     {"nhap", 0x31798063},
     {"nhapp", 0x3A244568},
     {"npd", 0x4F1544F5},
@@ -169,12 +166,10 @@ static const MtExtensionsStorage extCommon{
     {"poom", 0x1E01F870},
     {"por", 0x5A2E573A},
     {"psl", 0x254309C9},
-    {"ptex", 0x3756EE15},
     {"pts", 0x5842F0B0},
     {"pvi", 0x54DD639F},
     {"rcd", 0x3C4BD0ED},
     {"rdp", 0x29A5C1D1},
-    {"revr_ctr", 0x232E228C},
     {"rnd", 0x5CF33CD6},
     {"sad", 0x990B835},
     {"samd", 0x7DAAFFDC},
@@ -242,6 +237,30 @@ static const MtExtensionsStorage extCommon{
     {"wpp", 0x2141D3A9},
 };
 
+static const MtExtensionsStorage extN3DS{
+    /**/ //
+    {"mca", 0x79C47B59},
+    {"lfx", 0x682B1925},
+    {"nasl", 0x4C2446BF},
+    {"ptex", 0x3756EE15},
+    {"revr_ctr", 0x232E228C},
+};
+
+static const MtExtensionsStorage extAndroid{
+    /**/ //
+    {"mfx", 0x50F9DB3E},
+    {"revr_and", 0x232E228C},
+    {"scsr", 0xECD7DF4},
+    {"sew", 0x79C47B59},
+};
+
+static const MtExtensionsStorage extIOS{
+    /**/ //
+    {"ima", 0x41DBF99},
+    {"mfx", 0x50F9DB3E},
+    {"revr_appl", 0x232E228C},
+};
+
 static const MtExtFixupStorage fixups{
     /**/ //
     {0x0315E81F, "sdsr"},
@@ -256,8 +275,20 @@ static const TitleSupport supp3DS{
     LmtSupport{67},
 };
 
-static const TitleSupports supp{Platform::N3DS, supp3DS};
+static const TitleSupport suppAndroid{
+    ARC_WINPC_GENERIC,
+    ModSupport{0x06, true},
+    TexSupport{0x09},
+    LmtSupport{67, true},
+};
+
+static const TitleSupports supp{Platform::N3DS, supp3DS, Platform::Android,
+                                suppAndroid, Platform::IOS, suppAndroid};
 } // namespace MT_MHS
 
-static const MtExtensions extMHS{MT_MHS::extCommon, MT_MHS::fixups,
-                                 MT_MHS::supp, Platform::N3DS};
+static const MtExtensions extMHS{
+    MT_MHS::extCommon, MT_MHS::fixups,     MT_MHS::supp, //
+    Platform::N3DS,    MT_MHS::extN3DS,                  //
+    Platform::Android, MT_MHS::extAndroid,               //
+    Platform::IOS,     MT_MHS::extIOS,                   //
+};

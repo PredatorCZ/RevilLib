@@ -28,6 +28,8 @@ enum class Platform {
   CAFE,
   NSW,
   PS4,
+  Android,
+  IOS,
 };
 
 struct ArcSupport {
