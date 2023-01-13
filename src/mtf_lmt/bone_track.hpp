@@ -28,6 +28,7 @@ struct LMTTrackInterface : LMTTrack {
   mutable float frameRate = 60.f;
   mutable uint8 numIdents = 5;
   uint8 useRefFrame = 1;
+  int32 loopFrame = -1;
   bool useMinMax = false;
   LMTTrackControllerPtr controller;
 

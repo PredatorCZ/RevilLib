@@ -44,7 +44,8 @@ bool LMTAnimation::SupportedVersion(uint16 version) {
   return false;
 }
 
-bool IsX64CompatibleAnimationClass(BinReaderRef_e rd, revil::LMTVersion version) {
+bool IsX64CompatibleAnimationClass(BinReaderRef_e rd,
+                                   revil::LMTVersion version) {
   auto &layouts = clgen::Animation::LAYOUTS;
   clgen::LayoutLookup x64Layout{static_cast<uint8>(version), true, false};
   auto item = std::find_if(layouts.begin(), layouts.end(),
@@ -129,11 +130,15 @@ void ProcessClass(LMTAnimationMidInterface &item,
     return;
   }
 
+  if (flags.swapEndian) {
+    clgen::EndianSwap(item.interface);
+  }
+
   item.interface.TracksPtr().Fixup(flags.base, flags.ptrStore);
-  item.interface.FloatsPtr().Fixup(flags.base, flags.ptrStore);
 
   if (item.interface.LayoutVersion() >= LMT66) {
     item.interface.EventsPtr().Fixup(flags.base, flags.ptrStore);
+    item.interface.FloatsPtr().Fixup(flags.base, flags.ptrStore);
     auto events = item.interface.EventsLMT66();
     if (events.data) {
       flags.dataStart = events.data;
@@ -148,7 +153,13 @@ void ProcessClass(LMTAnimationMidInterface &item,
   for (size_t t = 0; t < item.interface.NumTracks(); t++) {
     flags.dataStart = item.interface.Tracks() + trackStride * t;
     auto track = LMTTrack::Create(flags);
-    ProcessClass(*static_cast<LMTTrackInterface *>(track.get()), flags);
+    auto iTrack = static_cast<LMTTrackInterface *>(track.get());
+
+    if (item.interface.m(clgen::Animation::loopFrame) >= 0) {
+      iTrack->loopFrame = item.interface.LoopFrame();
+    }
+
+    ProcessClass(*iTrack, flags);
     trackStride = track->Stride();
     item.storage.emplace_back(std::move(track));
   }

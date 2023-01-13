@@ -120,6 +120,7 @@ public:
   virtual int32 GetFrame(size_t frame) const = 0;
   virtual size_t Stride() const = 0;
   virtual uint32 BoneType() const = 0;
+  virtual std::string_view CompressionType() const = 0;
 
   static RE_EXTERN std::unique_ptr<LMTTrack>
   Create(const LMTConstructorProperties &props);

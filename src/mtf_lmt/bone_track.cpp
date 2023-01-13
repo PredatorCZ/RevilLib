@@ -52,9 +52,7 @@ MAKE_ENUM(ENUMSCOPE(class TrackV2BufferTypes
 
 #include "bone_track.inl"
 
-size_t LMTTrackInterface::NumFrames() const {
-  return controller->NumFrames() + useRefFrame;
-}
+size_t LMTTrackInterface::NumFrames() const { return controller->NumFrames(); }
 
 bool LMTTrackInterface::LMTTrackInterface::IsCubic() const {
   return controller->IsCubic();
@@ -62,22 +60,11 @@ bool LMTTrackInterface::LMTTrackInterface::IsCubic() const {
 
 void LMTTrackInterface::GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                                     size_t frame) const {
-  if (useRefFrame && !frame) {
-    inTangs = GetRefData();
-    outTangs = inTangs;
-    return;
-  }
-
   controller->GetTangents(inTangs, outTangs, frame);
 }
 
 void LMTTrackInterface::Evaluate(Vector4A16 &out, size_t frame) const {
-  if (useRefFrame && !frame) {
-    out = GetRefData();
-    return;
-  }
-
-  controller->Evaluate(out, frame - useRefFrame);
+  controller->Evaluate(out, frame);
 
   if (useMinMax) {
     out = minMax.max + minMax.min * out;
@@ -85,52 +72,57 @@ void LMTTrackInterface::Evaluate(Vector4A16 &out, size_t frame) const {
 }
 
 int32 LMTTrackInterface::GetFrame(size_t frame) const {
-  if (useRefFrame && !frame) {
-    return 0;
-  }
-
-  return controller->GetFrame(frame - useRefFrame) + useRefFrame;
+  return controller->GetFrame(frame);
 }
 
 void LMTTrackInterface::GetValue(Vector4A16 &out, float time) const {
   float frameDelta = time * frameRate;
-  const int32 frame = static_cast<int32>(frameDelta);
+  int32 frame = static_cast<int32>(frameDelta);
   const size_t numCtrFrames = controller->NumFrames();
 
-  if (!numCtrFrames && !useRefFrame) {
+  if (!numCtrFrames) {
+    if (useRefFrame) {
+      out = GetRefData();
+    }
+
     return;
   }
 
-  if ((!frame || !numCtrFrames) && useRefFrame) {
-    Vector4A16 refFrame(GetRefData());
-
-    if (frameDelta < 0.0001f || !numCtrFrames) {
-      out = refFrame;
-    } else {
-      controller->Evaluate(out, 0);
-      frameDelta -= frame;
-      out = refFrame + (out - refFrame) * frameDelta;
-    }
-  } else {
-    const int32 ctrFrame = frame - useRefFrame;
-    const int32 maxFrame = controller->GetFrame(numCtrFrames - 1);
-
-    if (ctrFrame >= maxFrame) {
-      Evaluate(out, numCtrFrames - 1);
-    } else {
-      for (size_t f = 1; f < numCtrFrames; f++) {
-        int32 cFrame = controller->GetFrame(f);
-
-        if (cFrame > ctrFrame) {
-          const float boundFrame = static_cast<float>(cFrame);
-          const float prevFrame =
-              static_cast<float>(controller->GetFrame(f - 1));
-
-          frameDelta = (prevFrame - frameDelta) / (prevFrame - boundFrame);
-
-          controller->Interpolate(out, f - 1, frameDelta, minMax);
-          break;
+  if (useRefFrame) {
+    if (loopFrame < 1) {
+      if (!frame) {
+        if (frameDelta < 0.0001f) {
+          out = GetRefData();
+        } else {
+          frameDelta -= frame;
+          Evaluate(out, 0);
+          out = GetRefData() + (out - GetRefData()) * frameDelta;
         }
+
+        return;
+      }
+
+      frame--;
+      frameDelta -= 1.f;
+    }
+  }
+
+  const int32 maxFrame = controller->GetFrame(numCtrFrames - 1);
+
+  if (frame >= maxFrame) {
+    Evaluate(out, numCtrFrames - 1);
+  } else {
+    for (size_t f = 1; f < numCtrFrames; f++) {
+      int32 cFrame = controller->GetFrame(f);
+
+      if (cFrame > frame) {
+        const float boundFrame = static_cast<float>(cFrame);
+        const float prevFrame = static_cast<float>(controller->GetFrame(f - 1));
+
+        frameDelta = (prevFrame - frameDelta) / (prevFrame - boundFrame);
+
+        controller->Interpolate(out, f - 1, frameDelta, minMax);
+        break;
       }
     }
   }
@@ -204,7 +196,7 @@ struct LMTTrackMidInterface : LMTTrackInterface {
   LMTTrackMidInterface(clgen::LayoutLookup rules, char *data) : interface {
     data, rules
   } {
-    useRefFrame = (interface.m(clgen::BoneTrack::referenceData) >= 0) + 1;
+    useRefFrame = interface.m(clgen::BoneTrack::referenceData) >= 0;
   }
 
   TrackType_e GetTrackType() const noexcept override {
@@ -231,26 +223,60 @@ struct LMTTrackMidInterface : LMTTrackInterface {
   bool UseTrackExtremes() const override {
     return interface.m(clgen::BoneTrack::extremes) >= 0;
   }
+
+  std::string_view CompressionType() const override {
+    static const std::string_view COMPRESSIONS[]{
+        "None",
+        "SingleVector3",
+        "HermiteVector3",
+        "StepRotationQuat3",
+        "SphericalRotation",
+        "LinearVector3",
+        "BiLinearVector3_16bit",
+        "BiLinearVector3_8bit",
+        "LinearRotationQuat4_14bit",
+        "BiLinearRotationQuat4_7bit",
+        "BiLinearRotationQuatXW_14bit",
+        "BiLinearRotationQuatYW_14bit",
+        "BiLinearRotationQuatZW_14bit",
+        "BiLinearRotationQuat4_11bit",
+        "BiLinearRotationQuat4_9bit",
+    };
+    uint32 version = 0;
+
+    if (interface.LayoutVersion() >= LMT56) {
+      version = 2;
+    } else if (interface.LayoutVersion() >= LMT51) {
+      version = 1;
+    }
+
+    uint8 compression = uint8(interface.Compression());
+
+    return COMPRESSIONS[uint32(buffRemapRegistry[version][compression])];
+  }
 };
 
 template <>
 void ProcessClass(LMTTrackMidInterface &item, LMTConstructorProperties flags) {
-  if (item.interface.BufferPtr().Check(flags.ptrStore)) {
-    return;
-  }
-
-  if (flags.swapEndian) {
-    clgen::EndianSwap(item.interface);
-  }
-
-  item.interface.BufferPtr().Fixup(flags.base, flags.ptrStore);
-  item.interface.ExtremesPtr().Fixup(flags.base, flags.ptrStore);
-
-  if (auto extr = item.interface.Extremes(); extr) {
+  if (!item.interface.BufferPtr().Check(flags.ptrStore)) {
     if (flags.swapEndian) {
-      FByteswapper(*extr);
+      clgen::EndianSwap(item.interface);
     }
 
+    item.interface.BufferPtr().Fixup(flags.base, flags.ptrStore);
+
+    if (item.interface.LayoutVersion() >= LMT56) {
+      item.interface.ExtremesPtr().Fixup(flags.base, flags.ptrStore);
+
+      if (auto extr = item.interface.Extremes(); extr) {
+        if (flags.swapEndian) {
+          FByteswapper(*extr);
+        }
+      }
+    }
+  }
+
+  if (auto extr = item.interface.Extremes(); extr) {
     item.useMinMax = true;
     memcpy(&item.minMax, extr, sizeof(TrackMinMax));
   }
