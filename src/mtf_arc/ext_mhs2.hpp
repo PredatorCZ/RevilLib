@@ -404,7 +404,7 @@ static const MtExtFixupStorage fixups{
 };
 
 static const TitleSupport suppNSW{
-    ArcSupport{7, 15, false, false, false, true},
+    ArcSupport{.extendedFilePath = true},
     ModSupport{0xD6, true},
     TexSupport{0xA3},
     LmtSupport{68, true},

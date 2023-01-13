@@ -26,9 +26,13 @@ namespace revil {
 class MODImpl;
 
 enum MODVersion : uint16 {
-  X70 = 0x70,
-  X99 = 0x99,
+  X05 = 0x05,
+  X06 = 0x06,
+  X70 = 0x70,     // DR X360
+  X170 = 0x170,   // DR PC
+  X99 = 0x99,     // MTF1 generic
   XD3 = 0xD3,     // RE6 PC
+  XD2 = 0xD2,
   X2CFF = 0x2CFF, // RE6 PS3
   XC5 = 0xC5,     // LP2 PC
   XC3 = 0xC3,     // LP2 PS3

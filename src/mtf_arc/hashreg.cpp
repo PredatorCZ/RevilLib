@@ -1696,7 +1696,7 @@ static decltype(extensions) extensionsIOS{
 static const std::map<Platform, decltype(extensions) *> extensionSlots{
     /**/ //
     {Platform::Auto, &extensions},
-    {Platform::WinPC, &extensions},
+    {Platform::Win32, &extensions},
     {Platform::PS3, &extensionsPS3},
     {Platform::CAFE, &extensionsCAFE},
     {Platform::N3DS, &extensionsN3DS},

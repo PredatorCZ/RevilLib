@@ -109,7 +109,7 @@ static const MtExtensionsStorage extPS3{
 };
 
 static const TitleSupport suppWin{
-    ArcSupport{8, 15},
+    ArcSupport{8},
     ModSupport{0xC5},
     TexSupport{0x87},
     LmtSupport{56},
@@ -123,7 +123,7 @@ static const TitleSupport suppPS3{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::PS3, suppPS3,   //
 };
 } // namespace MT_LP2
@@ -132,5 +132,5 @@ static const MtExtensions extLP2{
     MT_LP2::extCommon,                 //
     MT_LP2::supp,                      //
     Platform::PS3,     MT_LP2::extPS3, //
-    Platform::WinPC,   MT_LP2::extWin,
+    Platform::Win32,   MT_LP2::extWin,
 };

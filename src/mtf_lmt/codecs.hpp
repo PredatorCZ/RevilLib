@@ -394,7 +394,7 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
   template <class _C = C>
   typename std::enable_if<_C::VARIABLE_SIZE>::type
   GetTangents_(Vector4A16 &inTangs, Vector4A16 &outTangs, size_t frame) const {
-    data[frame].GetTangents(inTangs, outTangs);
+    data.at(frame).GetTangents(inTangs, outTangs);
   }
 
   template <class _C = C>
@@ -407,16 +407,16 @@ template <class C> struct Buff_EvalShared : LMTTrackController {
   }
 
   void Evaluate(Vector4A16 &out, size_t frame) const override {
-    data[frame].Evaluate(out);
+    data.at(frame).Evaluate(out);
   }
 
   void Interpolate(Vector4A16 &out, size_t frame, float delta,
                    const TrackMinMax &bounds) const override {
-    data[frame].Interpolate(out, data[frame + 1], delta, bounds);
+    data.at(frame).Interpolate(out, data[frame + 1], delta, bounds);
   }
 
   void Devaluate(const Vector4A16 &in, size_t frame) override {
-    data[frame].Devaluate(in);
+    data.at(frame).Devaluate(in);
   }
 
   void ToString(std::string &strBuff, size_t numIdents) const override;

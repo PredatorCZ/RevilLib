@@ -324,15 +324,15 @@ static const MtExtFixupStorage fixups{
 };
 
 static const TitleSupport suppWin{
-    ArcSupport{7, 15, false, false, true},
+    ArcSupport{.encrypted = true},
     ModSupport{0xD2},
     TexSupport{0x9D},
     LmtSupport{67},
 };
 
-static const TitleSupports supp{Platform::WinPC, suppWin};
+static const TitleSupports supp{Platform::Win32, suppWin};
 
 } // namespace MT_DDON
 
 static const MtExtensions extDDON{MT_DDON::extCommon, MT_DDON::fixups,
-                                  MT_DDON::supp, Platform::WinPC};
+                                  MT_DDON::supp, Platform::Win32};

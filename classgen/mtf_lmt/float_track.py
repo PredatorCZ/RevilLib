@@ -1,7 +1,7 @@
 import sys
 import os.path as pt
 sys.path.append(pt.dirname(pt.abspath(__file__)) + '/../')
-from base import *
+from lmt import *
 
 FloatFrame = NamedType('FloatFrame', 16, 4)
 FloatTrackComponentRemap = NamedType('FloatTrackComponentRemap', 1, 1)

@@ -189,7 +189,7 @@ static const TitleSupport suppPS3{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::PS3, suppPS3,   //
 };
 } // namespace MT_DD
@@ -197,5 +197,5 @@ static const MtExtensions extDD{
     MT_DD::extCommon,                //
     MT_DD::supp,                     //
     Platform::PS3,    MT_DD::extPS3, //
-    Platform::WinPC,  MT_DD::extWin,
+    Platform::Win32,  MT_DD::extWin,
 };

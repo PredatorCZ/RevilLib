@@ -134,13 +134,13 @@ static const TitleSupport suppWin{
 
 static const TitleSupports supp{
     Platform::N3DS, supp3DS,  //
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
 };
 } // namespace MT_RER
 
 static const MtExtensions extRER{
     MT_RER::extCommon,                   //
     MT_RER::fixups,                      //
-    Platform::WinPC,   MT_RER::extWinPC, //
+    Platform::Win32,   MT_RER::extWinPC, //
     Platform::N3DS,    MT_RER::ext3DS,   //
 };

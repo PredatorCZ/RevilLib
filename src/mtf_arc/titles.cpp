@@ -172,7 +172,7 @@ uint32 GetHash(std::string_view extension, std::string_view title,
   return foundSec->GetHash(extTranslated, platform);
 }
 
-PlatformFlags GetPlatformSupport(std::string_view title) {
+Platforms GetPlatformSupport(std::string_view title) {
   auto found = invertedExtensions.find(title);
 
   if (es::IsEnd(invertedExtensions, found)) {
@@ -180,10 +180,10 @@ PlatformFlags GetPlatformSupport(std::string_view title) {
   }
 
   auto foundSec = found->second;
-  PlatformFlags flags;
+  Platforms flags;
 
-  for (size_t i = 1; i < foundSec->NUMSLOTS; i++) {
-    flags.Set(Platform(i), foundSec->data[i]);
+  for (auto &[plat, supp] : foundSec->data) {
+    flags.emplace_back(plat);
   }
 
   return flags;

@@ -84,8 +84,8 @@ static const TitleSupport suppWin{
     LmtSupport{67},
 };
 
-static const TitleSupports supp{Platform::WinPC, suppWin};
+static const TitleSupports supp{Platform::Win32, suppWin};
 } // namespace MT_RE0
 
 static const MtExtensions extRE0{MT_RE0::extCommon, MT_RE0::supp,
-                                 Platform::WinPC};
+                                 Platform::Win32};

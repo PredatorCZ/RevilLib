@@ -150,7 +150,8 @@ void Buf_SingleVector3::AppendToString(std::stringstream &buffer) const {
   buffer << tRefl.GetReflectedValue(0);
 }
 
-std::string_view Buf_SingleVector3::RetreiveFromString(std::string_view buffer) {
+std::string_view
+Buf_SingleVector3::RetreiveFromString(std::string_view buffer) {
   buffer = es::SkipStartWhitespace(buffer, true);
 
   ReflectorWrap<Buf_SingleVector3> tRefl(this);
@@ -207,7 +208,8 @@ void Buf_LinearVector3::AppendToString(std::stringstream &buffer) const {
          << tRefl.GetReflectedValue(1) << " }";
 }
 
-std::string_view Buf_LinearVector3::RetreiveFromString(std::string_view buffer) {
+std::string_view
+Buf_LinearVector3::RetreiveFromString(std::string_view buffer) {
   buffer = SeekTo(buffer, '{');
   buffer = es::SkipStartWhitespace(buffer, true);
 
@@ -274,7 +276,8 @@ void Buf_HermiteVector3::AppendToString(std::stringstream &buffer) const {
   buffer << " }";
 }
 
-std::string_view Buf_HermiteVector3::RetreiveFromString(std::string_view buffer) {
+std::string_view
+Buf_HermiteVector3::RetreiveFromString(std::string_view buffer) {
   buffer = SeekTo(buffer, '{');
   buffer = es::SkipStartWhitespace(buffer, true);
 
@@ -922,7 +925,7 @@ void Buff_EvalShared<C>::ToString(std::string &strBuff,
     str << std::endl << idents[numIdents - 1];
   }
 
-  strBuff = str.str();
+  strBuff = std::move(str).str();
 }
 
 template <class C> void Buff_EvalShared<C>::FromString(std::string_view input) {

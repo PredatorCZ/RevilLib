@@ -16,7 +16,6 @@
 */
 
 #pragma once
-#include "datas/flags.hpp"
 #include "datas/supercore.hpp"
 #include "platform.hpp"
 #include "settings.hpp"
@@ -24,16 +23,16 @@
 #include <string_view>
 
 namespace revil {
-using PlatformFlags = es::Flags<Platform>;
-PlatformFlags RE_EXTERN GetPlatformSupport(std::string_view title);
+using Platforms = std::vector<Platform>;
+Platforms RE_EXTERN GetPlatformSupport(std::string_view title);
 const TitleSupport RE_EXTERN *GetTitleSupport(std::string_view title,
                                               Platform platform);
 std::string_view RE_EXTERN GetExtension(uint32 hash, std::string_view title = {},
-                                       Platform platform = Platform::WinPC);
+                                       Platform platform = Platform::Win32);
 std::string_view RE_EXTERN GetClassName(uint32 hash,
-                                       Platform platform = Platform::WinPC);
+                                       Platform platform = Platform::Win32);
 uint32 RE_EXTERN GetHash(std::string_view extension, std::string_view title,
-                         Platform platform = Platform::WinPC);
+                         Platform platform = Platform::Win32);
 using TitleCallback = std::function<void(std::string_view)>;
 void RE_EXTERN GetTitles(TitleCallback cb);
 

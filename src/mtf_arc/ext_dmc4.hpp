@@ -84,7 +84,7 @@ static const MtExtFixupStorage fixups{
 };
 
 static const TitleSupport suppWin{
-    ArcSupport{0x11, 0, false, true},
+    ArcSupport{.version = 0x11, .windowSize = 0, .xmemOnly = true},
     ModSupport{0x99},
     TexSupport{0x70},
     LmtSupport{49},
@@ -98,7 +98,7 @@ static const TitleSupport suppPS3{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::PS3, suppPS3,   //
 };
 } // namespace MT_DMC4
@@ -107,6 +107,6 @@ static const MtExtensions extDMC4{
     MT_DMC4::extCommon,                     //
     MT_DMC4::fixups,                        //
     MT_DMC4::supp,                          //
-    Platform::WinPC,    MT_DMC4::extWinPC,  //
+    Platform::Win32,    MT_DMC4::extWinPC,  //
     Platform::PS3,      MT_DMC4::extWinPS3, //
 };

@@ -101,8 +101,8 @@ static const TitleSupport suppWin{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
 };
 } // namespace MT_RE5
 static const MtExtensions extRE5{MT_RE5::extCommon, MT_RE5::fixups,
-                                 MT_RE5::supp, Platform::WinPC};
+                                 MT_RE5::supp, Platform::Win32};

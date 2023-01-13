@@ -146,7 +146,7 @@ static const TitleSupport suppPS3{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::PS3, suppPS3,   //
 };
 } // namespace MT_RE6
@@ -155,5 +155,5 @@ static const MtExtensions extRE6{
     MT_RE6::extCommon,                 //
     MT_RE6::supp,                      //
     Platform::PS3,     MT_RE6::extPS3, //
-    Platform::WinPC,   MT_RE6::extWin,
+    Platform::Win32,   MT_RE6::extWin,
 };

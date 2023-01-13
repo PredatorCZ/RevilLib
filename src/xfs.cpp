@@ -750,7 +750,7 @@ template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef_e rd) {
 void XFSImpl::Load(BinReaderRef_e rd) {
   using pt = Platform;
   XFSHeaderBase hdr;
-  pt platform = pt::WinPC;
+  pt platform = pt::Win32;
   rd.Push();
   rd.Read(hdr);
   rd.Pop();
@@ -763,7 +763,7 @@ void XFSImpl::Load(BinReaderRef_e rd) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
-  if (platform == pt::WinPC) {
+  if (platform == pt::Win32) {
     ::Load<uint32>(*this, rd);
   } else if (platform == pt::PS3) {
     ::Load<uint64>(*this, rd);
@@ -772,7 +772,7 @@ void XFSImpl::Load(BinReaderRef_e rd) {
   }
 
   for (auto &c : rtti) {
-    c.className = GetClassName(c.hash, Platform::WinPC);
+    c.className = GetClassName(c.hash, Platform::Win32);
 #ifdef XFS_DEBUG
     if (c.className.empty() && !rttiStore.count(c.hash)) {
       rttiStore[c.hash] = c;

@@ -1,7 +1,7 @@
 import sys
 import os.path as pt
 sys.path.append(pt.dirname(pt.abspath(__file__)) + '/../')
-from base import *
+from lmt import *
 
 TrackV1BufferTypes = NamedType('TrackV1BufferTypes', 1, 1)
 TrackType_er = NamedType('TrackType_er', 1, 1)

@@ -25,17 +25,12 @@ using MtExtensionsStorage = std::multimap<std::string_view, uint32>;
 using MtExtFixupStorage = std::map<uint32, std::string_view>;
 
 struct MtExtensions {
-  static constexpr size_t NUMSLOTS = 10;
-  const MtExtensionsStorage *data[NUMSLOTS]{};
+  std::map<Platform, const MtExtensionsStorage *> data;
   const MtExtFixupStorage *fixups = nullptr;
   const TitleSupports *support = nullptr;
 
-  static size_t Index(Platform platform) {
-    return static_cast<size_t>(platform);
-  }
-
   void Assign(Platform platform, const MtExtensionsStorage &storage) {
-    data[Index(platform)] = &storage;
+    data.emplace(platform, &storage);
   }
 
   template <class... type>
@@ -45,7 +40,9 @@ struct MtExtensions {
     Assign(std::forward<type>(types)...);
   }
 
-  void Assign(Platform platform) { data[Index(platform)] = data[0]; }
+  void Assign(Platform platform) {
+    data.emplace(platform, data.at(Platform::Auto));
+  }
 
   void Assign(const MtExtFixupStorage &storage) { fixups = &storage; }
 
@@ -64,24 +61,14 @@ struct MtExtensions {
   }
 
   template <class... type>
-  MtExtensions(const MtExtensionsStorage &base, type &&...types) : data{&base} {
+  MtExtensions(const MtExtensionsStorage &base, type &&...types)
+      : data{{Platform::Auto, &base}} {
     Assign(std::forward<type>(types)...);
   }
 
-  auto Get(Platform platform) const {
-    const size_t index = Index(platform);
-    if (index >= NUMSLOTS) {
-      throw std::out_of_range("Platform id out of range.");
-    }
-    auto item = data[index];
+  auto Get(Platform platform) const { return data.at(platform); }
 
-    if (!item) {
-      throw std::logic_error("Invalid platform.");
-    }
-    return item;
-  }
-
-  auto Base() const { return data[0]; }
+  auto Base() const { return data.at(Platform::Auto); }
 
   uint32 GetHash(std::string_view extension, Platform platform) const {
     auto found = Base()->find(extension);

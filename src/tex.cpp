@@ -469,7 +469,7 @@ TEX LoadTEXx56(BinReaderRef_e rd) {
   }
 
   rd.ReadContainer(main.buffer, bufferSize);
-  main.ConvertBuffer(Platform::WinPC);
+  main.ConvertBuffer(Platform::Win32);
 
   return main;
 }
@@ -653,7 +653,7 @@ void TEX::Load(BinReaderRef_e rd, Platform platform) {
   }
 
   if (platform == Platform::Auto) {
-    platform = rd.SwappedEndian() ? Platform::PS3 : Platform::WinPC;
+    platform = rd.SwappedEndian() ? Platform::PS3 : Platform::Win32;
   }
 
   auto found = texLoaders.find(header.versionV11);

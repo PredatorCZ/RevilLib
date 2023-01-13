@@ -93,7 +93,7 @@ static const TitleSupport suppPS3{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::PS3, suppPS3,   //
 };
 } // namespace MT_LP
@@ -102,5 +102,5 @@ static const MtExtensions extLP{
     MT_LP::extCommon,                //
     MT_LP::supp,                     //
     Platform::PS3,    MT_LP::extPS3, //
-    Platform::WinPC,  MT_LP::extWin,
+    Platform::Win32,  MT_LP::extWin,
 };

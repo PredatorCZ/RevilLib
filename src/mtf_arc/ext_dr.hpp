@@ -83,9 +83,9 @@ static const TitleSupport suppX360{
 };
 
 static const TitleSupports supp{
-    Platform::WinPC, suppWin, //
+    Platform::Win32, suppWin, //
     Platform::X360, suppX360, //
 };
 } // namespace MT_DR
 
-static const MtExtensions extDR{MT_DR::extCommon, MT_DR::supp, Platform::WinPC};
+static const MtExtensions extDR{MT_DR::extCommon, MT_DR::supp, Platform::Win32};

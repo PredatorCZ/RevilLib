@@ -17,45 +17,29 @@
 
 #pragma once
 #include "revil/platform.hpp"
+#include <map>
 #include <stdexcept>
 
 using namespace revil;
 
 struct TitleSupports {
-  static constexpr size_t NUMSLOTS = 10;
-  const TitleSupport *data[NUMSLOTS]{};
-
-  static size_t Index(Platform platform) {
-    return static_cast<size_t>(platform);
-  }
+  std::map<Platform, const TitleSupport *> data;
 
   void Assign(Platform platform, const TitleSupport &storage) {
-    data[Index(platform)] = &storage;
+    data.emplace(platform, &storage);
   }
 
   template <class... type>
-  void Assign(Platform platform, const TitleSupport &storage, type&&... types) {
+  void Assign(Platform platform, const TitleSupport &storage, type &&...types) {
     Assign(platform, storage);
     Assign(std::forward<type>(types)...);
   }
 
-  template <class... type>
-  TitleSupports(type&&... types) {
+  template <class... type> TitleSupports(type &&...types) {
     Assign(std::forward<type>(types)...);
   }
 
-  auto Get(Platform platform) const {
-    const size_t index = Index(platform);
-    if (index >= NUMSLOTS) {
-      throw std::out_of_range("Platform id out of range.");
-    }
-    auto item = data[index];
-
-    if (!item) {
-      throw std::logic_error("Invalid platform.");
-    }
-    return item;
-  }
+  auto Get(Platform platform) const { return data.at(platform); }
 };
 
 static constexpr ArcSupport ARC_PS3_GENERIC{8, 14, true};

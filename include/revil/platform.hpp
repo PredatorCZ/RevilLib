@@ -21,15 +21,24 @@
 namespace revil {
 enum class Platform {
   Auto,
-  WinPC,
-  PS3,
-  X360,
+  Win32,
   N3DS,
+  PS3 = 0100,
+  X360,
   CAFE,
-  NSW,
+  NSW = 0200,
   PS4,
   Android,
   IOS,
+  Win64,
+};
+
+struct PlatformInfo {
+  bool x64 = false;
+  bool bigEndian = false;
+
+  PlatformInfo(Platform p)
+      : x64(uint32(p) & 0200), bigEndian(uint32(p) & 0100) {}
 };
 
 struct ArcSupport {
