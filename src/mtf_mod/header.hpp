@@ -81,7 +81,7 @@ struct MODHeaderX170 : MODHeaderCommon {
   uint64 indices;
 };
 
-struct MODHeaderXD3 : MODHeaderCommon {
+struct MODHeaderXD2 : MODHeaderCommon {
   uint32 vertexBufferSize;
   uint32 numTextures;
   uint32 numGroups;
@@ -104,5 +104,22 @@ struct MODHeaderXD3X64 : MODHeaderCommon {
   uint64 meshes;
   uint64 vertexBuffer;
   uint64 indices;
+  uint64 dataEnd;
+};
+
+struct MODHeaderX05 : MODHeaderCommon {
+  uint32 vertexBufferSize;
+  uint32 numTextures;
+  uint32 numGroups;
+  uint32 numSkins;
+  uint64 bones;
+  uint64 groups;
+  uint64 materialNames;
+  uint64 meshes;
+  uint64 vertexBuffer;
+  uint64 indices;
+};
+
+struct MODHeaderX06 : MODHeaderX05 {
   uint64 dataEnd;
 };

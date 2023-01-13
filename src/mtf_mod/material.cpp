@@ -68,6 +68,12 @@ REFLECT(CLASS(MODMaterialHash), MEMBER(hash));
 
 REFLECT(CLASS(MODMaterialName), MEMBER(name));
 
+std::string MODMaterialX70::Name() const {
+  char buffer[0x10]{};
+  std::to_chars(std::begin(buffer), std::end(buffer), hash, 0x10);
+  return std::string("Material_") + buffer;
+}
+
 std::string MODMaterialHash::Name() const {
   char buffer[0x10]{};
   std::to_chars(std::begin(buffer), std::end(buffer), hash, 0x10);

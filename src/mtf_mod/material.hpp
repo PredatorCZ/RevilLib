@@ -64,6 +64,8 @@ struct MODMaterialX70 {
 
   uint32 hash;
   uint8 unk;
+
+  std::string Name() const;
 };
 
 struct MODMaterialX170 {

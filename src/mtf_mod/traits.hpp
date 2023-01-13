@@ -69,17 +69,32 @@ struct MODTraitsXD3 {
   using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialHash;
-  using mesh = MODMeshXD3;
-  using metadata = MODMetaDataV1;
+  using mesh = MODMeshXD2;
+  using metadata = MODMetaDataV2;
 };
 
-struct MODTraitsXD3PSN {
+struct MODTraitsXD2 {
   static constexpr size_t numSkinRemaps = 1;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 1;
   using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
-  using mesh = MODMeshXD3PSN;
+  using mesh = MODMeshXD2;
+  using metadata = MODMetaDataV2;
+};
+
+struct MODTraitsXD3PS4 : MODTraitsXD2 {
+  using mesh = MODMeshXD3PS4;
+};
+
+struct MODTraitsX06 {
+  static constexpr size_t numSkinRemaps = 32;
+  static constexpr size_t numRemaps = 0x100;
+  static constexpr size_t pathSize = 1;
+  using primitive = MODPrimitiveProxy;
+  using bone = MODBoneV1_5;
+  using material = MODMaterialName;
+  using mesh = MODMeshX06;
   using metadata = MODMetaDataV1;
 };

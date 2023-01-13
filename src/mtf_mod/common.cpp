@@ -16,6 +16,8 @@
 */
 
 #include "traits.hpp"
+#include <set>
+#include <span>
 
 using namespace revil;
 
@@ -74,7 +76,7 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
   retval.materialIndex = self.materialIndex;
   // retval.name = "group_" + std::to_string(self.unk);
 
-  const char *mainBuffer =
+  char *mainBuffer =
       main.buffer.data() + (self.vertexStart * self.buffer0Stride) +
       self.vertexStreamOffset + (self.indexValueOffset * self.buffer0Stride);
   auto curBuffer = mainBuffer;
@@ -122,7 +124,7 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
     norms.usage = uni::PrimitiveDescriptor::Usage_e::Normal;
     vtArray.descs.storage.emplace_back(norms);
 
-    if (!swap) {
+    if (!swap || laterFormat) {
       return;
     }
 
@@ -304,7 +306,11 @@ static const auto makeV1 = [](auto &self, auto &main, bool swap,
     }
   }
 
+  main.indices.storage.emplace_back(idArray);
+  main.vertices.storage.emplace_back(std::move(vtArray));
+
   retval.indexType = uni::Primitive::IndexType_e::Strip;
+  retval.name = std::to_string(self.unk);
   return retval;
 };
 
@@ -316,14 +322,14 @@ MODPrimitiveProxyV1 MODMeshX70::ReflectBE(revil::MODImpl &main_) {
 MODPrimitiveProxyV1 MODMeshX99::ReflectLE(revil::MODImpl &main_) {
   auto &main = static_cast<MODInner<MODTraitsX99LE> &>(main_);
   auto retval = makeV1(*this, main, false, true);
-  retval.skinIndex = boneRemapIndex;
+  retval.skinIndex = skinInfo.boneRemapIndex;
   return retval;
 }
 
 MODPrimitiveProxyV1 MODMeshX99::ReflectBE(revil::MODImpl &main_) {
   auto &main = static_cast<MODInner<MODTraitsX99BE> &>(main_);
   auto retval = makeV1(*this, main, true, true);
-  retval.skinIndex = boneRemapIndex;
+  retval.skinIndex = skinInfo.boneRemapIndex;
   return retval;
 }
 
@@ -366,6 +372,13 @@ static const MODVertexDescriptor VertexTangent = [] {
   retVal.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Madd;
   retVal.unpackData.min = Vector4A16{2};
   retVal.unpackData.max = Vector4A16{-1};
+  return retVal;
+}();
+
+static const MODVertexDescriptor TexCoordPhone = [] {
+  V retVal{F::UNORM, D::R16G16, U::TextureCoordiante};
+  retVal.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Mul;
+  retVal.unpackData.min = Vector4A16{64};
   return retVal;
 }();
 
@@ -969,108 +982,61 @@ std::map<uint32, MODVertices> formats{
                       VertexTangentSigned,
                       VertexColor),
     },
+    {
+        0xa8fab009, // P3s_unk1s_N4c_B4c_U2s_T4c
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined},
+                      VertexNormalSigned,
+                      VertexBoneIndices,
+                      TexCoordPhone,
+                      VertexTangentSigned),
+    },
+    {
+        0xAE62600B, // P3s_unk1s_N4c_T4c_B4c_W4c_U2h
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined},
+                      VertexNormalSigned,
+                      VertexTangentSigned,
+                      VertexBoneIndices,
+                      V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
+                      TexCoordPhone),
+    },
 };
 
 // clang-format on
 
-MODPrimitiveProxy MODMeshXD3::ReflectLE(revil::MODImpl &main_) {
-  auto &main = static_cast<MODInner<MODTraitsXD3> &>(main_);
+static const std::set<uint32> edgeModels{
+    0xdb7da014,
+};
+
+static const auto makeV2 = [](auto &self, revil::MODImpl &main, bool swap,
+                              auto &&fd) {
   MODPrimitiveProxy retval;
-  uint8 visibleLOD = data0.Get<MODMeshXC5::VisibleLOD>();
+  uint8 visibleLOD = self.data0.template Get<MODMeshXC5::VisibleLOD>();
   retval.lodIndex =
       convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
-  retval.materialIndex = data0.Get<MODMeshXC5::MaterialIndex>();
-  retval.indexType = uni::Primitive::IndexType_e::Triangle;
-  retval.indexIndex = main.indices.Size();
-  retval.vertexIndex = main.vertices.Size();
-  retval.skinIndex = 0;
-  retval.name = std::to_string(meshIndex) + ":" +
-                std::to_string(data0.Get<MODMeshXC5::GroupID>());
-  const size_t vertexStride = data1.Get<MODMeshXC5::VertexBufferStride>();
-
-  const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
-                           vertexStreamOffset +
-                           (indexValueOffset * vertexStride);
-
-  auto foundFormat = formats.find(vertexFormat);
-
-  if (!es::IsEnd(formats, foundFormat)) {
-    MODVertices tmpl = foundFormat->second;
-    tmpl.numVertices = numVertices;
-    for (auto &d : tmpl.descs.storage) {
-      d.buffer = mainBuffer + d.offset;
-      d.stride = vertexStride;
-
-      if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
-          skinBoneBegin) {
-        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
-        d.unpackData.min = Vector4A16(skinBoneBegin);
-      }
-    }
-    main.vertices.storage.emplace_back(std::move(tmpl));
-  } else {
-    main.vertices.storage.emplace_back();
-    // throw std::runtime_error("Unregistered vertex format: " +
-    //         std::to_string(vertexFormat));
-  }
-
-  uint16 *indexBuffer = reinterpret_cast<uint16 *>(
-      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
-
-  MODIndices idArray;
-  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
-  idArray.numIndices = numIndices;
-
-  for (size_t i = 0; i < numIndices; i++) {
-    if (indexBuffer[i] != 0xffff) {
-      indexBuffer[i] -= vertexStart;
-    }
-  }
-
-  main_.indices.storage.emplace_back(idArray);
-
-  return retval;
-}
-
-MODPrimitiveProxy MODMeshXD3PSN::ReflectLE(revil::MODImpl &main_) {
-  auto &main = static_cast<MODInner<MODTraitsXD3> &>(main_);
-  MODPrimitiveProxy retval;
-  uint8 visibleLOD = data0.Get<MODMeshXC5::VisibleLOD>();
-  retval.lodIndex =
-      convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
-  retval.materialIndex = data0.Get<MODMeshXC5::MaterialIndex>();
+  retval.materialIndex = self.data0.template Get<MODMeshXC5::MaterialIndex>();
   retval.indexType = uni::Primitive::IndexType_e::Strip;
   retval.indexIndex = main.indices.Size();
   retval.vertexIndex = main.vertices.Size();
-  retval.skinIndex = 0;
-  retval.name = std::to_string(meshIndex) + ":" +
-                std::to_string(data0.Get<MODMeshXC5::GroupID>());
-  const size_t vertexStride = data1.Get<MODMeshXC5::VertexBufferStride>();
+  retval.name = std::to_string(self.meshIndex) + ":" +
+                std::to_string(self.data0.template Get<MODMeshXC5::GroupID>());
+  const size_t vertexStride =
+      self.data1.template Get<MODMeshXC5::VertexBufferStride>();
 
-  const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
-                           vertexStreamOffset +
-                           (indexValueOffset * vertexStride);
+  char *mainBuffer = main.buffer.data() + (self.vertexStart * vertexStride) +
+                     self.vertexStreamOffset +
+                     (self.indexValueOffset * vertexStride);
 
-  auto foundFormat = formats.find(vertexFormat);
+  auto foundFormat = formats.find(self.vertexFormat);
 
   if (!es::IsEnd(formats, foundFormat)) {
     MODVertices tmpl = foundFormat->second;
-    tmpl.numVertices = numVertices;
+    tmpl.numVertices = self.numVertices;
     for (auto &d : tmpl.descs.storage) {
-      if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
-          skinBoneBegin) {
-        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
-        d.unpackData.min = Vector4A16(skinBoneBegin);
-      } else if (d.usage == uni::PrimitiveDescriptor::Usage_e::Normal) {
-        d.type = VertexNormalSigned.type;
-        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::None;
-      } else if (d.usage == uni::PrimitiveDescriptor::Usage_e::Tangent) {
-        d.type = VertexTangentSigned.type;
-        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::None;
-      }
-
       d.buffer = mainBuffer + d.offset;
       d.stride = vertexStride;
+      fd(d);
     }
     main.vertices.storage.emplace_back(std::move(tmpl));
   } else {
@@ -1080,172 +1046,163 @@ MODPrimitiveProxy MODMeshXD3PSN::ReflectLE(revil::MODImpl &main_) {
   }
 
   uint16 *indexBuffer = reinterpret_cast<uint16 *>(
-      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
+      &main.buffer[0] + main.vertexBufferSize + (self.indexStart * 2));
 
   MODIndices idArray;
   idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
-  idArray.numIndices = numIndices;
+  idArray.numIndices = self.numIndices;
 
-  for (size_t i = 0; i < numIndices; i++) {
-    if (indexBuffer[i] != 0xffff) {
-      indexBuffer[i] -= vertexStart;
+  if (swap) {
+    for (size_t i = 0; i < self.numIndices; i++) {
+      if (indexBuffer[i] != 0xffff) {
+        FByteswapper(indexBuffer[i]);
+        indexBuffer[i] -= self.vertexStart;
+      }
+    }
+  } else {
+    for (size_t i = 0; i < self.numIndices; i++) {
+      if (indexBuffer[i] != 0xffff) {
+        indexBuffer[i] -= self.vertexStart;
+      }
     }
   }
 
-  main_.indices.storage.emplace_back(idArray);
+  main.indices.storage.emplace_back(idArray);
 
   return retval;
+};
+
+static const auto swapBuffers = [](MODVertexDescriptor &d, size_t numVertices) {
+  char *curBuffer = d.buffer;
+
+  switch (d.type.compType) {
+  case uni::DataType::R16: {
+    for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
+      FByteswapper(*reinterpret_cast<uint16 *>(curBuffer));
+    }
+    break;
+  }
+
+  case uni::DataType::R16G16: {
+    for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
+      FByteswapper(*reinterpret_cast<USVector2 *>(curBuffer));
+    }
+    break;
+  }
+
+  case uni::DataType::R16G16B16: {
+    for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
+      FByteswapper(*reinterpret_cast<USVector *>(curBuffer));
+    }
+    break;
+  }
+
+  case uni::DataType::R32G32B32: {
+    for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
+      FByteswapper(*reinterpret_cast<Vector *>(curBuffer));
+    }
+    break;
+  }
+
+  default:
+    break;
+  }
+};
+
+MODPrimitiveProxy MODMeshXD2::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD3> &>(main_);
+  return makeV2(*this, main, false, [&](MODVertexDescriptor &d) {
+    if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
+        skinBoneBegin) {
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
+      d.unpackData.min = Vector4A16(skinBoneBegin);
+    }
+  });
 }
 
-MODPrimitiveProxy MODMeshXD3PSN::ReflectBE(revil::MODImpl &main_) {
-  auto &main = static_cast<MODInner<MODTraitsXD3PSN> &>(main_);
-  MODPrimitiveProxy retval;
-  uint8 visibleLOD = data0.Get<MODMeshXC5::VisibleLOD>();
-  retval.lodIndex =
-      convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
-  retval.materialIndex = data0.Get<MODMeshXC5::MaterialIndex>();
-  retval.indexType = uni::Primitive::IndexType_e::Strip;
-  retval.indexIndex = main.indices.Size();
-  retval.vertexIndex = main.vertices.Size();
-  retval.skinIndex = 0;
-  retval.name = std::to_string(meshIndex) + ":" +
-                std::to_string(data0.Get<MODMeshXC5::GroupID>());
-  const size_t vertexStride = data1.Get<MODMeshXC5::VertexBufferStride>();
-
-  char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
-                     vertexStreamOffset + (indexValueOffset * vertexStride);
-
-  auto foundFormat = formats.find(vertexFormat);
-
-  if (!es::IsEnd(formats, foundFormat)) {
-    MODVertices tmpl = foundFormat->second;
-    tmpl.numVertices = numVertices;
-    for (auto &d : tmpl.descs.storage) {
-      if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
-          skinBoneBegin) {
-        d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
-        d.unpackData.min = Vector4A16(skinBoneBegin);
-      }
-
-      d.buffer = mainBuffer + d.offset;
-      d.stride = vertexStride;
-
-      switch (d.type.compType) {
-      case uni::DataType::R16: {
-        auto curBuffer = mainBuffer + d.offset;
-
-        for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
-          FByteswapper(*reinterpret_cast<uint16 *>(curBuffer));
-        }
-        break;
-      }
-
-      case uni::DataType::R16G16: {
-        auto curBuffer = mainBuffer + d.offset;
-
-        for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
-          FByteswapper(*reinterpret_cast<USVector2 *>(curBuffer));
-        }
-        break;
-      }
-
-      case uni::DataType::R16G16B16: {
-        auto curBuffer = mainBuffer + d.offset;
-
-        for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
-          FByteswapper(*reinterpret_cast<USVector *>(curBuffer));
-        }
-        break;
-      }
-
-      case uni::DataType::R32G32B32: {
-        auto curBuffer = mainBuffer + d.offset;
-
-        for (size_t v = 0; v < numVertices; v++, curBuffer += d.stride) {
-          FByteswapper(*reinterpret_cast<Vector *>(curBuffer));
-        }
-        break;
-      }
-
-      default:
-        break;
-      }
+MODPrimitiveProxy MODMeshXD2::ReflectBE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD2> &>(main_);
+  return makeV2(*this, main, true, [&](MODVertexDescriptor &d) {
+    if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
+        skinBoneBegin < main.bones.size()) {
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
+      d.unpackData.min = Vector4A16(skinBoneBegin);
     }
-    main.vertices.storage.emplace_back(std::move(tmpl));
-  } else {
-    main.vertices.storage.emplace_back();
-    // throw std::runtime_error("Unregistered vertex format: " +
-    //         std::to_string(vertexFormat));
-  }
 
-  uint16 *indexBuffer = reinterpret_cast<uint16 *>(
-      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
+    swapBuffers(d, numVertices);
+  });
+}
 
-  MODIndices idArray;
-  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
-  idArray.numIndices = numIndices;
-
-  for (size_t i = 0; i < numIndices; i++) {
-    if (indexBuffer[i] != 0xffff) {
-      FByteswapper(indexBuffer[i]);
-      indexBuffer[i] -= vertexStart;
+MODPrimitiveProxy MODMeshXD3PS4::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD2> &>(main_);
+  return makeV2(*this, main, false, [&](MODVertexDescriptor &d) {
+    if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
+        skinBoneBegin) {
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
+      d.unpackData.min = Vector4A16(skinBoneBegin);
+    } else if (d.usage == uni::PrimitiveDescriptor::Usage_e::Normal) {
+      d.type = VertexNormalSigned.type;
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::None;
+    } else if (d.usage == uni::PrimitiveDescriptor::Usage_e::Tangent) {
+      d.type = VertexTangentSigned.type;
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::None;
     }
-  }
-
-  main_.indices.storage.emplace_back(idArray);
-
-  return retval;
+  });
 }
 
 MODPrimitiveProxy MODMeshXC5::ReflectLE(revil::MODImpl &main_) {
   auto &main = static_cast<MODInner<MODTraitsXC5> &>(main_);
-  MODPrimitiveProxy retval;
-  uint8 visibleLOD = data0.Get<VisibleLOD>();
-  retval.lodIndex =
-      convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
-  retval.materialIndex = data0.Get<MaterialIndex>();
-  retval.indexType = uni::Primitive::IndexType_e::Triangle;
-  retval.indexIndex = main.indices.Size();
-  retval.vertexIndex = main.vertices.Size();
-  retval.skinIndex = 0;
-  retval.name =
-      std::to_string(meshIndex) + ":" + std::to_string(data0.Get<GroupID>());
-  const size_t vertexStride = data1.Get<VertexBufferStride>();
+  return makeV2(*this, main, false, [&](MODVertexDescriptor &) {});
+}
 
-  const char *mainBuffer = main.buffer.data() + (vertexStart * vertexStride) +
-                           vertexStreamOffset +
-                           (indexValueOffset * vertexStride);
+MODPrimitiveProxy MODMeshX06::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD3> &>(main_);
+  auto retval = makeV2(*this, main, false, [&](MODVertexDescriptor &) {});
+  retval.skinIndex = skinBoneBegin;
 
-  auto foundFormat = formats.find(vertexFormat);
+  /*auto idxArray = main.Indices()->At(retval.indexIndex);
+  std::span<const uint16> indices(
+      reinterpret_cast<const uint16 *>(idxArray->RawIndexBuffer()), numIndices);
 
-  if (!es::IsEnd(formats, foundFormat)) {
-    MODVertices tmpl = foundFormat->second;
-    tmpl.numVertices = numVertices;
-    for (auto &d : tmpl.descs.storage) {
-      d.buffer = mainBuffer + d.offset;
-      d.stride = vertexStride;
+  bool removeTS = true;
+
+  for (auto d : vtArray.descs) {
+    switch (d->Usage()) {
+    case uni::PrimitiveDescriptor::Usage_e::Normal: {
+      uni::FormatCodec::fvec sampled;
+      d->Codec().Sample(sampled, d->RawBuffer(), numVertices, d->Stride());
+      for (auto i : indices) {
+        if (i == 0xffff) {
+          continue;
+        }
+
+        auto s = sampled.at(i);
+        if (s.Length() > 0.5f) {
+          removeTS = false;
+          //break;
+        } else {
+          printf("%i ", i);
+        }
+      }
+
+      break;
     }
-    main.vertices.storage.emplace_back(std::move(tmpl));
-  } else {
-    main.vertices.storage.emplace_back();
-    // throw std::runtime_error("Unregistered vertex format: " +
-    //         std::to_string(vertexFormat));
-  }
 
-  uint16 *indexBuffer = reinterpret_cast<uint16 *>(
-      &main.buffer[0] + main.vertexBufferSize + (indexStart * 2));
-
-  MODIndices idArray;
-  idArray.indexData = reinterpret_cast<const char *>(indexBuffer);
-  idArray.numIndices = numIndices;
-
-  for (size_t i = 0; i < numIndices; i++) {
-    if (indexBuffer[i] != 0xffff) {
-      indexBuffer[i] -= vertexStart;
+    default:
+      break;
     }
   }
 
-  main_.indices.storage.emplace_back(idArray);
+  if (removeTS) {
+    std::remove_if(vtArray.descs.storage.begin(), vtArray.descs.storage.end(),
+                   [](MODVertexDescriptor &d) {
+                     return d.usage == MODVertexDescriptor::Usage_e::Normal;
+                   });
+    std::remove_if(vtArray.descs.storage.begin(), vtArray.descs.storage.end(),
+                   [](MODVertexDescriptor &d) {
+                     return d.usage == MODVertexDescriptor::Usage_e::Tangent;
+                   });
+  }*/
 
   return retval;
 }

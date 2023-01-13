@@ -61,6 +61,10 @@ struct MODMetaDataV1 {
   uint8 boundaryJoint; //??
 };
 
+struct MODMetaDataV2 : MODMetaDataV1 {
+  uint32 numEnvelopes;
+};
+
 template <size_t numRemaps> struct MODSkinRemap {
   uint32 count;
   uint8 bones[numRemaps];
@@ -112,7 +116,7 @@ struct MODPrimitiveProxy : uni::Primitive {
 };
 
 struct MODPrimitiveProxyV1 : MODPrimitiveProxy {
-  const char *additionalBuffer;
+  char *additionalBuffer;
 };
 
 struct MODIndices : uni::IndexArray {
@@ -128,7 +132,7 @@ struct MODIndices : uni::IndexArray {
 };
 
 struct MODVertexDescriptor : uni::PrimitiveDescriptor {
-  const char *buffer;
+  char *buffer;
   size_t stride;
   size_t offset;
   size_t index = 0;

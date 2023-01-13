@@ -25,6 +25,13 @@ namespace revil {
 class MODImpl;
 }
 
+struct MODMeshSkinInfo {
+  uint8 numEnvelopes;
+  uint8 boneRemapIndex;
+  uint16 unk;
+  void Swap();
+};
+
 struct MODMeshX99 {
   uint16 unk;
   uint16 materialIndex;
@@ -44,8 +51,7 @@ struct MODMeshX99 {
   uint32 indexValueOffset;
   uint8 unk050[2];
   uint16 startIndex;
-  uint8 numEnvelopes;
-  uint8 boneRemapIndex;
+  MODMeshSkinInfo skinInfo;
   uint32 firstEnvelope; // assigned at runtime
 
   MODPrimitiveProxyV1 ReflectLE(revil::MODImpl &);
@@ -119,7 +125,7 @@ struct MODMeshXC5 {
   MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
 };
 
-struct MODMeshXD3 {
+struct MODMeshXD2 {
   int16 unk; // somehow essential, must be an odd number
   uint16 numVertices;
   MODMeshXC5::BitField00 data0;
@@ -138,12 +144,17 @@ struct MODMeshXD3 {
   uint32 unk02; // envelopes ptr?
 
   MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
 };
 
-struct MODMeshXD3PSN : MODMeshXD3 {
-  uint32 null[2];
-
+struct MODMeshXD3PS4 : MODMeshXD2 {
   MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  void NoSwap();
+};
+
+struct MODMeshX06 : MODMeshXD2 {
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  void NoSwap();
 };
