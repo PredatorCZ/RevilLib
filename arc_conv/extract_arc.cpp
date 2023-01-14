@@ -19,6 +19,7 @@
 #include "arc_conv.hpp"
 #include "datas/encrypt/blowfish.h"
 #include "datas/fileinfo.hpp"
+#include "datas/master_printer.hpp"
 #include "lzx.h"
 #include "mspack.h"
 #include "project.h"
@@ -127,32 +128,29 @@ REFLECT(CLASS(ARCExtract),
         MEMBER(platform, "p",
                ReflDesc{"Set platform for correct archive handling."}));
 
-es::string_view filters[]{
+std::string_view filters[]{
     ".arc$",
-    {},
 };
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::EXTRACT,
-    ArchiveLoadType::FILTERED,
-    ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
-                    "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+    .filteredLoad = true,
+    .header = ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
+                              "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+    .filters = filters,
 };
-
-AppInfo_s *AppInitModule() {
-  RegisterReflectedType<Platform>();
-  return &appInfo;
-}
 
 static const char DDONKey[] =
     "ABB(DF2I8[{Y-oS_CCMy(@<}qR}WYX11M)w[5V.~CbjwM5q<F1Iab+-";
 static BlowfishEncoder enc;
 static constexpr uint32 ARCCID = CompileFourCC("ARCC");
 
-auto ReadARCC(BinReaderRef rd) {
+AppInfo_s *AppInitModule() {
+  enc.SetKey(DDONKey);
+  return &appInfo;
+}
+
+auto ReadARCC(BinReaderRef_e rd) {
   ARC hdr;
   rd.Read(hdr);
   rd.Skip(-4);
@@ -164,7 +162,7 @@ auto ReadARCC(BinReaderRef rd) {
   ARCFiles files;
   rd.ReadContainer(files, hdr.numFiles);
 
-  auto buffer = reinterpret_cast<char *>(files.begin().operator->());
+  auto buffer = reinterpret_cast<char *>(files.data());
   size_t bufferSize = sizeof(ARCFile) * hdr.numFiles;
 
   enc.Decode(buffer, bufferSize);
@@ -172,38 +170,41 @@ auto ReadARCC(BinReaderRef rd) {
   return std::make_tuple(hdr, files);
 }
 
-void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
-  BinReaderRef rd(stream);
+void AppProcessFile(AppContext *ctx) {
   std::stringstream backup;
-  rd.Push();
   uint32 id;
-  rd.Read(id);
-  rd.Pop();
+  ctx->GetType(id);
   ARC hdr;
+  BinReaderRef_e rd(ctx->GetStream());
 
   if (id == SFHID) {
     backup = ProcessHFS(rd);
-    rd = BinReaderRef(backup);
+    rd = BinReaderRef_e(backup);
     rd.Push();
     rd.Read(id);
     rd.Pop();
   }
 
-  Platform platform = id == CRAID ? Platform::PS3 : Platform::WinPC;
+  Platform platform = id == CRAID ? Platform::PS3 : Platform::Win32;
 
   if (settings.platform != Platform::Auto) {
-    platform = settings.platform;
+    if (revil::PlatformInfo(platform).bigEndian !=
+        revil::PlatformInfo(settings.platform).bigEndian) {
+      printwarning("Platform setting mistmatch, using fallback platform: "
+                   << (id == CRAID ? "PS3" : "Win32"));
+    } else {
+      platform = settings.platform;
+    }
   }
 
-  AFileInfo fleInfo(ctx->ctx->workingFile);
-
   auto WriteFiles = [&](auto &files) {
-    if (ctx->RequiresFolders()) {
+    auto ectx = ctx->ExtractContext();
+    if (ectx->RequiresFolders()) {
       for (auto &f : files) {
-        ctx->AddFolderPath(f.fileName);
+        ectx->AddFolderPath(f.fileName);
       }
 
-      ctx->GenerateFolders();
+      ectx->GenerateFolders();
     }
 
     std::string inBuffer;
@@ -281,11 +282,11 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
         snprintf(buffer, sizeof(buffer), "%.8" PRIX32, f.typeHash);
         filePath += buffer;
       } else {
-        filePath += ext.to_string();
+        filePath.append(ext);
       }
 
-      ctx->NewFile(filePath);
-      ctx->SendData({outBuffer.data(), f.uncompressedSize});
+      ectx->NewFile(filePath);
+      ectx->SendData({outBuffer.data(), f.uncompressedSize});
     }
   };
 

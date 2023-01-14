@@ -16,15 +16,14 @@
 */
 
 #include "datas/binreader_stream.hpp"
-#include "datas/binwritter.hpp"
+#include "datas/binwritter_stream.hpp"
 #include "datas/fileinfo.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/tex.hpp"
 
-es::string_view filters[]{
+std::string_view filters[]{
     ".tex$",
-    {},
 };
 
 struct TEXConvert : ReflectorBase<TEXConvert>, Tex2DdsSettings {
@@ -43,26 +42,22 @@ REFLECT(CLASS(TEXConvert),
                    ReflDesc{"Set platform for correct texture handling."}));
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::CONVERT,
-    ArchiveLoadType::FILTERED,
-    MTFTEXConvert_DESC " v" MTFTEXConvert_VERSION ", " MTFTEXConvert_COPYRIGHT
-                       "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+    .filteredLoad = true,
+    .header = MTFTEXConvert_DESC " v" MTFTEXConvert_VERSION
+                                 ", " MTFTEXConvert_COPYRIGHT "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+    .filters = filters,
 };
 
 AppInfo_s *AppInitModule() {
-  RegisterReflectedType<Platform>();
   return &appInfo;
 }
 
-void AppProcessFile(std::istream &stream, AppContext *ctx) {
+void AppProcessFile(AppContext *ctx) {
   TEX tex;
-  tex.Load(stream, settings.platformOverride);
+  tex.Load(ctx->GetStream(), settings.platformOverride);
 
   AFileInfo fleInfo0(ctx->workingFile);
-  auto outFile = fleInfo0.GetFullPathNoExt().to_string() + ".dds";
-  BinWritter wr(outFile);
+  BinWritterRef wr(ctx->NewFile(fleInfo0.ChangeExtension(".dds")));
   tex.SaveAsDDS(wr, settings);
 }

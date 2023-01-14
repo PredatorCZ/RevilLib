@@ -17,15 +17,14 @@
 
 #include "datas/app_context.hpp"
 #include "datas/binreader_stream.hpp"
-#include "datas/binwritter.hpp"
+#include "datas/binwritter_stream.hpp"
 #include "datas/reflector.hpp"
 #include "datas/vectors_simd.hpp"
 #include "project.h"
 #include <vector>
 
-es::string_view filters[]{
+std::string_view filters[]{
     ".sngw$",
-    {},
 };
 
 static struct DDONSngw : ReflectorBase<DDONSngw> {
@@ -37,12 +36,11 @@ REFLECT(CLASS(DDONSngw),
                ReflDesc{"Switch between encrypt or decrypt only."}));
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::CONVERT,
-    ArchiveLoadType::FILTERED,
-    DDONSngw_DESC " v" DDONSngw_VERSION ", " DDONSngw_COPYRIGHT "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+    .filteredLoad = true,
+    .header = DDONSngw_DESC " v" DDONSngw_VERSION ", " DDONSngw_COPYRIGHT
+                            "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+    .filters = filters,
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -67,11 +65,10 @@ UIVector4A16 Encrypt(UIVector4A16 input) {
   return _mm_or_si128(ldata, rdata);
 }
 
-void AppProcessFile(std::istream &stream, AppContext *ctx) {
-  BinReaderRef rd(stream);
+void AppProcessFile(AppContext *ctx) {
+  BinReaderRef rd(ctx->GetStream());
   uint32 id;
   rd.Read(id);
-  rd.Seek(0);
   const size_t fileSize = rd.GetSize();
   const size_t numChunks = fileSize / sizeof(UIVector4A16);
   const size_t numRest = fileSize % sizeof(UIVector4A16);
@@ -80,13 +77,13 @@ void AppProcessFile(std::istream &stream, AppContext *ctx) {
 
   if (id == SNGWID && settings.encrypt) {
     rd.ReadContainer(store, numItems);
-    memset(store.data(), 0, sizeof(SNGWID));
+    memset(reinterpret_cast<void *>(store.data()), 0, sizeof(SNGWID));
 
     for (size_t i = 0; i < numItems; i++) {
       store[i] = Encrypt(store[i]);
     }
 
-    BinWritter wr(ctx->workingFile + ".enc");
+    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".enc")));
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   } else if (!settings.encrypt) {
     UIVector4A16 sample;
@@ -104,9 +101,8 @@ void AppProcessFile(std::istream &stream, AppContext *ctx) {
       store[i] = Decrypt(store[i]);
     }
 
-    memcpy(store.data(), &SNGWID, sizeof(SNGWID));
-
-    BinWritter wr(ctx->workingFile + ".dec");
+    memcpy(reinterpret_cast<void *>(store.data()), &SNGWID, sizeof(SNGWID));
+    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dec")));
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   }
 }

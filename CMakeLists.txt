@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 project(RevilToolset VERSION 1.0)
 
 if(NOT MSVC)
@@ -14,15 +14,9 @@ set(BUILD_SHARED_LIBS
 set(BUILD_STATIC_OBJECTS
     OFF
     CACHE BOOL "")
-set(PUGI_SHARED_LIBS
+set(NO_OBJECTS
     ON
-    CACHE BOOL "")
-set(PC_SHARED_LIB
-    ON
-    CACHE BOOL "")
-set(GLTF_SHARED_LIB
-    ON
-    CACHE BOOL "")
+    CACHE BOOL "" FORCE)
 
 add_subdirectory(${TPD_PATH}/RevilLib)
 add_subdirectory(${TPD_PATH}/RevilLib/3rd_party/PreCore/spike

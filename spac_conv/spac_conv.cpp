@@ -34,7 +34,7 @@ extern "C" {
 #include "vgmstream.h"
 }
 
-es::string_view filters[]{
+std::string_view filters[]{
     ".spc$",
     {},
 };
@@ -54,13 +54,11 @@ REFLECT(
             "Convert ADPCM WAV files into PCM WAV if SPAC contains then."}));
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::EXTRACT,
-    ArchiveLoadType::FILTERED,
-    SPACConvert_DESC " v" SPACConvert_VERSION ", " SPACConvert_COPYRIGHT
-                     "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+    .filteredLoad = true,
+    .header = SPACConvert_DESC " v" SPACConvert_VERSION
+                               ", " SPACConvert_COPYRIGHT "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+    .filters = filters,
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -171,8 +169,8 @@ struct ArchiveBuffer {
   std::vector<ArchiveFileEntry> entries;
 };
 
-void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
-  BinReaderRef rd(stream);
+void AppExtractFile(AppContext *ctx) {
+  BinReaderRef_e rd(ctx->GetStream());
 
   SPACHeader hdr;
   rd.Read(hdr);
@@ -220,9 +218,10 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
       WAVEGenericHeader gHdr(0);
 
       while (true) {
-        rd.Push();
-        rd.Read(gHdr);
-        rd.Pop();
+        BinReaderRef rdn(rd);
+        rdn.Push();
+        rdn.Read(gHdr);
+        rdn.Pop();
 
         if (gHdr.id == RIFFHeader::ID) {
           break;
@@ -289,10 +288,11 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
       !settings.convertWAV ? nullptr : VGMMemoryFile::Create();
 
   for (auto &e : msBuffer.entries) {
-    AFileInfo finf(ctx->ctx->workingFile);
+    AFileInfo &finf = ctx->workingFile;
     auto extension = GetReflectedEnum<SPACFileType>()
                          ->names[static_cast<size_t>(e.fileType)];
     std::string nakedName = (std::to_string(currentFile) + '.') + extension;
+    auto ectx = ctx->ExtractContext();
 
     if (settings.convertWAV &&
         (settings.forceWAV || e.fileType != SPACFileType::WAV)) {
@@ -323,22 +323,22 @@ void AppExtractFile(std::istream &stream, AppExtractContext *ctx) {
 
       close_vgmstream(cVGMStream);
 
-      auto filename = finf.GetFilename().to_string() + '_' +
+      auto filename = std::string(finf.GetFilename()) + '_' +
                       std::to_string(currentFile) + ".wav";
 
-      ctx->NewFile(filename);
+      ectx->NewFile(filename);
       std::stringstream str;
       BinWritterRef wr(str);
       wr.Write(hdr);
       wr.Write(fmt);
       wr.Write(wData);
-      auto strBuff = str.str();
-      ctx->SendData(strBuff);
-      ctx->SendData({reinterpret_cast<char *>(sampleBuffer), samplerSize});
+      auto strBuff = std::move(str).str();
+      ectx->SendData(strBuff);
+      ectx->SendData({reinterpret_cast<char *>(sampleBuffer), samplerSize});
     } else {
-      auto filename = finf.GetFilename().to_string() + '_' + nakedName;
-      ctx->NewFile(filename);
-      ctx->SendData({e.start, e.size});
+      auto filename = std::string(finf.GetFilename()) + '_' + nakedName;
+      ectx->NewFile(filename);
+      ectx->SendData({e.start, e.size});
     }
 
     currentFile++;

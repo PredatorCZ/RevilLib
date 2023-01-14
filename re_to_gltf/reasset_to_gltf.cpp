@@ -1,5 +1,5 @@
 #include "datas/binreader_stream.hpp"
-#include "datas/binwritter.hpp"
+#include "datas/binwritter_stream.hpp"
 #include "datas/fileinfo.hpp"
 #include "gltf.hpp"
 #include "project.h"
@@ -10,26 +10,17 @@
 #include "uni/skeleton.hpp"
 #include <nlohmann/json.hpp>
 
-static struct {
-  // Keys must be float according to standard
-  // However it works in blender
-  bool compressKeys = false;
-} debug;
-
-es::string_view filters[]{
+std::string_view filters[]{
     ".mot.43$",     ".mot.65$",      ".mot.78$",
     ".mot.458$",    ".motlist.60$",  ".motlist.85$",
     ".motlist.99$", ".motlist.486$", {},
 };
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::CONVERT,
-    ArchiveLoadType::FILTERED,
-    REAsset2GLTF_DESC " v" REAsset2GLTF_VERSION ", " REAsset2GLTF_COPYRIGHT
-                      "Lukas Cone",
-    nullptr,
-    filters,
+    .filteredLoad = true,
+    .header = REAsset2GLTF_DESC " v" REAsset2GLTF_VERSION
+                                ", " REAsset2GLTF_COPYRIGHT "Lukas Cone",
+    .filters = filters,
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -54,7 +45,8 @@ private:
   }
 
   size_t WriteTimes(const std::vector<float> &times, GLTFStream &stream);
-  size_t CompressKeys(const std::vector<float> &times, GLTFStream &stream);
+  size_t WriteTimes(const std::vector<float> &times,
+                    const std::vector<uint16> &indices, GLTFStream &stream);
 
   std::map<size_t, uint32> boneRemaps;
   std::map<int32, std::pair<std::vector<float>, uint32>> timesByFramerate;
@@ -62,84 +54,9 @@ private:
   int32 commonStream = -1;
 };
 
-template <class C, class I>
-std::vector<C> resample(const std::vector<I> &input, float fraction,
-                        uint32 maxbits) {
-  std::vector<C> output;
-  output.reserve(input.size());
-
-  for (auto &i : input) {
-    float frac = (i * fraction);
-
-    if (frac > 1.f) {
-      frac = 1.f;
-    }
-
-    output.push_back(frac * maxbits);
-  }
-
-  return output;
-}
-
-bool fltcmp(float f0, float f1, float epsilon = FLT_EPSILON) {
-  return (f1 <= f0 + epsilon) && (f1 >= f0 - epsilon);
-}
-
-size_t MOTGLTF::CompressKeys(const std::vector<float> &times,
-                             GLTFStream &stream) {
-  const float duration = times.back();
-  auto [keyAccess, keyIndex] = NewAccessor(stream, 2);
-  keyAccess.count = times.size();
-  keyAccess.type = gltf::Accessor::Type::Scalar;
-  keyAccess.normalized = true;
-  keyAccess.min.push_back(0);
-  keyAccess.max.push_back(duration);
-
-  auto writeData = [&, &keyAccess = keyAccess](auto &containter) {
-    using vtype =
-        typename std::remove_reference<decltype(containter)>::type::value_type;
-    size_t valueSize = sizeof(vtype);
-    stream.wr.WriteContainer(containter);
-    keyAccess.componentType = valueSize == 2
-                                  ? gltf::Accessor::ComponentType::UnsignedShort
-                                  : gltf::Accessor::ComponentType::UnsignedByte;
-  };
-
-  if (times.size() > 255) {
-    auto processed = resample<uint16>(times, 1.f, 0xffff);
-    writeData(processed);
-  } else {
-    auto processed = resample<uint8>(times, 1.f, 0xff);
-    const size_t numKeys = processed.size();
-
-    for (size_t i = 0; i < numKeys - 1; i++) {
-      uint8 first = processed[i];
-      uint8 &next = processed[i + 1];
-
-      if (first == next) {
-        next++;
-      }
-    }
-
-    if (fltcmp(processed.back() * (1.f / 0xff), duration, 0.0001f)) {
-      auto processed = resample<uint16>(times, 1.f, 0xffff);
-      writeData(processed);
-    } else {
-      writeData(processed);
-    }
-  }
-
-  return keyIndex;
-}
-
 size_t MOTGLTF::WriteTimes(const std::vector<float> &times,
                            GLTFStream &stream) {
   const float duration = times.back();
-
-  if (debug.compressKeys && duration <= 1.f) {
-    return CompressKeys(times, stream);
-  }
-
   auto [keyAccess, keyIndex] = NewAccessor(stream, 4);
   keyAccess.count = times.size();
   keyAccess.type = gltf::Accessor::Type::Scalar;
@@ -151,53 +68,22 @@ size_t MOTGLTF::WriteTimes(const std::vector<float> &times,
   return keyIndex;
 }
 
-struct StripResult {
-  std::vector<float> times;
-  std::vector<Vector4A16> values;
-};
+size_t MOTGLTF::WriteTimes(const std::vector<float> &times,
+                           const std::vector<uint16> &indices,
+                           GLTFStream &stream) {
+  const float duration = times[indices.back()];
+  auto [keyAccess, keyIndex] = NewAccessor(stream, 4);
+  keyAccess.count = indices.size();
+  keyAccess.type = gltf::Accessor::Type::Scalar;
+  keyAccess.componentType = gltf::Accessor::ComponentType::Float;
+  keyAccess.min.push_back(0);
+  keyAccess.max.push_back(duration);
 
-StripResult StripValues(std::vector<float> times, size_t upperLimit,
-                        const uni::MotionTrack *tck) {
-  StripResult retval;
-  retval.times.push_back(times[0]);
-  Vector4A16 low, middle;
-  tck->GetValue(low, times[0]);
-  retval.values.push_back(low);
-
-  if (upperLimit == 1) {
-    return retval;
+  for (auto i : indices) {
+    stream.wr.Write(times[i]);
   }
 
-  tck->GetValue(middle, times[1]);
-
-  if (middle == low) {
-    return retval;
-  }
-
-  retval.times.push_back(times[1]);
-  retval.values.push_back(middle);
-
-  for (size_t i = 2; i < upperLimit; i++) {
-    Vector4A16 high;
-    tck->GetValue(high, times[i]);
-
-    for (size_t p = 0; p < 4; p++) {
-      if (!fltcmp(low[p], high[p], 0.00001f)) {
-        auto ratio = (low[p] - middle[p]) / (low[p] - high[p]);
-        if (!fltcmp(ratio, 0.5f, 0.00001f)) {
-          retval.times.push_back(times[i]);
-          retval.values.push_back(high);
-          break;
-        }
-      }
-    }
-
-    auto tmp = middle;
-    middle = high;
-    low = tmp;
-  }
-
-  return retval;
+  return keyIndex;
 }
 
 void MOTGLTF::MakeKeyBuffers(const uni::MotionsConst &anims) {
@@ -228,9 +114,14 @@ void MOTGLTF::MakeKeyBuffers(const uni::MotionsConst &anims) {
     keyIndex = WriteTimes(times, CommonStream());
   }
 
-  auto [acc, _] = NewAccessor(CommonStream(), 4);
+  auto [acc, accId] = NewAccessor(CommonStream(), 4);
+  singleKeyAccess = accId;
   acc.count = 1;
-  acc.max.front() = 0;
+  acc.max.emplace_back();
+  acc.min.emplace_back();
+  acc.type = gltf::Accessor::Type::Scalar;
+  acc.componentType = gltf::Accessor::ComponentType::Float;
+  CommonStream().wr.Write(0.f);
 }
 
 void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
@@ -240,23 +131,15 @@ void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
   auto &times = timeData.first;
   uint32 keyAccessor = timeData.second;
   const float duration = anim->Duration();
-  size_t upperLimit = 0;
-
-  for (size_t i = 0; i < times.size(); i++) {
-    if (fltcmp(times[i], duration, 0.0001f)) {
-      upperLimit = i + 1;
-      break;
-    }
-  }
-
-  if (!upperLimit) {
-    throw std::logic_error("Floating point mismatch");
-  }
-
+  size_t upperLimit = gltfutils::FindTimeEndIndex(times, duration);
   auto &aniStream = NewStream(anim->Name() + "-data");
 
   for (auto a : *anim) {
-    auto stripResult = StripValues(times, upperLimit, a.get());
+    if (!boneRemaps.contains(a->BoneIndex())) {
+      continue;
+    }
+
+    auto stripResult = gltfutils::StripValues(times, upperLimit, a.get());
     const size_t numSamples = stripResult.values.size();
     size_t keyAccessIndex = keyAccessor;
     const bool isVec3 = a->TrackType() != uni::MotionTrack::Rotation;
@@ -264,12 +147,12 @@ void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
     if (numSamples == 1) {
       keyAccessIndex = singleKeyAccess;
     } else if (numSamples != upperLimit) {
-      keyAccessIndex = WriteTimes(stripResult.times, aniStream);
+      keyAccessIndex = WriteTimes(times, stripResult.timeIndices, aniStream);
     } else {
       keyAccessIndex = accessors.size();
       accessors.push_back(accessors[keyAccessor]);
       accessors.back().count = upperLimit;
-      accessors.back().max.front() = stripResult.times.back();
+      accessors.back().max.front() = times[stripResult.timeIndices.back()];
     }
 
     animation.channels.emplace_back();
@@ -298,7 +181,10 @@ void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
       transAccess.type = gltf::Accessor::Type::Vec4;
 
       for (auto &i : stripResult.values) {
-        aniStream.wr.Write(Vector4A16(i * 32767).Convert<int16>());
+        i *= 0x7fff;
+        i = Vector4A16(_mm_round_ps(i._data, _MM_ROUND_NEAREST));
+        SVector4 comp = i.Convert<int16>();
+        aniStream.wr.Write(comp);
       }
     }
 
@@ -321,12 +207,11 @@ void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
 }
 
 void MOTGLTF::ProcessSkeletons(const uni::SkeletonsConst &skels) {
-  skins.emplace_back();
-  auto &skin = skins.back();
+  gltfutils::BoneInfo infos;
 
   for (auto skel : *skels.get()) {
     for (auto b : *skel) {
-      if (boneRemaps.count(b->Index())) {
+      if (boneRemaps.contains(b->Index())) {
         continue;
       }
 
@@ -344,14 +229,20 @@ void MOTGLTF::ProcessSkeletons(const uni::SkeletonsConst &skels) {
       bone.GetExtensionsAndExtras()["extras"]["hash"] = hash;
 
       if (parent) {
-        nodes[boneRemaps.at(parent->Index())].children.push_back(index);
+        size_t parentIndex = boneRemaps.at(parent->Index());
+        nodes[parentIndex].children.push_back(index);
+        infos.Add(index, value.translation, parentIndex);
+      } else {
+        scenes.front().nodes.push_back(nodes.size());
+        infos.Add(index, value.translation);
       }
 
       boneRemaps[b->Index()] = index;
-      skin.joints.push_back(index);
       nodes.emplace_back(std::move(bone));
     }
   }
+
+  gltfutils::VisualizeSkeleton(*this, infos);
 }
 
 void MOTGLTF::Pipeline(const revil::REAsset &asset) {
@@ -365,14 +256,12 @@ void MOTGLTF::Pipeline(const revil::REAsset &asset) {
   }
 }
 
-void AppProcessFile(std::istream &stream, AppContext *ctx) {
+void AppProcessFile(AppContext *ctx) {
   revil::REAsset asset;
-  BinReaderRef rd(stream);
-  asset.Load(rd);
+  asset.Load(ctx->GetStream());
   MOTGLTF main;
   main.Pipeline(asset);
-  AFileInfo outPath(ctx->outFile);
-  BinWritter wr(outPath.GetFullPathNoExt().to_string() + ".glb");
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")));
 
-  main.FinishAndSave(wr, outPath.GetFolder());
+  main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

@@ -16,12 +16,13 @@
 */
 
 #pragma once
-#include "revil/platform.hpp"
 #include "datas/app_context.hpp"
 #include "datas/reflector.hpp"
+#include "revil/platform.hpp"
 
 using namespace revil;
 
-REFLECT(ENUMERATION(Platform), ENUM_MEMBER(Auto), ENUM_MEMBER(WinPC),
+REFLECT(ENUMERATION(Platform), ENUM_MEMBER(Auto), ENUM_MEMBER(Win32),
         ENUM_MEMBER(PS3), ENUM_MEMBER(X360), ENUM_MEMBER(N3DS),
-        ENUM_MEMBER(CAFE), ENUM_MEMBER(NSW));
+        ENUM_MEMBER(CAFE), ENUM_MEMBER(NSW), ENUM_MEMBER(PS4),
+        ENUM_MEMBER(Android), ENUM_MEMBER(IOS), ENUM_MEMBER(Win64));

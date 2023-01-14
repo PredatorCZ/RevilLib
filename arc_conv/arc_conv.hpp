@@ -27,7 +27,7 @@ void AppAdditionalHelp(AppHelpContext *ctx, size_t indent) {
   auto &str = ctx->GetStream("titles");
   str << std::setfill('\t') << std::setw(indent) << '\t'
       << "Valid titles: title ( supported platforms )" << std::endl;
-  revil::GetTitles([&](es::string_view titleName) {
+  revil::GetTitles([&](std::string_view titleName) {
     str << std::setw(indent + 1) << '\t' << titleName;
     PlatformFlags flags = GetPlatformSupport(titleName);
     bool added = false;

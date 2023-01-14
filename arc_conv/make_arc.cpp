@@ -40,16 +40,12 @@ REFLECT(CLASS(ARCMake),
                             "compressed. (Some platforms only)"}));
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::PACK,
-    ArchiveLoadType::ALL,
-    ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
-                    "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
+    .header = ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
+                              "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
 };
 
 AppInfo_s *AppInitModule() {
-  RegisterReflectedType<Platform>();
   return &appInfo;
 }
 
@@ -95,7 +91,7 @@ struct ArcMakeContext : AppPackContext {
         ts(revil::GetTitleSupport(settings.title, settings.platform)) {}
   ArcMakeContext &operator=(ArcMakeContext &&) = default;
 
-  void SendFile(es::string_view path, std::istream &stream) override {
+  void SendFile(std::string_view path, std::istream &stream) override {
     const size_t extPos = path.find_last_of('.');
 
     if (extPos == path.npos) {
@@ -261,7 +257,7 @@ struct ArcMakeContext : AppPackContext {
       cFile.uncompressedSize = f.uSize;
       cFile.compressedSize = f.cSize;
 
-      if (settings.platform == Platform::WinPC) {
+      if (settings.platform == Platform::Win32) {
         std::replace(std::begin(cFile.fileName), std::end(cFile.fileName), '/',
                      '\\');
       }
@@ -302,8 +298,6 @@ struct ArcMakeContext : AppPackContext {
   }
 };
 
-static thread_local ArcMakeContext archive;
-
 AppPackContext *AppNewArchive(const std::string &folder,
                               const AppPackStats &stats) {
   auto file = folder;
@@ -312,5 +306,5 @@ AppPackContext *AppNewArchive(const std::string &folder,
   }
 
   file += ".arc";
-  return &(archive = ArcMakeContext(file, stats));
+  return new ArcMakeContext(file, stats);
 }

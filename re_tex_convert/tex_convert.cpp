@@ -17,22 +17,21 @@
 
 #include "datas/app_context.hpp"
 #include "datas/binreader_stream.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/fileinfo.hpp"
+#include "datas/binwritter_stream.hpp"
+#include "datas/except.hpp"
 #include "datas/master_printer.hpp"
 #include "datas/reflector.hpp"
 #include "formats/DDS.hpp"
 #include "project.h"
 #include <algorithm>
 
-es::string_view filters[]{
+std::string_view filters[]{
     ".tex$",
-    {},
 };
 
 struct TEXConvert : ReflectorBase<TEXConvert> {
   bool legacyDDS = true;
-  bool forceLegacyDDS = true;
+  bool forceLegacyDDS = false;
   bool largestMipmap = true;
 } settings;
 
@@ -49,14 +48,12 @@ REFLECT(CLASS(TEXConvert),
         MEMBERNAME(largestMipmap, "largest-mipmap-only", "m",
                    ReflDesc{"Will try to extract only highest mipmap.", ""}), );
 
-static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::CONVERT,
-    ArchiveLoadType::FILTERED,
-    RETEXConvert_DESC " v" RETEXConvert_VERSION ", " RETEXConvert_COPYRIGHT
-                      "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
-    filters,
+AppInfo_s appInfo{
+    .filteredLoad = true,
+    .header = RETEXConvert_DESC " v" RETEXConvert_VERSION
+                                ", " RETEXConvert_COPYRIGHT "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+    .filters = filters,
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -95,26 +92,19 @@ struct RETEX {
   }
 };
 
-void AppProcessFile(std::istream &stream, AppContext *ctx) {
-  BinReaderRef rd(stream);
-
+void AppProcessFile(AppContext *ctx) {
   uint32 id;
-  rd.Read(id);
-  rd.Seek(0);
+  ctx->GetType(id);
 
   if (id != RETEX::ID) {
     throw es::InvalidHeaderError(id);
   }
 
-  const size_t fleSize = rd.GetSize();
-  std::string buffer;
-  rd.ReadContainer(buffer, fleSize);
+  std::string buffer = ctx->GetBuffer();
   RETEX *tex = reinterpret_cast<RETEX *>(&buffer[0]);
   tex->Fixup();
 
-  AFileInfo fleInfo0(ctx->workingFile);
-  auto outFile = fleInfo0.GetFullPathNoExt().to_string() + ".dds";
-  BinWritter wr(outFile);
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dds")));
 
   DDS ddtex = {};
   ddtex = DDSFormat_DX10;

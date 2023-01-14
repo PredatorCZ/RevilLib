@@ -33,12 +33,9 @@ REFLECT(CLASS(XFS2XML),
         MEMBERNAME(saveData, "save-data", "d", ReflDesc{"Save data."}), );
 
 static AppInfo_s appInfo{
-    AppInfo_s::CONTEXT_VERSION,
-    AppMode_e::CONVERT,
-    ArchiveLoadType::ALL,
-    XFSConvert_DESC " v" XFSConvert_VERSION ", " XFSConvert_COPYRIGHT
-                    "Lukas Cone",
-    reinterpret_cast<ReflectorFriend *>(&settings),
+    .header = XFSConvert_DESC " v" XFSConvert_VERSION ", " XFSConvert_COPYRIGHT
+                              "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -46,8 +43,10 @@ AppInfo_s *AppInitModule() { return &appInfo; }
 void AppProcessFile(std::istream &stream, AppContext *ctx) {
   XFS xfs;
   xfs.Load(stream);
-  auto outFile = ctx->workingFile + ".xml";
+
+  auto &outStr = ctx->NewFile(ctx->workingFile.ChangeExtension(".xml"));
+
   pugi::xml_document doc;
   xfs.ToXML(doc);
-  XMLToFile(outFile, doc);
+  doc.save(outStr);
 }
