@@ -1,0 +1,50 @@
+name: release nightly
+
+on:
+  workflow_run:
+    workflows:
+      - build
+    types:
+      - completed
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+    - name: Download artifacts
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        workflow: build.yaml
+        branch: ${{ github.event.release.target_commitish }}
+        workflow_conclusion: success
+
+    - name: Move artifacts to workspace
+      run: |
+        for file in *; do
+          if [ -d $file ]; then
+              pushd $file
+              if [[ $file == *-win64 ]]; then
+                7z a ../$file.7z .
+              else
+                mv *.tar.xz ..
+              fi
+              popd
+          fi
+        done
+
+    - name: Release them
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.xz
+          *.7z
+        tag_name: nightly
+
+    - uses: actions/checkout@v2
+    - name: Redirect nightly tag
+      run: |
+        git config --global user.email "nightly-bot"
+        git config --global user.name "nightly-bot"
+        git tag nightly --message "" --force
+        git push origin nightly --force

@@ -21,6 +21,7 @@
 #include "datas/master_printer.hpp"
 #include "datas/stat.hpp"
 #include "project.h"
+#include <algorithm>
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -45,9 +46,7 @@ static AppInfo_s appInfo{
     .settings = reinterpret_cast<ReflectorFriend *>(&settings),
 };
 
-AppInfo_s *AppInitModule() {
-  return &appInfo;
-}
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 struct AFile {
   std::string path;
