@@ -476,7 +476,7 @@ void AppProcessFile(AppContext *ctx) {
   mod.Load(ctx->GetStream());
   MODGLTF main;
   main.Pipeline(mod);
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")));
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
 
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

@@ -15,7 +15,6 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/aabb.hpp"
 #include "datas/binreader_stream.hpp"
 #include "datas/binwritter_stream.hpp"
 #include "datas/fileinfo.hpp"
@@ -25,6 +24,14 @@
 #include "re_common.hpp"
 #include "revil/lmt.hpp"
 #include <set>
+
+#if 0
+#include "nlohmann/json.hpp"
+using ReportType = nlohmann::json;
+#define USE_REPORT
+#else
+using ReportType = uint64;
+#endif
 
 std::string_view filters[]{
     ".lmt$",
@@ -49,7 +56,6 @@ REFLECT(CLASS(LMT2GLTF),
 
 static AppInfo_s appInfo{
     .filteredLoad = true,
-    .multithreaded = false,
     .header = LMT2GLTF_DESC " v" LMT2GLTF_VERSION ", " LMT2GLTF_COPYRIGHT
                             "Lukas Cone",
     .settings = reinterpret_cast<ReflectorFriend *>(&settings),
@@ -89,6 +95,9 @@ struct AnimNode {
   uint8 boneType = 0;
   Vector4A16 refRotation;
   Vector4A16 refPosition;
+  std::string_view positionCompression;
+  std::string_view rotationCompression;
+  std::string_view scaleCompression;
 };
 
 struct AnimEngine {
@@ -417,7 +426,7 @@ gltfutils::StripResult StripValues(std::span<Vector4A16> tck) {
     for (size_t p = 0; p < 3; p++) {
       if (!gltfutils::fltcmp(low[p], high[p], 0.0001f)) {
         auto ratio = (low[p] - middle[p]) / (low[p] - high[p]);
-        if (!gltfutils::fltcmp(ratio, 0.5f, 0.0001f)) {
+        if (!gltfutils::fltcmp(ratio, 0.5f, 0.005f)) {
           retval.timeIndices.push_back(i - 1);
           retval.values.push_back(middle);
           break;
@@ -462,7 +471,7 @@ StripResult StripValues(std::span<SVector4> tck) {
     for (size_t p = 0; p < 3; p++) {
       if (!gltfutils::fltcmp(low[p], high[p], 0.0001f)) {
         auto ratio = (low[p] - middle[p]) / (low[p] - high[p]);
-        if (!gltfutils::fltcmp(ratio, 0.5f, 0.0001f)) {
+        if (!gltfutils::fltcmp(ratio, 0.5f, 0.005f)) {
           retval.timeIndices.push_back(i - 1);
           retval.values.push_back(Pack(middle));
           break;
@@ -484,10 +493,10 @@ StripResult StripValues(std::span<SVector4> tck) {
 }
 
 void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
-              std::span<float> times, uint32 loopFrame) {
+              std::span<float> times, uint32 loopFrame, ReportType &report) {
 
   auto TryStripWrite = [&](auto valuesSpan, size_t keys, GLTFStream &stream,
-                           gltf::Accessor &acc) {
+                           size_t accId) {
     auto strip = StripValues(valuesSpan);
     const float stripRatio =
         float(strip.timeIndices.size()) / float(valuesSpan.size());
@@ -508,7 +517,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
       keyAccess.min.push_back(0);
       keyAccess.max.push_back(times[strip.timeIndices.back()]);
       keyAccess.count = strip.timeIndices.size();
-      acc.count = strip.timeIndices.size();
+      main.accessors.at(accId).count = strip.timeIndices.size();
 
       for (auto t : strip.timeIndices) {
         stream.wr.Write(times[t]);
@@ -533,18 +542,28 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
     gltf::Animation animation;
     animation.name = std::move(animName);
 
+#ifdef USE_REPORT
+    auto [animReport, _] = report.emplace(animation.name, ReportType::object());
+    auto [channels, _1] = animReport->emplace("channels", ReportType::object());
+#endif
+
     for (auto &[_, node] : eng.nodes) {
       if (node.glNodeIndex < 0) {
         continue;
       }
-
+#ifdef USE_REPORT
+      auto [channel, _2] = channels->emplace(
+          std::to_string(animation.channels.size()), nlohmann::json::object());
+#endif
       if (!node.positions.empty()) {
         animation.channels.emplace_back();
         auto &curChannel = animation.channels.back();
         curChannel.sampler = animation.samplers.size();
         curChannel.target.node = node.glNodeIndex;
         curChannel.target.path = "translation";
-
+#ifdef USE_REPORT
+        *channel = node.positionCompression;
+#endif
         animation.samplers.emplace_back();
         auto &sampler = animation.samplers.back();
 
@@ -558,7 +577,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
         std::span<Vector4A16> positionsSpan(node.positions);
         positionsSpan = positionsSpan.subspan(start, size);
 
-        sampler.input = TryStripWrite(positionsSpan, keys, stream, transAccess);
+        sampler.input = TryStripWrite(positionsSpan, keys, stream, transIndex);
       }
 
       if (!node.rotations.empty()) {
@@ -567,7 +586,9 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
         curChannel.sampler = animation.samplers.size();
         curChannel.target.node = node.glNodeIndex;
         curChannel.target.path = "rotation";
-
+#ifdef USE_REPORT
+        *channel = node.rotationCompression;
+#endif
         animation.samplers.emplace_back();
         auto &sampler = animation.samplers.back();
 
@@ -581,7 +602,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
 
         std::span<SVector4> rotationsSpan(node.rotations);
         rotationsSpan = rotationsSpan.subspan(start, size);
-        sampler.input = TryStripWrite(rotationsSpan, keys, stream, transAccess);
+        sampler.input = TryStripWrite(rotationsSpan, keys, stream, transIndex);
       }
 
       if (!node.scales.empty()) {
@@ -592,7 +613,9 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
                                      ? node.glNodeIndex
                                      : node.glScaleNodeIndex;
         curChannel.target.path = "scale";
-
+#ifdef USE_REPORT
+        *channel = node.scaleCompression;
+#endif
         animation.samplers.emplace_back();
         auto &sampler = animation.samplers.back();
 
@@ -606,7 +629,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
         std::span<Vector4A16> scalesSpan(node.scales);
         scalesSpan = scalesSpan.subspan(start, size);
 
-        sampler.input = TryStripWrite(scalesSpan, keys, stream, transAccess);
+        sampler.input = TryStripWrite(scalesSpan, keys, stream, transIndex);
       }
     }
 
@@ -692,7 +715,8 @@ enum LPTypes {
   Vs00LeftArmChain,  // Vs07, Vs41, Hm
 };
 
-void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
+void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
+           ReportType &report) {
   int32 sampleRate = 60;
   const float sampleFrac = 1.f / sampleRate;
 
@@ -711,9 +735,10 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
     engine.numSamples = times.size();
 
     for (auto t : *m) {
-      uint16 index(t->BoneIndex());
+      size_t index = t->BoneIndex();
 
       if (!engine.nodes.contains(index)) {
+        printline("Missing bone: " << index);
         continue;
       }
 
@@ -728,6 +753,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
       switch (t->TrackType()) {
       case uni::MotionTrack::Position:
         aNode.positions.reserve(times.size());
+        aNode.positionCompression = tm->CompressionType();
 
         for (auto k : times) {
           Vector4A16 value;
@@ -738,6 +764,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
         break;
       case uni::MotionTrack::Rotation:
         aNode.rotations.reserve(times.size());
+        aNode.rotationCompression = tm->CompressionType();
 
         for (auto k : times) {
           Vector4A16 value;
@@ -747,6 +774,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
         break;
       case uni::MotionTrack::Scale:
         aNode.scales.reserve(times.size());
+        aNode.scaleCompression = tm->CompressionType();
 
         for (auto k : times) {
           Vector4A16 value;
@@ -777,7 +805,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
       return 0;
     }();
 
-    DumpAnim(engine, main, animName, times, loopFrame);
+    DumpAnim(engine, main, animName, times, loopFrame, report);
 
     motionIndex++;
   }
@@ -786,6 +814,11 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name) {
 void AppProcessFile(AppContext *ctx) {
   LMTGLTF main(gltf::LoadFromBinary(ctx->GetStream(), ""));
   auto &lmts = ctx->SupplementalFiles();
+#ifdef USE_REPORT
+  nlohmann::json report(nlohmann::json::object());
+#else
+  ReportType report = 0;
+#endif
 
   for (auto &lmtFile : lmts) {
     auto lmtStream = ctx->RequestFile(lmtFile);
@@ -793,10 +826,44 @@ void AppProcessFile(AppContext *ctx) {
     lmt.Load(*lmtStream.Get());
     DoLmt(main, lmt,
           lmts.size() > 1 ? std::string(AFileInfo(lmtFile).GetFilename())
-                          : "Motion");
+                          : "Motion",
+          report);
   }
 
+#ifdef USE_REPORT
+  std::set<uint32> animData;
+
+  for (auto &a : main.animations) {
+    for (auto &s : a.samplers) {
+      animData.emplace(s.output);
+    }
+  }
+
+  size_t v3Size = 0;
+  size_t v4Size = 0;
+
+  for (auto f : animData) {
+    auto &acc = main.accessors.at(f);
+
+    if (acc.type == gltf::Accessor::Type::Vec4) {
+      v4Size += acc.count * 8;
+    } else {
+      v3Size += acc.count * 12;
+    }
+  }
+
+  printline("Rotations buffer size: " << v4Size);
+  printline("Translations/Scales buffer size: " << v3Size);
+
+  {
+    BinWritterRef wrj(ctx->NewFile(
+        std::string(ctx->workingFile.GetFullPathNoExt()) + "_report.json").str);
+
+    wrj.BaseStream() << report;
+  }
+#endif
+
   BinWritterRef wr(ctx->NewFile(
-      std::string(ctx->workingFile.GetFullPathNoExt()) + "_out.glb"));
+      std::string(ctx->workingFile.GetFullPathNoExt()) + "_out.glb").str);
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

@@ -1,14 +1,14 @@
-cmake_minimum_required(VERSION 3.16)
-
-project(XFSConvert VERSION 1.0)
+project(XFSConvert)
 
 build_target(
   NAME
   xfs_to_xml
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
-  xfs_to_xml
+  xfs_to_xml.cpp
   LINKS
   revil
   AUTHOR

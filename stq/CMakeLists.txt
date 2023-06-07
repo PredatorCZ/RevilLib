@@ -1,20 +1,19 @@
-project(REAsset2GLTF)
+project(STQ2JSON)
 
 build_target(
   NAME
-  reasset_to_gltf
+  stq_to_json
   TYPE
   ESMODULE
   VERSION
   1
   SOURCES
-  reasset_to_gltf.cpp
+  stq_to_json.cpp
   LINKS
-  revil
-  gltf
+  precore
   AUTHOR
   "Lukas Cone"
   DESCR
-  "RE Assets to GLTF"
+  "Convert MTF Sound Stream Request to JSON"
   START_YEAR
-  2021)
+  2022)

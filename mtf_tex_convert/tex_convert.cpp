@@ -58,6 +58,6 @@ void AppProcessFile(AppContext *ctx) {
   tex.Load(ctx->GetStream(), settings.platformOverride);
 
   AFileInfo fleInfo0(ctx->workingFile);
-  BinWritterRef wr(ctx->NewFile(fleInfo0.ChangeExtension(".dds")));
+  BinWritterRef wr(ctx->NewFile(fleInfo0.ChangeExtension(".dds")).str);
   tex.SaveAsDDS(wr, settings);
 }

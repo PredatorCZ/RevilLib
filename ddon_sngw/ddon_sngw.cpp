@@ -83,7 +83,7 @@ void AppProcessFile(AppContext *ctx) {
       store[i] = Encrypt(store[i]);
     }
 
-    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".enc")));
+    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".enc")).str);
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   } else if (!settings.encrypt) {
     UIVector4A16 sample;
@@ -102,7 +102,7 @@ void AppProcessFile(AppContext *ctx) {
     }
 
     memcpy(reinterpret_cast<void *>(store.data()), &SNGWID, sizeof(SNGWID));
-    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dec")));
+    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dec")).str);
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   }
 }

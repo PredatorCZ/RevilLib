@@ -40,11 +40,16 @@ static AppInfo_s appInfo{
 
 AppInfo_s *AppInitModule() { return &appInfo; }
 
-void AppProcessFile(std::istream &stream, AppContext *ctx) {
+void AppProcessFile(AppContext *ctx) {
   XFS xfs;
-  xfs.Load(stream);
 
-  auto &outStr = ctx->NewFile(ctx->workingFile.ChangeExtension(".xml"));
+  try {
+    xfs.Load(ctx->GetStream());
+  } catch (const es::InvalidHeaderError &r) {
+    return;
+  }
+
+  auto &outStr = ctx->NewFile(ctx->workingFile.ChangeExtension(".xml")).str;
 
   pugi::xml_document doc;
   xfs.ToXML(doc);

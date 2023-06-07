@@ -104,7 +104,7 @@ void AppProcessFile(AppContext *ctx) {
   RETEX *tex = reinterpret_cast<RETEX *>(&buffer[0]);
   tex->Fixup();
 
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dds")));
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dds")).str);
 
   DDS ddtex = {};
   ddtex = DDSFormat_DX10;

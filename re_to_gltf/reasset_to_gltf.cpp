@@ -261,7 +261,7 @@ void AppProcessFile(AppContext *ctx) {
   asset.Load(ctx->GetStream());
   MOTGLTF main;
   main.Pipeline(asset);
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")));
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
 
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

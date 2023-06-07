@@ -1,10 +1,12 @@
-project(OBBExtract VERSION 1.0)
+project(OBBExtract)
 
 build_target(
   NAME
   obb_extract
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   obb_extract.cpp
   LINKS

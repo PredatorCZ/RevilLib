@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.12)
-
-project(DDONSngw VERSION 1.0)
+project(DDONSngw)
 
 build_target(
   NAME
   ddon_sngw
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   ddon_sngw.cpp
   LINKS

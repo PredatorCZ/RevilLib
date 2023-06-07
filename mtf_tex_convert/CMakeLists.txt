@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.3)
-
-project(MTFTEXConvert VERSION 1.0)
+project(MTFTEXConvert)
 
 build_target(
   NAME
   mtf_tex_to_dds
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   tex_convert.cpp
   LINKS

@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
-
-project(ARCConvert VERSION 1.0)
+project(ARCConvert)
 
 file(GLOB ZLIB_SOURCES "${TPD_PATH}/zlib/*.c")
 
@@ -12,9 +10,11 @@ build_target(
   extract_arc
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   extract_arc.cpp
-  ${TPD_PATH}/mspack/lzxd
+  ${TPD_PATH}/mspack/lzxd.c
   LINKS
   revil
   zlib-objects
@@ -34,6 +34,8 @@ build_target(
   make_arc
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   make_arc.cpp
   LINKS

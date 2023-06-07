@@ -29,18 +29,21 @@ void AppAdditionalHelp(AppHelpContext *ctx, size_t indent) {
       << "Valid titles: title ( supported platforms )" << std::endl;
   revil::GetTitles([&](std::string_view titleName) {
     str << std::setw(indent + 1) << '\t' << titleName;
-    PlatformFlags flags = GetPlatformSupport(titleName);
+    Platforms plats = GetPlatformSupport(titleName);
     bool added = false;
     auto ref = GetReflectedEnum<Platform>();
 
-    for (size_t f = 1; f < ref->numMembers; f++) {
-      if (flags[Platform(f)]) {
-        if (!added) {
-          str << " (" << ref->names[f];
-          added = true;
-          continue;
+    for (auto p : plats) {
+      for (size_t f = 1; f < ref->numMembers; f++) {
+        if (ref->values[f] == uint64(p)) {
+          if (!added) {
+            str << " (" << ref->names[f];
+            added = true;
+            continue;
+          }
+          str << ", " << ref->names[f];
+          break;
         }
-        str << ", " << ref->names[f];
       }
     }
 

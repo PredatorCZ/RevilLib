@@ -1,13 +1,15 @@
-project(UDASExtract VERSION 1.0)
+project(UDASExtract)
 
 build_target(
   NAME
   udas_extract
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   udas_extract.cpp
-  ${TPD_PATH}/mspack/lzxd
+  ${TPD_PATH}/mspack/lzxd.c
   INCLUDES
   ${TPD_PATH}/mspack
   LINKS

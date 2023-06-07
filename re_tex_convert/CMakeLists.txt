@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.3)
-
-project(RETEXConvert VERSION 1.0)
+project(RETEXConvert)
 
 build_target(
   NAME
   re_tex_to_dds
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   tex_convert.cpp
   LINKS
