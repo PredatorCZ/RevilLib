@@ -25,17 +25,22 @@ template <> void ProcessClass(REMotlist85 &item, ProcessFlags flags) {
     return;
   }
 
-  for (uint32 m = 0; m < item.numMotions; m++) {
-    item.motions[m].Fixup(flags.base, *flags.ptrStore);
+  auto motions = item.motions.operator->();
 
-    REAssetBase *cMotBase = item.motions[m];
+  for (uint32 m = 0; m < item.numMotions; m++) {
+    motions[m].Fixup(flags.base, *flags.ptrStore);
+
+    REAssetBase *cMotBase = motions[m];
 
     if (!cMotBase || cMotBase->assetID != REMotion65Asset::VERSION ||
         cMotBase->assetFourCC != REMotion65Asset::ID) {
       continue;
     }
 
-    ProcessClass(*item.motions[m], flags);
+    auto nFlags = flags;
+    nFlags.base = reinterpret_cast<char *>(cMotBase);
+
+    ProcessClass(*motions[m], nFlags);
   }
 }
 

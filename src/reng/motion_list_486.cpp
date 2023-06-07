@@ -25,12 +25,14 @@ template <> void ProcessClass(REMotlist486 &item, ProcessFlags flags) {
     return;
   }
 
+  auto motions = item.motions.operator->();
+
   for (uint32 m = 0; m < item.numMotions; m++) {
-    item.motions[m].Fixup(flags.base, *flags.ptrStore);
+    motions[m].Fixup(flags.base, *flags.ptrStore);
 
-    REAssetBase *cMotBase = item.motions[m];
+    REAssetBase *cMotBase = motions[m];
 
-    if (!cMotBase || cMotBase->assetID != REMotion458Asset::VERSION ||
+    if (!cMotBase /*|| cMotBase->assetID != REMotion458Asset::VERSION*/ ||
         cMotBase->assetFourCC != REMotion458Asset::ID) {
       continue;
     }
@@ -39,14 +41,14 @@ template <> void ProcessClass(REMotlist486 &item, ProcessFlags flags) {
 
     ProcessClass(*cMot, flags);
 
-    char *localBuffer = reinterpret_cast<char *>(cMot);
-
     if (cMot->pad || !cMot->bones) {
       continue;
     }
 
-    cMot->bones.Fixup(localBuffer, *flags.ptrStore);
-    cMot->bones->ptr.Fixup(localBuffer, *flags.ptrStore);
+    auto nFlags = flags;
+    nFlags.base = reinterpret_cast<char *>(cMot);
+    cMot->bones.Fixup(nFlags.base, *nFlags.ptrStore);
+    cMot->bones->ptr.Fixup(nFlags.base, *nFlags.ptrStore);
     REMotionBone *bonesPtr = cMot->bones->ptr;
 
     if (!bonesPtr) {
@@ -54,7 +56,7 @@ template <> void ProcessClass(REMotlist486 &item, ProcessFlags flags) {
     }
 
     for (size_t b = 0; b < cMot->numBones; b++) {
-      ProcessClass(bonesPtr[b], flags);
+      ProcessClass(bonesPtr[b], nFlags);
     }
   }
 }
@@ -69,7 +71,7 @@ void REMotlist486Asset::Build() {
   for (size_t m = 0; m < numAnims; m++) {
     auto cMot = data.motions[m];
 
-    if (!cMot || cMot->assetID != REMotion458Asset::VERSION ||
+    if (!cMot /*|| cMot->assetID != REMotion458Asset::VERSION*/ ||
         cMot->assetFourCC != REMotion458Asset::ID) {
       continue;
     }

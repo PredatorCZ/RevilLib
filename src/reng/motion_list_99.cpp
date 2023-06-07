@@ -26,10 +26,12 @@ template <> void ProcessClass(REMotlist99 &item, ProcessFlags flags) {
     return;
   }
 
-  for (uint32 m = 0; m < item.numMotions; m++) {
-    item.motions[m].Fixup(flags.base, *flags.ptrStore);
+  auto motions = item.motions.operator->();
 
-    REAssetBase *cMotBase = item.motions[m];
+  for (uint32 m = 0; m < item.numMotions; m++) {
+    motions[m].Fixup(flags.base, *flags.ptrStore);
+
+    REAssetBase *cMotBase = motions[m];
 
     if (!cMotBase || cMotBase->assetID != REMotion78Asset::VERSION ||
         cMotBase->assetFourCC != REMotion78Asset::ID) {
@@ -40,14 +42,14 @@ template <> void ProcessClass(REMotlist99 &item, ProcessFlags flags) {
 
     ProcessClass(*cMot, flags);
 
-    char *localBuffer = reinterpret_cast<char *>(cMot);
-
     if (cMot->pad || !cMot->bones) {
       continue;
     }
 
-    cMot->bones.Fixup(localBuffer, *flags.ptrStore);
-    cMot->bones->ptr.Fixup(localBuffer, *flags.ptrStore);
+    auto nFlags = flags;
+    nFlags.base = reinterpret_cast<char *>(cMot);
+    cMot->bones.Fixup(nFlags.base, *flags.ptrStore);
+    cMot->bones->ptr.Fixup(nFlags.base, *flags.ptrStore);
     REMotionBone *bonesPtr = cMot->bones->ptr;
 
     if (!bonesPtr) {
@@ -55,7 +57,7 @@ template <> void ProcessClass(REMotlist99 &item, ProcessFlags flags) {
     }
 
     for (size_t b = 0; b < cMot->numBones; b++) {
-      ProcessClass(bonesPtr[b], flags);
+      ProcessClass(bonesPtr[b], nFlags);
     }
   }
 }

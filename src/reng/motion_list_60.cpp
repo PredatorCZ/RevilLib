@@ -25,17 +25,22 @@ template <> void ProcessClass(REMotlist60 &item, ProcessFlags flags) {
     return;
   }
 
-  for (uint32 m = 0; m < item.numMotions; m++) {
-    item.motions[m].Fixup(flags.base, *flags.ptrStore);
+  auto motions = item.motions.operator->();
 
-    REAssetBase *cMotBase = item.motions[m];
+  for (uint32 m = 0; m < item.numMotions; m++) {
+    motions[m].Fixup(flags.base, *flags.ptrStore);
+
+    REAssetBase *cMotBase = motions[m];
 
     if (!cMotBase || cMotBase->assetID != REMotion43Asset::VERSION ||
         cMotBase->assetFourCC != REMotion43Asset::ID) {
       continue;
     }
 
-    ProcessClass(*item.motions[m], flags);
+    auto nFlags = flags;
+    nFlags.base = reinterpret_cast<char *>(cMotBase);
+
+    ProcessClass(*motions[m], nFlags);
   }
 }
 
@@ -44,9 +49,10 @@ void REMotlist60Asset::Build() {
   const size_t numAnims = data.numMotions;
 
   auto &motionListStorage = static_cast<MotionList60 &>(*this).storage;
+  auto motions = data.motions.operator->();
 
   for (size_t m = 0; m < numAnims; m++) {
-    REAssetBase *cMot = data.motions[m];
+    REAssetBase *cMot = motions[m];
 
     if (!cMot || cMot->assetID != REMotion43Asset::VERSION ||
         cMot->assetFourCC != REMotion43Asset::ID) {
@@ -59,7 +65,7 @@ void REMotlist60Asset::Build() {
   auto &skeletonStorage = static_cast<SkeletonList &>(*this).storage;
 
   for (size_t m = 0; m < numAnims; m++) {
-    auto cMot = data.motions[m];
+    auto cMot = motions[m];
 
     if (!cMot || cMot->assetID != REMotion43Asset::VERSION ||
         cMot->assetFourCC != REMotion43Asset::ID || !cMot->bones) {

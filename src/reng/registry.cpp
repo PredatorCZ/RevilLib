@@ -16,7 +16,7 @@
 */
 
 #include "datas/except.hpp"
-#include "motion_list_486.hpp"
+#include "motion_list_528.hpp"
 #include "motion_list_99.hpp"
 #include <set>
 #include <unordered_map>
@@ -40,6 +40,7 @@ static const std::unordered_map<uint64, decltype(&f_<void>::creator)>
     assetRegistry = {
         make<REMotlist60Asset>(), make<REMotlist85Asset>(),
         make<REMotlist99Asset>(), make<REMotlist486Asset>(),
+        make<REMotlist528Asset>(),
         make<REMotion43Asset>(),  make<REMotion78Asset>(),
         make<REMotion65Asset>(),  make<REMotion458Asset>(),
 };
