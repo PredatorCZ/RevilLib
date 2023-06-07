@@ -86,6 +86,7 @@ bool IsX64CompatibleAnimationClass(BinReaderRef_e rd,
 struct LMTAnimationMidInterface : LMTAnimationInterface {
   clgen::Animation::Interface interface;
   std::unique_ptr<LMTAnimationEvent> events;
+  std::unique_ptr<LMTFloatTrack> floatTracks;
 
   LMTAnimationMidInterface(clgen::LayoutLookup rules, char *data) : interface {
     data, rules
@@ -143,6 +144,12 @@ void ProcessClass(LMTAnimationMidInterface &item,
     if (events.data) {
       flags.dataStart = events.data;
       item.events = LMTAnimationEvent::Create(flags);
+    }
+
+    auto floats = item.interface.Floats();
+    if (floats.data) {
+      flags.dataStart = events.data;
+      item.floatTracks = LMTFloatTrack::Create(flags);
     }
   } else {
     auto events = item.interface.Events();
