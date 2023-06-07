@@ -1,45 +1,18 @@
-cmake_minimum_required(VERSION 3.3)
-
-project(SPACConvert VERSION 2.0)
-
-set(CMAKE_CURRENT_SOURCE_DIR
-    ${TPD_PATH}/vgmstream
-    CACHE STRING "" FORCE)
-
-option(USE_FDKAAC "" OFF)
-option(BUILD_CLI "" OFF)
-option(USE_G7221 "" OFF)
-
-if(WIN32)
-  option(BUILD_FB2K "" OFF)
-  option(BUILD_WINAMP "" OFF)
-  option(BUILD_XMPLAY "" OFF)
-else()
-  option(BUILD_AUDACIOUS "" OFF)
-  option(USE_JANSSON "" OFF)
-endif()
-
-option(USE_MPEG "" OFF)
-option(USE_VORBIS "" OFF)
-option(USE_FFMPEG "" ON)
-option(USE_G7221 "" OFF)
-option(USE_G719 "" OFF)
-option(USE_ATRAC9 "" OFF)
-option(USE_SPEEX "" OFF)
-option(USE_CELT "" OFF)
-
-add_subdirectory(${TPD_PATH}/vgmstream ${CMAKE_BINARY_DIR}/3rd_party/vgmstream)
+project(SPACConvert)
 
 build_target(
   NAME
   spac_conv
   TYPE
   ESMODULE
+  VERSION
+  2
   SOURCES
   spac_conv.cpp
   LINKS
-  libvgmstream
   revil
+  INCLUDES
+  ../include
   AUTHOR
   "Lukas Cone"
   DESCR
@@ -47,4 +20,7 @@ build_target(
   START_YEAR
   2019)
 
-setup_target(spac_conv TRUE)
+# if(UNIX)
+#   target_link_libraries(spac_conv libvgmstream)
+#   target_compile_definitions(spac_conv PRIVATE USE_VGM)
+# endif()

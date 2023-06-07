@@ -30,14 +30,8 @@
 #include <memory>
 #include <sstream>
 
-extern "C" {
+#ifdef USE_VGM
 #include "vgmstream.h"
-}
-
-std::string_view filters[]{
-    ".spc$",
-    {},
-};
 
 static struct SPACConvert : ReflectorBase<SPACConvert> {
   bool forceWAV = false;
@@ -52,16 +46,6 @@ REFLECT(
         forceWAV, "force-wav", "W",
         ReflDesc{
             "Convert ADPCM WAV files into PCM WAV if SPAC contains then."}));
-
-static AppInfo_s appInfo{
-    .filteredLoad = true,
-    .header = SPACConvert_DESC " v" SPACConvert_VERSION
-                               ", " SPACConvert_COPYRIGHT "Lukas Cone",
-    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
-    .filters = filters,
-};
-
-AppInfo_s *AppInitModule() { return &appInfo; }
 
 class VGMMemoryFile;
 
@@ -140,6 +124,24 @@ public:
 
   operator STREAMFILE *() { return reinterpret_cast<STREAMFILE *>(this); }
 };
+
+#endif
+
+std::string_view filters[]{
+    ".spc$",
+};
+
+static AppInfo_s appInfo{
+    .filteredLoad = true,
+    .header = SPACConvert_DESC " v" SPACConvert_VERSION
+                               ", " SPACConvert_COPYRIGHT "Lukas Cone",
+#ifdef USE_VGM
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+#endif
+    .filters = filters,
+};
+
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 struct SPACHeader {
   static constexpr uint32 ID = CompileFourCC("SPAC");
@@ -284,6 +286,8 @@ void AppExtractFile(AppContext *ctx) {
   }
 
   size_t currentFile = 0;
+
+#ifdef USE_VGM
   VGMMemoryFile *nmFile =
       !settings.convertWAV ? nullptr : VGMMemoryFile::Create();
 
@@ -307,17 +311,20 @@ void AppExtractFile(AppContext *ctx) {
         continue;
       }
 
-      const size_t samplerSize = cVGMStream->num_samples * sizeof(sample_t);
+      vgmstream_info vgmInfo;
+      describe_vgmstream_info(cVGMStream, &vgmInfo);
+
+      const size_t samplerSize = vgmInfo.num_samples * sizeof(sample_t);
       std::string samples;
       samples.resize(samplerSize);
       sample_t *sampleBuffer = reinterpret_cast<sample_t *>(&samples[0]);
 
-      render_vgmstream(sampleBuffer, cVGMStream->num_samples, cVGMStream);
+      render_vgmstream(sampleBuffer, vgmInfo.num_samples, cVGMStream);
 
       RIFFHeader hdr(sizeof(RIFFHeader) + sizeof(WAVE_fmt) + sizeof(WAVE_data) +
                      samplerSize);
       WAVE_fmt fmt(WAVE_FORMAT::PCM);
-      fmt.sampleRate = cVGMStream->sample_rate;
+      fmt.sampleRate = vgmInfo.sample_rate;
       fmt.CalcData();
       WAVE_data wData(samplerSize);
 
@@ -345,4 +352,17 @@ void AppExtractFile(AppContext *ctx) {
   }
 
   delete nmFile;
+#else
+  for (auto &e : msBuffer.entries) {
+    AFileInfo &finf = ctx->workingFile;
+    auto extension = GetReflectedEnum<SPACFileType>()
+                         ->names[static_cast<size_t>(e.fileType)];
+    std::string nakedName = (std::to_string(currentFile) + '.') + extension;
+    auto ectx = ctx->ExtractContext();
+    auto filename = std::string(finf.GetFilename()) + '_' + nakedName;
+    ectx->NewFile(filename);
+    ectx->SendData({e.start, e.size});
+    currentFile++;
+  }
+#endif
 }
