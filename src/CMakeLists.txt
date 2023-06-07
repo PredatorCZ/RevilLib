@@ -81,7 +81,7 @@ if(BUILD_SHARED_LIBS)
     NO_PROJECT_H)
 
   target_compile_definitions(revil INTERFACE RE_IMPORT)
-  if(NOT MSVC)
+  if(UNIX)
     target_link_libraries(revil -Wl,-z,defs)
   endif()
   install(
