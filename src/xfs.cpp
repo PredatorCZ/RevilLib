@@ -12,7 +12,7 @@
 #include <deque>
 #include <vector>
 
-//#define XFS_DEBUG
+// #define XFS_DEBUG
 
 /*
 lp pc: 4
@@ -47,6 +47,7 @@ MAKE_ENUM(ENUMSCOPE(class XFSType
           EMEMBER(_matrix_),           //
           EMEMBER(vector4_),           //
           EMEMBER(_vector4_),          // colour
+          EMEMBERVAL(string2_, 32),    //
           EMEMBERVAL(vector3_, 35),    //
           EMEMBERVAL(_resource_, 0x80) // 8+, custom?
 );
@@ -101,6 +102,12 @@ struct XFSHeaderV1 : XFSHeaderBase {
   }
 };
 
+struct XFSHeaderV2 : XFSHeaderBase {
+  uint64 unk0; // num members/strings?
+  uint32 numLayouts;
+  uint32 dataStart;
+};
+
 template <class PadType> struct XFSClassMemberRaw {
   std::string memberName;
   XFSType type;
@@ -122,6 +129,30 @@ template <class PadType> struct XFSClassMemberRaw {
   }
 };
 
+template <class PtrType> struct XFSClassMemberV2 {
+  std::string memberName;
+  XFSType type;
+  uint8 flags; // alignment flags??
+  uint16 memberSize;
+  PtrType null[8];
+
+  void Read(BinReaderRef_e rd) {
+    PtrType memNameOffset;
+    rd.Read(memNameOffset);
+    rd.Read(type);
+    rd.Read(flags);
+    rd.Read(memberSize);
+    if constexpr (sizeof(PtrType) == 8) {
+      rd.Skip(4);
+    }
+    rd.Read(null);
+    rd.Push();
+    rd.Seek(memNameOffset);
+    rd.ReadString(memberName);
+    rd.Pop();
+  }
+};
+
 template <class PadType> struct XFSClass {
   uint32 hash;
   XFSClassInfo info;
@@ -131,6 +162,19 @@ template <class PadType> struct XFSClass {
     rd.Read(hash);
     rd.Read(info.data);
     rd.ReadContainer(members, info->Get<XFSClassInfo::NumMembers>());
+  }
+};
+
+template <class PtrType> struct XFSClassV2 {
+  uint32 hash;
+  std::vector<XFSClassMemberV2<PtrType>> members;
+
+  void Read(BinReaderRef_e rd) {
+    rd.Read(hash);
+    if constexpr (sizeof(PtrType) == 8) {
+      rd.Skip(4);
+    }
+    rd.ReadContainer<PtrType>(members);
   }
 };
 
@@ -149,6 +193,11 @@ struct XFSClassMember {
       throw std::runtime_error("Some bullshit");
     }
   }
+
+  template <class pad_type>
+  XFSClassMember(XFSClassMemberV2<pad_type> &&raw)
+      : name(std::move(raw.memberName)), type(raw.type), flags(raw.flags),
+        size(raw.memberSize) {}
 };
 
 REFLECT(CLASS(XFSClassMember), MEMBER(name), MEMBER(type), MEMBER(flags));
@@ -161,6 +210,16 @@ struct XFSClassDesc {
   XFSClassDesc() = default;
   template <class pad_type>
   XFSClassDesc(XFSClass<pad_type> &&raw) : hash(raw.hash) {
+    members.reserve(raw.members.size());
+
+    std::transform(std::make_move_iterator(raw.members.begin()),
+                   std::make_move_iterator(raw.members.end()),
+                   std::back_inserter(members),
+                   [](auto &&item) { return std::move(item); });
+  }
+
+  template <class PtrType>
+  XFSClassDesc(XFSClassV2<PtrType> &&raw) : hash(raw.hash) {
     members.reserve(raw.members.size());
 
     std::transform(std::make_move_iterator(raw.members.begin()),
@@ -343,6 +402,7 @@ public:
   std::deque<XFSClassData> dataStore;
   XFSClassData *root;
 
+  template <class PtrType>
   void ReadData(BinReaderRef_e rd, XFSClassData **root = nullptr);
   void ToXML(const XFSClassData &item, pugi::xml_node node);
   void ToXML(pugi::xml_node node);
@@ -359,6 +419,7 @@ void XFS::ToXML(pugi::xml_node node) const { pi->ToXML(node); }
 
 void XFS::RTTIToXML(pugi::xml_node node) const { pi->RTTIToXML(node); }
 
+template <class PtrType>
 void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
   XFSMeta meta;
   rd.Read(meta.data);
@@ -367,7 +428,7 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
     return;
   }
 
-  uint32 chunkSize;
+  PtrType chunkSize;
   const size_t strBegin = rd.Tell();
   rd.Read(chunkSize);
 
@@ -417,7 +478,8 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
       case XFSType::color_:
         rd.Read(cType.data.asColor);
         break;
-      case XFSType::string_: {
+      case XFSType::string_:
+      case XFSType::string2_: {
         std::string temp;
         rd.ReadString(temp);
         cType.SetString(temp);
@@ -428,13 +490,15 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
         break;
       case XFSType::class_:
       case XFSType::classref_:
-        ReadData(rd, reinterpret_cast<XFSClassData **>(&cType.data.asPointer));
+        ReadData<PtrType>(
+            rd, reinterpret_cast<XFSClassData **>(&cType.data.asPointer));
         break;
       case XFSType::_resource_:
         rd.Read(*cType.AllocClass<XFSDataResource>());
         break;
       default:
-        throw std::runtime_error("Undefined type!");
+        throw std::runtime_error("Undefined type at: " +
+                                 std::to_string(rd.Tell()));
       }
     } else {
       switch (d.type) {
@@ -513,12 +577,13 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
       case XFSType::classref_: {
         auto adata = cType.AllocArray<XFSClassData *>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
-          ReadData(rd, adata++);
+          ReadData<PtrType>(rd, adata++);
         }
         break;
       }
       default:
-        throw std::runtime_error("Undefined type!");
+        throw std::runtime_error("Undefined type at: " +
+                                 std::to_string(rd.Tell()));
       }
     }
 
@@ -604,6 +669,42 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
+      case XFSType::s8_: {
+        auto adata = reinterpret_cast<const int8 *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("value").set_value(adata[i]);
+        }
+        break;
+      }
+      case XFSType::s32_: {
+        auto adata = reinterpret_cast<const int32 *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("value").set_value(adata[i]);
+        }
+        break;
+      }
+      case XFSType::u32_: {
+        auto adata = reinterpret_cast<const uint32 *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("value").set_value(adata[i]);
+        }
+        break;
+      }
+      case XFSType::f32_: {
+        auto adata = reinterpret_cast<const float *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("value").set_value(adata[i]);
+        }
+        break;
+      }
       default:
         throw std::runtime_error("Unhandled xml array type");
       }
@@ -641,6 +742,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         value.set_value(m.data.asUInt64);
         break;
       case XFSType::string_:
+      case XFSType::string2_:
         value.set_value(m.AsString());
         break;
       case XFSType::color_:
@@ -726,12 +828,12 @@ std::map<uint32, XFSClassDesc> rttiStore;
 static constexpr uint32 XFSID = CompileFourCC("XFS");
 static constexpr uint32 XFSIDBE = CompileFourCC("\0SFX");
 
-template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef_e rd) {
+template <class PtrType> void Load(XFSImpl &main, BinReaderRef_e rd) {
   XFSHeaderV1 header;
   rd.Read(header);
   rd.SetRelativeOrigin(rd.Tell(), false);
   std::vector<uint32> layoutOffsets;
-  std::vector<XFSClass<ptr_type0>> layouts;
+  std::vector<XFSClass<PtrType>> layouts;
   rd.ReadContainer(layoutOffsets, header.numLayouts);
   rd.ReadContainer(layouts, header.numLayouts);
   rd.Seek(header.dataStart);
@@ -745,6 +847,22 @@ template <class ptr_type0> void Load(XFSImpl &main, BinReaderRef_e rd) {
 
                    return std::move(item);
                  });
+}
+
+template <class PtrType> void LoadV2(XFSImpl &main, BinReaderRef_e rd) {
+  XFSHeaderV2 header;
+  rd.Read(header);
+  rd.SetRelativeOrigin(rd.Tell(), false);
+  std::vector<PtrType> layoutOffsets;
+  std::vector<XFSClassV2<PtrType>> layouts;
+  rd.ReadContainer(layoutOffsets, header.numLayouts);
+  rd.ReadContainer(layouts, header.numLayouts);
+  rd.Seek(header.dataStart);
+
+  std::transform(std::make_move_iterator(layouts.begin()),
+                 std::make_move_iterator(layouts.end()),
+                 std::back_inserter(main.rtti),
+                 [](auto &&item) { return std::move(item); });
 }
 
 void XFSImpl::Load(BinReaderRef_e rd) {
@@ -763,12 +881,18 @@ void XFSImpl::Load(BinReaderRef_e rd) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
-  if (platform == pt::Win32) {
-    ::Load<uint32>(*this, rd);
-  } else if (platform == pt::PS3) {
-    ::Load<uint64>(*this, rd);
+  if (hdr.version == 0xf) {
+    ::LoadV2<uint64>(*this, rd);
+  } else if (hdr.version == 0x10) {
+    ::LoadV2<uint32>(*this, rd);
   } else {
-    throw std::runtime_error("Undefined platform!");
+    if (platform == pt::Win32) {
+      ::Load<uint32>(*this, rd);
+    } else if (platform == pt::PS3) {
+      ::Load<uint64>(*this, rd);
+    } else {
+      throw std::runtime_error("Undefined platform!");
+    }
   }
 
   for (auto &c : rtti) {
@@ -780,7 +904,11 @@ void XFSImpl::Load(BinReaderRef_e rd) {
 #endif
   }
 
-  ReadData(rd);
+  if (hdr.version == 0xf) {
+    ReadData<uint64>(rd);
+  } else {
+    ReadData<uint32>(rd);
+  }
   root = &dataStore.back();
 
   const size_t eof = rd.GetSize();
