@@ -26,7 +26,10 @@ jobs:
               pushd $file
               if [[ $file == *-win64 ]]; then
                 7z a ../$file.7z .
+                7z a ../$file-modulesonly.7z '-ir!*.spk' '-ir!revil*.dll'
               else
+                tar -xf *.tar.xz
+                7z a ../$(basename *.tar.xz .tar.xz)-modulesonly.7z '-ir!*.spk' '-ir!librevil.so*'
                 mv *.tar.xz ..
               fi
               popd
