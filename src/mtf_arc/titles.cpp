@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2021 Lukas Cone
+    Copyright(C) 2020-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include "ext_mhg.hpp"
 #include "ext_mhs.hpp"
 #include "ext_mhs2.hpp"
+#include "ext_mhxr.hpp"
 #include "ext_pwaadd.hpp"
 #include "ext_pwaasoj.hpp"
 #include "ext_re0.hpp"
@@ -44,8 +45,6 @@
 #include "ext_sbsh.hpp"
 #include "ext_sbsyd.hpp"
 #include "revil/hashreg.hpp"
-
-// #define HRG_DEBUG
 
 const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"ace_attorney_dual_destinies", &extPWAADD},
@@ -77,11 +76,13 @@ const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"mhs", &extMHS},
     {"mhs2", &extMHS2},
     {"mhx", &extMHG},
+    {"mhxr", &extMHXR},
     {"mhxx", &extMHG},
     {"monster_hunter_3", &extMH3},
     {"monster_hunter_4", &extMH4},
     {"monster_hunter_cross", &extMHG},
     {"monster_hunter_double_cross", &extMHG},
+    {"monster_hunter_explore", &extMHXR},
     {"monster_hunter_generations", &extMHG},
     {"monster_hunter_stories_2", &extMHS2},
     {"monster_hunter_stories", &extMHS},
@@ -140,6 +141,10 @@ void GetTitles(TitleCallback cb) {
   }
 }
 
+/* Lookup order:
+  extCommon map
+  if platform not auto lookup class from ext<platform> map
+*/
 uint32 GetHash(std::string_view extension, std::string_view title,
                Platform platform) {
   auto found = invertedExtensions.find(title);
@@ -207,25 +212,24 @@ const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
 
 } // namespace revil
 
-#ifdef HRG_DEBUG
+#ifndef NDEBUG
 static std::string_view shortNames[]{
-    "dd",  "ddon", "dgs",  "dgs2",  "dmc4",   "dr",      "ext",  "lp",  "lp2",
-    "mh3", "mh4",  "mhg",  "mhs",   "pwaadd", "pwaasoj", "re0",  "re5", "re6",
-    "rem", "rer",  "sbsh", "sbsyd", "sb3",    "sb4",     "sb4s",
+    "dd",  "ddon", "dgs", "dgs2", "dmc4",  "dr",     "ext",     "lp",   "lp2",
+    "mh3", "mh4",  "mhg", "mhs",  "mhxr",  "pwaadd", "pwaasoj", "re0",  "re5",
+    "re6", "rem",  "rer", "sbsh", "sbsyd", "sb3",    "sb4",     "sb4s",
 };
 
 void RE_EXTERN CheckCollisions() {
   for (auto n : shortNames) {
     auto &registry = invertedExtensions.at(n);
-    for (size_t p = 1; p < registry->NUMSLOTS; p++) {
-      auto ptStore = registry->data[p];
-      if (!ptStore) {
+    for (auto ptStore : registry->data) {
+      if (!ptStore.second || ptStore.first == Platform::Auto) {
         continue;
       }
 
       auto check = [&](auto reg) {
         for (auto i : *reg) {
-          auto name = GetExtension(i.second, {}, Platform(p));
+          auto name = GetExtension(i.second, {}, ptStore.first);
           if (name != i.first) {
             if (registry->fixups) {
               auto found = registry->fixups->find(i.second);
@@ -242,17 +246,18 @@ void RE_EXTERN CheckCollisions() {
               }
             }
 
-            printerror("Found collision for " << n << " platform: " << p << ": "
-                                              << i.first << " vs " << name);
+            printerror("Found collision for "
+                       << n << " platform: " << uint32(ptStore.first) << ": "
+                       << i.first << " vs " << name);
           }
         }
       };
 
-      if (ptStore != registry->Base()) {
+      if (ptStore.second != registry->Base()) {
         check(registry->Base());
       }
 
-      check(ptStore);
+      check(ptStore.second);
     }
   }
 }
