@@ -16,13 +16,14 @@ if(BUILD_STATIC_OBJECTS)
     OBJECT
     SOURCES
     ${CORE_SOURCE_FILES}
+    ../3rd_party/pvr_core/pvr_decompress.cpp
     LINKS
     pugixml-objects
     precore-objects
     NO_VERINFO
     NO_PROJECT_H)
 
-  target_include_directories(revil-objects PUBLIC ../include)
+  target_include_directories(revil-objects PUBLIC ../include ../3rd_party/pvr_core)
 endif()
 
 if(BUILD_SHARED_OBJECTS)
@@ -33,13 +34,14 @@ if(BUILD_SHARED_OBJECTS)
     OBJECT
     SOURCES
     ${CORE_SOURCE_FILES}
+    ../3rd_party/pvr_core/pvr_decompress.cpp
     PROPERTIES
     POSITION_INDEPENDENT_CODE
     ON
     NO_VERINFO
     NO_PROJECT_H)
 
-  target_include_directories(revil-shared PUBLIC ../include)
+  target_include_directories(revil-shared PUBLIC ../include ../3rd_party/pvr_core)
 
   if(BUILD_SHARED_LIBS)
     target_link_libraries(revil-shared precore pugixml)
@@ -79,6 +81,13 @@ if(BUILD_SHARED_LIBS)
     AUTHOR
     "Lukas Cone"
     NO_PROJECT_H)
+
+  if(WIN32 OR MINGW)
+    set_target_properties(revil PROPERTIES SUFFIX ${PROJECT_VERSION_MAJOR}.dll
+                                           PREFIX "")
+  else()
+    set_target_properties(revil PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+  endif()
 
   target_compile_definitions(revil INTERFACE RE_IMPORT)
   if(UNIX)

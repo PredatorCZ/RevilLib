@@ -1,3 +1,19 @@
+/*  Revil Format Library
+    Copyright(C) 2020-2023 Lukas Cone
+
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
+*/
 
 #include "revil/tex.hpp"
 #include "datas/binreader_stream.hpp"
@@ -5,6 +21,7 @@
 #include "datas/bitfield.hpp"
 #include "datas/except.hpp"
 #include "formats/addr_ps3.hpp"
+#include "pvr_decompress.hpp"
 #include <map>
 #include <vector>
 
@@ -84,6 +101,7 @@ enum class TEXFormatV2PS4 : uint8 {
 };
 
 static constexpr uint32 TEXID = CompileFourCC("TEX");
+static constexpr uint32 TEXSID = CompileFourCC("TEX ");
 static constexpr uint32 XETID = CompileFourCC("\0XET");
 
 struct TEXx70 {
@@ -218,6 +236,42 @@ struct TEXx9D {
     FByteswapper(tier1.value);
     FByteswapper(tier2.value);
   }
+};
+
+enum class TEXFormatAndr : uint8 {
+  RGBA8 = 0x1,
+  RGBA4 = 0x7,
+  ETC1 = 0x0A,
+  PVRTC4 = 0x0D,
+};
+
+enum class TEXTypeAndr : uint32 {
+  Base = 0x11,
+  Normal = 0x21,
+  Mask = 0x31,
+  CubeMap = 0x61,
+};
+
+struct TEXx09 {
+  uint32 id;
+  uint16 version;
+  TEXFormatAndr format;
+  uint8 unk; // 4
+  TEXTypeAndr type;
+
+  uint32 width : 13;
+  uint32 height : 13;
+  uint32 numMips : 4;
+  uint32 unk0 : 1;
+  uint32 unk1 : 1;
+
+  uint32 offset0;
+  uint32 pvrtcOffset;
+  uint32 offset1;
+
+  uint32 unkSize;
+  uint32 pvrtcSize;
+  uint32 dxtSize;
 };
 
 struct TEXCubemapData {
@@ -432,6 +486,15 @@ struct TEXInternal : TEX {
       }
 
       asDDS.dxgiFormat = DXGI_FORMAT_R8G8_UNORM;
+    } else if (platform == Platform::Android && asDDS == DDSFormat_A4R4G4B4) {
+      const size_t stride = sizeof(uint16);
+      const size_t numLoops = buffer.size() / stride;
+
+      for (size_t i = 0; i < numLoops; i++) {
+        const size_t index = i * stride;
+        uint16 &data = *reinterpret_cast<uint16 *>(buffer.data() + index);
+        data = data >> 4 | data << 12;
+      }
     }
   }
 };
@@ -613,11 +676,65 @@ TEX LoadTEXx9D(BinReaderRef_e rd, Platform platform) {
   return main;
 }
 
+TEX LoadTEXx09(BinReaderRef_e rd_, Platform) {
+  BinReaderRef rd(rd_);
+  TEXInternal main;
+  TEXx09 header;
+  rd.Read(header);
+
+  main.asDDS.width = header.width;
+  main.asDDS.height = header.height;
+  main.asDDS.NumMipmaps(header.numMips);
+
+  if (header.format == TEXFormatAndr::PVRTC4) {
+    main.asDDS = DDSFormat_A8B8G8R8;
+    std::string buffer;
+    const size_t bufferSize = main.asDDS.ComputeBufferSize(main.mips);
+    main.buffer.resize(bufferSize);
+    rd.Seek(header.pvrtcOffset);
+    rd.ReadContainer(buffer, header.pvrtcSize);
+    size_t curOffset = 0;
+
+    for (size_t m = 0; m < header.numMips; m++) {
+      curOffset += pvr::PVRTDecompressPVRTC(
+          buffer.data() + curOffset, 0, header.width / (1 << m),
+          header.height / (1 << m),
+          reinterpret_cast<uint8 *>(main.buffer.data() + main.mips.offsets[m]));
+    }
+  } else if (header.format == TEXFormatAndr::ETC1) {
+    main.asDDS = DDSFormat_A8B8G8R8;
+    std::string buffer;
+    const size_t bufferSize = main.asDDS.ComputeBufferSize(main.mips);
+    main.buffer.resize(bufferSize);
+    rd.ReadContainer(buffer, rd.GetSize() - sizeof(header));
+    size_t curOffset = 0;
+
+    for (size_t m = 0; m < header.numMips; m++) {
+      curOffset += pvr::PVRTDecompressETC(
+          buffer.data() + curOffset, header.width / (1 << m),
+          header.height / (1 << m), main.buffer.data() + main.mips.offsets[m],
+          0);
+    }
+  } else if (header.format == TEXFormatAndr::RGBA4) {
+    main.asDDS = DDSFormat_A4R4G4B4;
+    size_t bufferSize = main.asDDS.ComputeBufferSize(main.mips);
+    rd.ReadContainer(main.buffer, bufferSize);
+  } else if (header.format == TEXFormatAndr::RGBA8) {
+    main.asDDS = DDSFormat_A8B8G8R8;
+    size_t bufferSize = main.asDDS.ComputeBufferSize(main.mips);
+    rd.ReadContainer(main.buffer, bufferSize);
+  } else {
+    throw std::runtime_error("Unknown texture format!");
+  }
+
+  main.ConvertBuffer(Platform::Android);
+
+  return main;
+}
+
 static const std::map<uint16, TEX (*)(BinReaderRef_e, Platform)> texLoaders{
-    {0x66, LoadTEXx66<TEXx66>},
-    {0x70, LoadTEXx66<TEXx70>},
-    {0x87, LoadTEXx87},
-    {0x9D, LoadTEXx9D},
+    {0x66, LoadTEXx66<TEXx66>}, {0x70, LoadTEXx66<TEXx70>}, {0x87, LoadTEXx87},
+    {0x9D, LoadTEXx9D},         {0x09, LoadTEXx09},
 };
 
 void TEX::Load(BinReaderRef_e rd, Platform platform) {
@@ -637,7 +754,7 @@ void TEX::Load(BinReaderRef_e rd, Platform platform) {
 
   if (header.id == XETID) {
     rd.SwapEndian(true);
-  } else if (header.id != TEXID) {
+  } else if (header.id != TEXID && header.id != TEXSID) {
     throw es::InvalidHeaderError(header.id);
   }
 
