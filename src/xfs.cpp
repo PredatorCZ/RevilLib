@@ -849,10 +849,7 @@ template <class PtrType> void Load(XFSImpl &main, BinReaderRef_e rd) {
                  });
 }
 
-template <class PtrType> void LoadV2(XFSImpl &main, BinReaderRef_e rd) {
-  XFSHeaderV2 header;
-  rd.Read(header);
-  rd.SetRelativeOrigin(rd.Tell(), false);
+template <class PtrType> void LoadV2(XFSImpl &main, BinReaderRef_e rd, XFSHeaderV2 &header) {
   std::vector<PtrType> layoutOffsets;
   std::vector<XFSClassV2<PtrType>> layouts;
   rd.ReadContainer(layoutOffsets, header.numLayouts);
@@ -863,6 +860,24 @@ template <class PtrType> void LoadV2(XFSImpl &main, BinReaderRef_e rd) {
                  std::make_move_iterator(layouts.end()),
                  std::back_inserter(main.rtti),
                  [](auto &&item) { return std::move(item); });
+}
+
+bool LoadV2(XFSImpl &main, BinReaderRef_e rd) {
+  XFSHeaderV2 header;
+  rd.Read(header);
+  rd.SetRelativeOrigin(rd.Tell(), false);
+  uint32 offset;
+  rd.Read(offset);
+  rd.Seek(0);
+  const size_t expectedEndX64 = header.numLayouts * 8;
+
+  if (offset == expectedEndX64) {
+    LoadV2<uint64>(main, rd, header);
+    return true;
+  }
+
+  LoadV2<uint32>(main, rd, header);
+  return false;
 }
 
 void XFSImpl::Load(BinReaderRef_e rd) {
@@ -881,10 +896,10 @@ void XFSImpl::Load(BinReaderRef_e rd) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
-  if (hdr.version == 0xf) {
-    ::LoadV2<uint64>(*this, rd);
-  } else if (hdr.version == 0x10) {
-    ::LoadV2<uint32>(*this, rd);
+  bool isX64 = false;
+
+  if (hdr.version == 0xf || hdr.version == 0x10) {
+    isX64 = ::LoadV2(*this, rd);
   } else {
     if (platform == pt::Win32) {
       ::Load<uint32>(*this, rd);
@@ -904,7 +919,7 @@ void XFSImpl::Load(BinReaderRef_e rd) {
 #endif
   }
 
-  if (hdr.version == 0xf) {
+  if (isX64) {
     ReadData<uint64>(rd);
   } else {
     ReadData<uint32>(rd);
