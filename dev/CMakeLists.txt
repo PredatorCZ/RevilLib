@@ -1,10 +1,12 @@
-project(ValidateVFS VERSION 1.0)
+project(ValidateVFS)
 
 build_target(
   NAME
   validate_arcs
   TYPE
   ESMODULE
+  VERSION
+  1
   SOURCES
   validate_arcs.cpp
   LINKS

@@ -140,17 +140,11 @@ static AppInfo_s appInfo{
     .filters = filters,
 };
 
-static const char DDONKey[] =
-    "ABB(DF2I8[{Y-oS_CCMy(@<}qR}WYX11M)w[5V.~CbjwM5q<F1Iab+-";
-static BlowfishEncoder enc;
 static constexpr uint32 ARCCID = CompileFourCC("ARCC");
 
-AppInfo_s *AppInitModule() {
-  enc.SetKey(DDONKey);
-  return &appInfo;
-}
+AppInfo_s *AppInitModule() { return &appInfo; }
 
-auto ReadARCC(BinReaderRef_e rd) {
+auto ReadARCC(BinReaderRef_e rd, BlowfishEncoder &enc) {
   ARC hdr;
   rd.Read(hdr);
   rd.Skip(-4);
@@ -196,6 +190,8 @@ void AppProcessFile(AppContext *ctx) {
       platform = settings.platform;
     }
   }
+
+  BlowfishEncoder enc;
 
   auto WriteFiles = [&](auto &files) {
     auto ectx = ctx->ExtractContext();
@@ -299,7 +295,12 @@ void AppProcessFile(AppContext *ctx) {
   } else {
     ARCFiles files;
     if (id == ARCCID) {
-      std::tie(hdr, files) = ReadARCC(rd);
+      if (ts->arc.blowfishKey.empty()) {
+        throw std::runtime_error(
+            "Encrypted archives not supported for this title");
+      }
+      enc.SetKey(ts->arc.blowfishKey);
+      std::tie(hdr, files) = ReadARCC(rd, enc);
     } else {
       std::tie(hdr, files) = ReadARC(rd);
     }
@@ -320,7 +321,7 @@ size_t AppExtractStat(request_chunk requester) {
 
   if (arcHdr->id == CRAID) {
     arcHdr->SwapEndian();
-  } else if (arcHdr->id != ARCID) {
+  } else if (arcHdr->id != ARCID && arcHdr->id != ARCCID) {
     return 0;
   }
 
