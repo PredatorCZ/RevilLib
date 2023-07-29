@@ -256,7 +256,7 @@ static const MtExtensionsStorage extAndroid{
 
 static const MtExtensionsStorage extIOS{
     /**/ //
-    {"ima", 0x41DBF99},
+    {"ima", 0x41DBF997},
     {"mfx", 0x50F9DB3E},
     {"revr_appl", 0x232E228C},
 };

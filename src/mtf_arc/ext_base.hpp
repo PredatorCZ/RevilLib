@@ -21,7 +21,10 @@
 #include <map>
 #include <string_view>
 
+// Convert extension to class hash
 using MtExtensionsStorage = std::multimap<std::string_view, uint32>;
+
+// Priority extension lookup for current title
 using MtExtFixupStorage = std::map<uint32, std::string_view>;
 
 struct MtExtensions {

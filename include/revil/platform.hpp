@@ -17,6 +17,7 @@
 
 #pragma once
 #include "datas/supercore.hpp"
+#include <string_view>
 
 namespace revil {
 enum class Platform {
@@ -46,8 +47,8 @@ struct ArcSupport {
   uint16 windowSize = 15;
   bool allowRaw = false;
   bool xmemOnly = false;
-  bool encrypted = false;
   bool extendedFilePath = false;
+  std::string_view blowfishKey{};
 };
 
 struct ModSupport {

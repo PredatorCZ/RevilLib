@@ -53,7 +53,7 @@ static const MtExtensionsStorage extCommon{
     {"cdrt", 0x7DAA553D},
     {"cecp", 0x37DBF969},
     {"cee", 0x2A8E3F37},
-    {"cip", 0x6AFF2211},
+    {"caip", 0x6AFF2211},
     {"ckc", 0x7766ACE5},
     {"cks", 0x565490C9},
     {"col", 0x199C56C0},
@@ -324,7 +324,7 @@ static const MtExtFixupStorage fixups{
 };
 
 static const TitleSupport suppWin{
-    ArcSupport{.encrypted = true},
+    ArcSupport{.blowfishKey = "ABB(DF2I8[{Y-oS_CCMy(@<}qR}WYX11M)w[5V.~CbjwM5q<F1Iab+-"},
     ModSupport{0xD2},
     TexSupport{0x9D},
     LmtSupport{67},
