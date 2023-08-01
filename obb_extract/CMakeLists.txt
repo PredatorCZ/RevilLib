@@ -17,3 +17,5 @@ build_target(
   "OOB Archive Extractor"
   START_YEAR
   2022)
+
+install(FILES mhs.files DESTINATION data/mhs.files)

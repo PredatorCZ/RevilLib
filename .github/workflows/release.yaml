@@ -6,6 +6,8 @@ on:
       - build
     types:
       - completed
+    branches:
+      - master
 
 jobs:
   release:
@@ -19,6 +21,12 @@ jobs:
         branch: ${{ github.event.release.target_commitish }}
         workflow_conclusion: success
 
+    - name: Import signature key
+      uses: crazy-max/ghaction-import-gpg@v5
+      with:
+        gpg_private_key: ${{ secrets.GHA_GPG_KEY }}
+        passphrase: ${{ secrets.GHA_GPG_PWD }}
+
     - name: Move artifacts to workspace
       run: |
         for file in *; do
@@ -26,15 +34,26 @@ jobs:
               pushd $file
               if [[ $file == *-win64 ]]; then
                 7z a ../$file.7z .
-                7z a ../$file-modulesonly.7z '-ir!*.spk' '-ir!revil*.dll'
+                gpg --detach-sign ../$file.7z
+                # 7z a ../$file-modulesonly.7z '-ir!*.spk' '-ir!revil*.dll'
+                # gpg --detach-sign ../$file-modulesonly.7z
               else
-                tar -xf *.tar.xz
-                7z a ../$(basename *.tar.xz .tar.xz)-modulesonly.7z '-ir!*.spk' '-ir!librevil.so*'
+                # tar -xf *.tar.xz
+                # 7z a ../$(basename *.tar.xz .tar.xz)-modulesonly.7z '-ir!*.spk' '-ir!librevil.so*'
+                # gpg --detach-sign ../$(basename *.tar.xz .tar.xz)-modulesonly.7z
                 mv *.tar.xz ..
+                gpg --detach-sign ../*.tar.xz
               fi
               popd
           fi
         done
+
+    - name: Clear nightly assets
+      uses: andreaswilli/delete-release-assets-action@v3.0.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag: nightly
+        deleteOnlyFromDrafts: false
 
     - name: Release them
       uses: softprops/action-gh-release@v1
@@ -42,6 +61,7 @@ jobs:
         files: |
           *.xz
           *.7z
+          *.sig
         tag_name: nightly
 
     - uses: actions/checkout@v2

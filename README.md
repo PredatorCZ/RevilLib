@@ -6,7 +6,20 @@ This toolset runs on Spike foundation.
 
 Head to this **[Wiki](https://github.com/PredatorCZ/PreCore/wiki/Spike)** for more information on how to effectively use it.
 
-## DDONSngw
+**[Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)**
+
+## Release authenticity
+
+Every release asset will contain corresponding `.sig` file, together with [Sign Key](sign_key.asc) can be used to verify asset via gpg.
+
+Simple usage:
+
+```bash
+gpg --import sign_key.asc # Required only once
+gpg --verify <asset_name>.sig
+```
+
+## Encrypt/Decrypt DDON SNGW
 
 ### Module command: ddon_sngw
 
@@ -23,7 +36,7 @@ Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.
 
   Switch between encrypt or decrypt only.
 
-## ARCExtract
+## ARC Extract
 
 ### Module command: extract_arc
 
@@ -45,9 +58,11 @@ Extract MT Framework ARC archives.
 
   **Default value:** Auto
 
+  **Valid values:** Auto, Win32, PS3, X360, N3DS, CAFE, NSW, PS4, Android, IOS, Win64
+
   Set platform for correct archive handling.
 
-## ARCMake
+## ARC Create
 
 ### Module command: make_arc
 
@@ -69,6 +84,8 @@ Create MT Framework ARC archives.
 
   **Default value:** Auto
 
+  **Valid values:** Auto, Win32, PS3, X360, N3DS, CAFE, NSW, PS4, Android, IOS, Win64
+
   Set platform for correct archive handling.
 
 - **force-zlib-header**
@@ -80,13 +97,13 @@ Create MT Framework ARC archives.
 
   Force ZLIB header for files that won't be compressed. (Some platforms only)
 
-## MOD2GLTF
+## MOD to GLTF
 
 ### Module command: mod_to_gltf
 
 Converts MT Framework `.mod` model into GLTF format.
 
-## TEXConvert
+## MTF TEX to DDS
 
 ### Module command: mtf_tex_to_dds
 
@@ -128,9 +145,17 @@ Converts MT Framework `.tex` texture into DDS format.
 
   **Default value:** Auto
 
+  **Valid values:** Auto, Win32, PS3, X360, N3DS, CAFE, NSW, PS4, Android, IOS, Win64
+
   Set platform for correct texture handling.
 
-## TEXConvert
+## OBB Extract
+
+### Module command: obb_extract
+
+Extract Android .obb archives for Monster Hunter Stories.
+
+## RE TEX to DDS
 
 ### Module command: re_tex_to_dds
 
@@ -152,7 +177,7 @@ Converts RE Engine `.tex` texture into DDS format.
   **CLI Long:** ***--force-legacy-dds***\
   **CLI Short:** ***-f***
 
-  **Default value:** true
+  **Default value:** false
 
   Will try to convert some matching formats from DX10 to DX9, for example: RG88 to AL88.
 
@@ -165,18 +190,18 @@ Converts RE Engine `.tex` texture into DDS format.
 
   Will try to extract only highest mipmap.
 
-## REAsset2GLTF
+## REAsset to GLTF
 
 ### Module command: reasset_to_gltf
 
 Converts RE Engine various assets into GLTF format.
 Currently only supports animations.
 
-## SPACConvert
+## SPAC Extract
 
 ### Module command: spac_conv
 
-Extracts MT Framework `.spc` sound containers and converts their files into WAV format.
+Extracts MT Framework `.spc` sound containers.
 
 ### Supported formats within SPAC archive
 
@@ -184,27 +209,13 @@ Extracts MT Framework `.spc` sound containers and converts their files into WAV 
 - MSF, Various formats (16bit PCM, AT3, ...), PS3
 - RIFF WAVE, Various formats (MS IMA ADPCM mostly), PC
 
-### Settings
+## UDAS Extract
 
-- **convert-wav**
+### Module command: udas_extract
 
-  **CLI Long:** ***--convert-wav***\
-  **CLI Short:** ***-w***
+Extract udas/das archives from RE4.
 
-  **Default value:** true
-
-  Convert sounds to WAV format.
-
-- **force-wav**
-
-  **CLI Long:** ***--force-wav***\
-  **CLI Short:** ***-W***
-
-  **Default value:** false
-
-  Convert ADPCM WAV files into PCM WAV if SPAC contains then.
-
-## XFS2XML
+## XFS to XML
 
 ### Module command: xfs_to_xml
 
@@ -230,12 +241,9 @@ Converts MT Framework generic binary data table format into XML.
 
   Save data.
 
-## [Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)
-
 ## License
 
 This toolset is available under GPL v3 license. (See LICENSE.md)\
 This toolset uses following libraries:
 
 - RevilLib, Copyright (c) 2017-2022 Lukas Cone
-- vgmstream, Various Authors (See COPYING)
