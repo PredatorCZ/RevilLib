@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<toolset_name>RevilToolset</toolset_name>
+<toolset_description>Revil Toolset is a collection of modding tools for RE Engine/MT Framework titles.
+
+This toolset runs on Spike foundation.
+
+Head to this **[Wiki](https://github.com/PredatorCZ/PreCore/wiki/Spike)** for more information on how to effectively use it.
+
+**[Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)**
+
+## Release authenticity
+
+Every release asset will contain corresponding `.sig` file, together with [Sign Key](sign_key.asc) can be used to verify asset via gpg.
+
+Simple usage:
+
+```bash
+gpg --import sign_key.asc # Required only once
+gpg --verify &lt;asset_name&gt;.sig
+```</toolset_description>
+<ddon_sngw name="Encrypt/Decrypt DDON SNGW">Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.</ddon_sngw>
+<mod_to_gltf name="MOD to GLTF">Converts MT Framework `.mod` model into GLTF format.</mod_to_gltf>
+<mtf_tex_to_dds name="MTF TEX to DDS">Converts MT Framework `.tex` texture into DDS format.</mtf_tex_to_dds>
+<re_tex_to_dds name="RE TEX to DDS">Converts RE Engine `.tex` texture into DDS format.</re_tex_to_dds>
+<reasset_to_gltf name="REAsset to GLTF">Converts RE Engine various assets into GLTF format.
+Currently only supports animations.</reasset_to_gltf>
+<spac_conv name="SPAC Extract">Extracts MT Framework `.spc` sound containers.
+
+### Supported formats within SPAC archive
+
+- FWSE, Modified IMA ADPCM, PC
+- MSF, Various formats (16bit PCM, AT3, ...), PS3
+- RIFF WAVE, Various formats (MS IMA ADPCM mostly), PC</spac_conv>
+<xfs_to_xml name="XFS to XML">Converts MT Framework generic binary data table format into XML.</xfs_to_xml>
+<extract_arc name="ARC Extract">Extract MT Framework ARC archives.</extract_arc>
+<make_arc name="ARC Create">Create MT Framework ARC archives.</make_arc>
+<obb_extract name="OBB Extract">Extract Android .obb archives for Monster Hunter Stories.</obb_extract>
+<udas_extract name="UDAS Extract">Extract udas/das archives from RE4.</udas_extract>
+<toolset_footer>## License
+
+This toolset is available under GPL v3 license. (See LICENSE.md)\
+This toolset uses following libraries:
+
+- RevilLib, Copyright (c) 2017-2022 Lukas Cone
+</toolset_footer>

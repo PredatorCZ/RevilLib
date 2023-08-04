@@ -1,0 +1,6 @@
+[submodule "3rd_party/RevilLib"]
+	path = 3rd_party/RevilLib
+	url = git@github.com:PredatorCZ/RevilLib.git
+[submodule "3rd_party/zlib"]
+	path = 3rd_party/zlib
+	url = git@github.com:madler/zlib.git
