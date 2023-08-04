@@ -1,13 +1,30 @@
+/*  Revil Format Library
+    Copyright(C) 2021-2023 Lukas Cone
+
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "revil/xfs.hpp"
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/bitfield.hpp"
-#include "datas/matrix44.hpp"
-#include "datas/reflector.hpp"
-#include "datas/reflector_xml.hpp"
-#include "datas/vectors_simd.hpp"
 #include "pugixml.hpp"
 #include "revil/hashreg.hpp"
+#include "spike/io/binreader.hpp"
+#include "spike/io/binwritter.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/reflect/reflector_xml.hpp"
+#include "spike/type/bitfield.hpp"
+#include "spike/type/matrix44.hpp"
+#include "spike/type/vectors_simd.hpp"
 #include <algorithm>
 #include <deque>
 #include <vector>
@@ -849,7 +866,8 @@ template <class PtrType> void Load(XFSImpl &main, BinReaderRef_e rd) {
                  });
 }
 
-template <class PtrType> void LoadV2(XFSImpl &main, BinReaderRef_e rd, XFSHeaderV2 &header) {
+template <class PtrType>
+void LoadV2(XFSImpl &main, BinReaderRef_e rd, XFSHeaderV2 &header) {
   std::vector<PtrType> layoutOffsets;
   std::vector<XFSClassV2<PtrType>> layouts;
   rd.ReadContainer(layoutOffsets, header.numLayouts);

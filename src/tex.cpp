@@ -16,12 +16,12 @@
 */
 
 #include "revil/tex.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/bitfield.hpp"
-#include "datas/except.hpp"
-#include "formats/addr_ps3.hpp"
 #include "pvr_decompress.hpp"
+#include "spike/except.hpp"
+#include "spike/gpu/addr_ps3.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/type/bitfield.hpp"
 #include <map>
 #include <vector>
 

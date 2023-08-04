@@ -15,7 +15,6 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/master_printer.hpp"
 #include "ext_dd.hpp"
 #include "ext_ddon.hpp"
 #include "ext_dgs.hpp"
@@ -45,6 +44,7 @@
 #include "ext_sbsh.hpp"
 #include "ext_sbsyd.hpp"
 #include "revil/hashreg.hpp"
+#include "spike/master_printer.hpp"
 
 const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"ace_attorney_dual_destinies", &extPWAADD},

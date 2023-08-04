@@ -1,5 +1,5 @@
 #pragma once
-#include "classgen/classgen.hpp"
+#include "spike/classgen.hpp"
 
 enum LMTVersion : uint8 {
   LMT22 = 22, // DR

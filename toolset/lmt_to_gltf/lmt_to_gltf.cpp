@@ -15,14 +15,14 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/fileinfo.hpp"
-#include "datas/matrix44.hpp"
-#include "gltf.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/lmt.hpp"
+#include "spike/gltf.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
+#include "spike/type/matrix44.hpp"
 #include <set>
 
 #if 0
@@ -493,7 +493,7 @@ StripResult StripValues(std::span<SVector4> tck) {
 }
 
 void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
-              std::span<float> times, uint32 loopFrame, ReportType &report) {
+              std::span<float> times, uint32 loopFrame, ReportType &) {
 
   auto TryStripWrite = [&](auto valuesSpan, size_t keys, GLTFStream &stream,
                            size_t accId) {
@@ -686,7 +686,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
   }
 }
 
-#include "datas/master_printer.hpp"
+#include "spike/master_printer.hpp"
 
 // Ak09, Ak15(Dongo) and Most Vs doesn't have marked LegIKTarget
 enum LPTypes {
@@ -856,14 +856,18 @@ void AppProcessFile(AppContext *ctx) {
   printline("Translations/Scales buffer size: " << v3Size);
 
   {
-    BinWritterRef wrj(ctx->NewFile(
-        std::string(ctx->workingFile.GetFullPathNoExt()) + "_report.json").str);
+    BinWritterRef wrj(
+        ctx->NewFile(std::string(ctx->workingFile.GetFullPathNoExt()) +
+                     "_report.json")
+            .str);
 
     wrj.BaseStream() << report;
   }
 #endif
 
-  BinWritterRef wr(ctx->NewFile(
-      std::string(ctx->workingFile.GetFullPathNoExt()) + "_out.glb").str);
+  BinWritterRef wr(
+      ctx->NewFile(std::string(ctx->workingFile.GetFullPathNoExt()) +
+                   "_out.glb")
+          .str);
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

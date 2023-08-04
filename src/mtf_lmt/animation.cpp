@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 #include "animation.hpp"
 #include "bone_track.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/flags.hpp"
-#include "datas/reflector.hpp"
 #include "event.hpp"
 #include "float_track.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/type/flags.hpp"
 
 MAKE_ENUM(ENUMSCOPE(class AnimV2Flags
                     : uint32, AnimV2Flags),

@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -32,8 +32,8 @@ public:
 typedef uni::VectorList<uni::Motion, REMotion458Asset> MotionList486;
 
 class REMotlist486Asset : public REAssetImpl,
-                         public MotionList486,
-                         public SkeletonList {
+                          public MotionList486,
+                          public SkeletonList {
   REMotlist486 &Get() { return REAssetBase::Get<REMotlist486>(this->buffer); }
   const REMotlist486 &Get() const {
     return REAssetBase::Get<const REMotlist486>(this->buffer);

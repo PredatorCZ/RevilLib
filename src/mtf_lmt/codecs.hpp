@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,9 +16,10 @@
 */
 
 #pragma once
-#include "datas/flags.hpp"
-#include "datas/reflector.hpp"
 #include "internal.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/type/flags.hpp"
+#include <span>
 
 static constexpr float fPI = 3.14159265f;
 static constexpr float fPI2 = 0.5 * fPI;
@@ -381,42 +382,36 @@ struct Buf_BiLinearRotationQuat4_9bit {
 };
 
 template <class C> struct Buff_EvalShared : LMTTrackController {
-  typedef std::vector<C, es::allocator_hybrid<C>> Store_Type;
-
-  Store_Type data;
+  std::span<C> data;
+  std::vector<C> internalData;
   std::vector<int16> frames;
 
   int32 GetFrame(size_t frame) const override { return frames[frame]; }
   size_t NumFrames() const override { return data.size(); }
-  void NumFrames(size_t numItems) override { data.resize(numItems); }
-  bool IsCubic() const override { return C::VARIABLE_SIZE; }
-
-  template <class _C = C>
-  typename std::enable_if<_C::VARIABLE_SIZE>::type
-  GetTangents_(Vector4A16 &inTangs, Vector4A16 &outTangs, size_t frame) const {
-    data.at(frame).GetTangents(inTangs, outTangs);
+  void NumFrames(size_t numItems) override {
+    internalData.resize(numItems);
+    data = internalData;
   }
-
-  template <class _C = C>
-  typename std::enable_if<!_C::VARIABLE_SIZE>::type
-  GetTangents_(Vector4A16 &, Vector4A16 &, size_t) const {}
+  bool IsCubic() const override { return C::VARIABLE_SIZE; }
 
   void GetTangents(Vector4A16 &inTangs, Vector4A16 &outTangs,
                    size_t frame) const override {
-    GetTangents_(inTangs, outTangs, frame);
+    if constexpr (C::VARIABLE_SIZE) {
+      data[frame].GetTangents(inTangs, outTangs);
+    }
   }
 
   void Evaluate(Vector4A16 &out, size_t frame) const override {
-    data.at(frame).Evaluate(out);
+    data[frame].Evaluate(out);
   }
 
   void Interpolate(Vector4A16 &out, size_t frame, float delta,
                    const TrackMinMax &bounds) const override {
-    data.at(frame).Interpolate(out, data[frame + 1], delta, bounds);
+    data[frame].Interpolate(out, data[frame + 1], delta, bounds);
   }
 
   void Devaluate(const Vector4A16 &in, size_t frame) override {
-    data.at(frame).Devaluate(in);
+    data[frame].Devaluate(in);
   }
 
   void ToString(std::string &strBuff, size_t numIdents) const override;

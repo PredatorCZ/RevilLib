@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 */
 
 #pragma once
-#include "common.hpp"
 #include "bones.hpp"
-#include "mesh.hpp"
+#include "common.hpp"
 #include "material.hpp"
+#include "mesh.hpp"
 
 struct MODTraitsX70 {
   static constexpr size_t numSkinRemaps = 1;

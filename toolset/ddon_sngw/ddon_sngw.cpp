@@ -15,12 +15,12 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/app_context.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/reflector.hpp"
-#include "datas/vectors_simd.hpp"
 #include "project.h"
+#include "spike/app_context.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/type/vectors_simd.hpp"
 #include <vector>
 
 std::string_view filters[]{
@@ -83,7 +83,8 @@ void AppProcessFile(AppContext *ctx) {
       store[i] = Encrypt(store[i]);
     }
 
-    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".enc")).str);
+    BinWritterRef wr(
+        ctx->NewFile(ctx->workingFile.ChangeExtension(".enc")).str);
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   } else if (!settings.encrypt) {
     UIVector4A16 sample;
@@ -102,7 +103,8 @@ void AppProcessFile(AppContext *ctx) {
     }
 
     memcpy(reinterpret_cast<void *>(store.data()), &SNGWID, sizeof(SNGWID));
-    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".dec")).str);
+    BinWritterRef wr(
+        ctx->NewFile(ctx->workingFile.ChangeExtension(".dec")).str);
     wr.WriteBuffer(reinterpret_cast<const char *>(store.data()), fileSize);
   }
 }

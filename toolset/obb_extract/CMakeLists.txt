@@ -10,7 +10,7 @@ build_target(
   SOURCES
   obb_extract.cpp
   LINKS
-  precore
+  spike
   AUTHOR
   "Lukas Cone"
   DESCR
@@ -18,4 +18,4 @@ build_target(
   START_YEAR
   2022)
 
-install(FILES mhs.files DESTINATION data/mhs.files)
+install(FILES mhs.files DESTINATION $<IF:$<BOOL:${UNIX}>,data,bin/data>)

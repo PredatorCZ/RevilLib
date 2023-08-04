@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 #pragma once
 #include "asset.hpp"
-#include "datas/flags.hpp"
-#include "datas/unicode.hpp"
-#include "datas/vectors_simd.hpp"
-#include "uni/list_vector.hpp"
-#include "uni/motion.hpp"
+#include "spike/type/flags.hpp"
+#include "spike/type/unicode.hpp"
+#include "spike/type/vectors_simd.hpp"
+#include "spike/uni/list_vector.hpp"
+#include "spike/uni/motion.hpp"
 
 struct RETrackCurve43;
 struct RETrackCurve65;

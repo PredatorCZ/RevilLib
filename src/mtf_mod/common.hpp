@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,12 +16,12 @@
 */
 
 #pragma once
-#include "datas/matrix44.hpp"
-#include "datas/reflector.hpp"
 #include "revil/mod.hpp"
-#include "uni/list_vector.hpp"
-#include "uni/model.hpp"
-#include "uni/skeleton.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/type/matrix44.hpp"
+#include "spike/uni/list_vector.hpp"
+#include "spike/uni/model.hpp"
+#include "spike/uni/skeleton.hpp"
 
 namespace revil {
 class MODImpl;

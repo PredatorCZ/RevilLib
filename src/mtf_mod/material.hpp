@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
 */
 
 #pragma once
-#include "datas/bitfield.hpp"
-#include "datas/vectors_simd.hpp"
+#include "spike/type/bitfield.hpp"
+#include "spike/type/vectors_simd.hpp"
 
 struct MODMaterialX70 {
   using SkinType = BitMemberDecl<0, 4>;
@@ -102,7 +102,6 @@ struct MODMaterialX170 {
   uint32 hash;
   uint8 unk01;
 };
-
 
 struct MODMaterialXC5 {
   using SkinType = BitMemberDecl<0, 4>;

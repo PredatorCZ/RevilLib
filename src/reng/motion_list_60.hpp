@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 #pragma once
 #include "asset.hpp"
-#include "datas/unicode.hpp"
 #include "motion_43.hpp"
-#include "uni/list_vector.hpp"
-#include "uni/skeleton.hpp"
-#include "uni/rts.hpp"
+#include "spike/type/unicode.hpp"
+#include "spike/uni/list_vector.hpp"
+#include "spike/uni/rts.hpp"
+#include "spike/uni/skeleton.hpp"
 
 struct REMotlist60 : public REAssetBase {
   uint64 pad;

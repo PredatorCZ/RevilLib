@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,13 +16,12 @@
 */
 
 #pragma once
-#include "datas/allocator_hybrid.hpp"
-#include "datas/deleter_hybrid.hpp"
-#include "datas/endian.hpp"
-#include "datas/pointer.hpp"
-#include "datas/vectors_simd.hpp"
 #include "revil/lmt.hpp"
-#include "uni/list_vector.hpp"
+#include "spike/type/pointer.hpp"
+#include "spike/type/vectors_simd.hpp"
+#include "spike/uni/deleter_hybrid.hpp"
+#include "spike/uni/list_vector.hpp"
+#include "spike/util/endian.hpp"
 #include <memory>
 #include <vector>
 

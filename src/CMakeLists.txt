@@ -1,14 +1,6 @@
 file(GLOB_RECURSE CORE_SOURCE_FILES "*.cpp")
 
-if(BUILD_STATIC_LIBS)
-  set(BUILD_STATIC_OBJECTS ON)
-endif()
-
-if(BUILD_SHARED_LIBS)
-  set(BUILD_SHARED_OBJECTS ON)
-endif()
-
-if(BUILD_STATIC_OBJECTS)
+if(NOT NO_OBJECTS)
   build_target(
     NAME
     revil-objects
@@ -16,71 +8,39 @@ if(BUILD_STATIC_OBJECTS)
     OBJECT
     SOURCES
     ${CORE_SOURCE_FILES}
-    ../3rd_party/pvr_core/pvr_decompress.cpp
-    LINKS
-    pugixml-objects
-    precore-objects
-    NO_VERINFO
-    NO_PROJECT_H)
-
-  target_include_directories(revil-objects PUBLIC ../include ../3rd_party/pvr_core)
-endif()
-
-if(BUILD_SHARED_OBJECTS)
-  build_target(
-    NAME
-    revil-shared
-    TYPE
-    OBJECT
-    SOURCES
-    ${CORE_SOURCE_FILES}
-    ../3rd_party/pvr_core/pvr_decompress.cpp
+    ${TPD_PATH}/pvr_core/pvr_decompress.cpp
     PROPERTIES
     POSITION_INDEPENDENT_CODE
-    ON
-    NO_VERINFO
-    NO_PROJECT_H)
-
-  target_include_directories(revil-shared PUBLIC ../include ../3rd_party/pvr_core)
-
-  if(BUILD_SHARED_LIBS)
-    target_link_libraries(revil-shared precore pugixml)
-  else()
-    target_link_libraries(revil-shared precore-objects pugixml-objects)
-  endif()
-endif()
-
-if(BUILD_STATIC_LIBS)
-  build_target(
-    NAME
-    revil-static
-    PROPERTIES
-    OUTPUT_NAME
-    revil
-    TYPE
-    STATIC
+    ${OBJECTS_PID}
     LINKS
-    revil-objects
+    pugixml-objects
+    spike-objects
     NO_VERINFO
     NO_PROJECT_H)
-  install(TARGETS revil-static LIBRARY DESTINATION lib)
+
+    target_include_directories(revil-objects PUBLIC ../include ${TPD_PATH}/pvr_core)
 endif()
 
 if(BUILD_SHARED_LIBS)
-  target_compile_definitions(revil-shared PRIVATE RE_EXPORT)
-
   build_target(
     NAME
     revil
     TYPE
     SHARED
+    SOURCES
+    ${CORE_SOURCE_FILES}
+    ${TPD_PATH}/pvr_core/pvr_decompress.cpp
     LINKS
-    revil-shared
+    spike
+    pugixml
     START_YEAR
     2017
     AUTHOR
     "Lukas Cone"
     NO_PROJECT_H)
+
+  target_compile_definitions(revil PRIVATE RE_EXPORT)
+  target_include_directories(revil PUBLIC ../include ${TPD_PATH}/pvr_core)
 
   if(WIN32 OR MINGW)
     set_target_properties(revil PROPERTIES SUFFIX ${PROJECT_VERSION_MAJOR}.dll

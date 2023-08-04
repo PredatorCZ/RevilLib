@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,9 +16,9 @@
 */
 
 #pragma once
-#include "datas/bitfield.hpp"
-#include "datas/flags.hpp"
-#include "datas/vectors_simd.hpp"
+#include "spike/type/bitfield.hpp"
+#include "spike/type/flags.hpp"
+#include "spike/type/vectors_simd.hpp"
 
 struct MODPrimitiveProxyV1;
 namespace revil {

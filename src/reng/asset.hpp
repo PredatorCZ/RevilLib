@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@
 */
 
 #pragma once
-#include "datas/allocator_hybrid.hpp"
-#include "datas/deleter_hybrid.hpp"
-#include "datas/pointer.hpp"
 #include "revil/re_asset.hpp"
-#include "uni/common.hpp"
+#include "spike/type/pointer.hpp"
+#include "spike/uni/common.hpp"
+#include "spike/uni/deleter_hybrid.hpp"
+#include <span>
 #include <vector>
 
 using namespace revil;
@@ -33,16 +33,16 @@ template <class C> struct REArray {
 struct REAssetBase {
   uint32 assetID, assetFourCC;
 
-  template <class C, class I> static C &Get(I &data) {
-    return reinterpret_cast<C &>(data[0]);
+  template <class C> static C &Get(char *data) {
+    return *reinterpret_cast<C *>(data);
   }
 };
 
 class revil::REAssetImpl {
 public:
   using Ptr = std::unique_ptr<REAssetImpl>;
-  using buffer_type = std::vector<char, es::allocator_hybrid<char>>;
-  buffer_type buffer;
+  std::string internalBuffer;
+  char *buffer = nullptr;
   void Load(BinReaderRef rd);
   static Ptr Create(REAssetBase base);
   void Assign(REAssetBase *data);
@@ -60,5 +60,4 @@ public:
   std::vector<void *> *ptrStore;
 };
 
-template <class C>
-void RE_EXTERN ProcessClass(C &input, ProcessFlags flags);
+template <class C> void RE_EXTERN ProcessClass(C &input, ProcessFlags flags);

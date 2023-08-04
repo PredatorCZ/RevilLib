@@ -170,7 +170,7 @@ static CompressionReport ReportCompression(const float fractal,
   return result;
 }
 
-#include "datas/master_printer.hpp"
+#include "spike/master_printer.hpp"
 #include <iomanip>
 
 static const TrackTypesShared possibleVec3Types[] = {

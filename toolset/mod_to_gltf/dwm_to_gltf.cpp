@@ -15,19 +15,17 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/aabb.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/fileinfo.hpp"
-#include "datas/matrix44.hpp"
-#include "gltf.hpp"
 #include "project.h"
 #include "re_common.hpp"
-#include "uni/model.hpp"
+#include "spike/gltf.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
+#include "spike/type/matrix44.hpp"
+#include "spike/uni/model.hpp"
+#include "spike/util/aabb.hpp"
 
-std::string_view filters[]{
-    ".dwm$"
-};
+std::string_view filters[]{".dwm$"};
 
 static AppInfo_s appInfo{
     .filteredLoad = true,
@@ -39,22 +37,22 @@ static AppInfo_s appInfo{
 AppInfo_s *AppInitModule() { return &appInfo; }
 
 struct DWModel {
-    uint32 unk[14];
-    void NoSwap();
+  uint32 unk[14];
+  void NoSwap();
 };
 
 struct VTPosition {
-    Vector pos;
-    float weight;
+  Vector pos;
+  float weight;
 
-    void NoSwap();
+  void NoSwap();
 };
 
 struct Morph {
-    float id;
-    float value;
+  float id;
+  float value;
 
-    void NoSwap();
+  void NoSwap();
 };
 
 void AppProcessFile(AppContext *ctx) {
@@ -82,7 +80,7 @@ void AppProcessFile(AppContext *ctx) {
   std::vector<VTPosition> positions;
   rd.ReadContainer(positions, numVertices);
 
-  for(size_t i = 0; i < numVertices; i++) {
+  for (size_t i = 0; i < numVertices; i++) {
     Morph mph;
     rd.Read(mph);
     auto pos = positions.at(i).pos;
@@ -98,7 +96,6 @@ void AppProcessFile(AppContext *ctx) {
 
   main.scenes.front().nodes.emplace_back(main.nodes.size());
   main.nodes.emplace_back(node);
-
 
   BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
 

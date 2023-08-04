@@ -15,11 +15,11 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader_stream.hpp"
-#include "datas/pugiex.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/xfs.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/util/pugiex.hpp"
 #include <algorithm>
 
 struct XFS2XML : ReflectorBase<XFS2XML> {

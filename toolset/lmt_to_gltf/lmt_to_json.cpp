@@ -15,13 +15,13 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/fileinfo.hpp"
 #include "nlohmann/json.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/lmt.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
 
 std::string_view filters[]{
     ".lmt$",
@@ -88,7 +88,8 @@ void AppProcessFile(AppContext *ctx) {
   }
 
   if (main.size() > 0) {
-    BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".json")).str);
+    BinWritterRef wr(
+        ctx->NewFile(ctx->workingFile.ChangeExtension(".json")).str);
     wr.BaseStream() << main;
   }
 }

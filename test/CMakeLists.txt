@@ -8,7 +8,7 @@ build_target(
   LINKS
   revil-objects
   pugixml-objects
-  precore-objects
+  spike-objects
   INCLUDES
   ../src
   NO_PROJECT_H
@@ -21,5 +21,5 @@ add_subdirectory(resources_lmt)
 if(ODR_TEST)
   include(odr_test)
   test_odr(PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../include)
-  target_link_libraries(test_odr precore-interface)
+  target_link_libraries(test_odr spike-interface)
 endif()

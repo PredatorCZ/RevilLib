@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,14 +16,13 @@
 */
 
 #include "asset.hpp"
-#include "datas/binreader.hpp"
-#include "datas/except.hpp"
+#include "spike/except.hpp"
+#include "spike/io/binreader.hpp"
 #include <map>
 
 REAsset::~REAsset() = default;
 REAsset::REAsset() = default;
 REAsset::REAsset(revil::REAsset &&) = default;
-
 
 void REAsset::Load(const std::string &fileName) {
   BinReader rd(fileName);
@@ -43,13 +42,13 @@ void REAsset::Load(BinReaderRef rd) {
 
 void REAssetImpl::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
-  rd.ReadContainer(buffer, fleSize);
+  rd.ReadContainer(internalBuffer, fleSize);
   std::vector<void *> ptrStore;
   Fixup(ptrStore);
 }
 
 void REAssetImpl::Assign(REAssetBase *data) {
   char *rawData = reinterpret_cast<char *>(data);
-  es::allocator_hybrid_base::LinkStorage(buffer, rawData, 1);
+  buffer = rawData;
   Build();
 }

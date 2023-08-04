@@ -16,11 +16,11 @@
 */
 
 #include "arc_conv.hpp"
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/master_printer.hpp"
-#include "datas/stat.hpp"
 #include "project.h"
+#include "spike/io/binreader.hpp"
+#include "spike/io/binwritter.hpp"
+#include "spike/io/stat.hpp"
+#include "spike/master_printer.hpp"
 #include <algorithm>
 #include <atomic>
 #include <mutex>

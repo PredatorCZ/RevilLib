@@ -15,18 +15,18 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/app_context.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/endian.hpp"
-#include "datas/except.hpp"
-#include "datas/fileinfo.hpp"
-#include "datas/master_printer.hpp"
-#include "datas/reflector.hpp"
-#include "formats/FWSE.hpp"
-#include "formats/MSF.hpp"
-#include "formats/WAVE.hpp"
 #include "project.h"
+#include "spike/app_context.hpp"
+#include "spike/except.hpp"
+#include "spike/format/FWSE.hpp"
+#include "spike/format/MSF.hpp"
+#include "spike/format/WAVE.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
+#include "spike/master_printer.hpp"
+#include "spike/reflect/reflector.hpp"
+#include "spike/util/endian.hpp"
 #include <memory>
 #include <sstream>
 

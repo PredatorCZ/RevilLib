@@ -17,12 +17,13 @@
 
 #include "../hfs.hpp"
 #include "arc_conv.hpp"
-#include "datas/encrypt/blowfish.h"
-#include "datas/fileinfo.hpp"
-#include "datas/master_printer.hpp"
+#include "project.h"
+#include "spike/crypto/blowfish.h"
+#include "spike/io/fileinfo.hpp"
+#include "spike/master_printer.hpp"
+
 #include "lzx.h"
 #include "mspack.h"
-#include "project.h"
 
 #pragma region XMemDecompress
 

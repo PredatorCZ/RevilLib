@@ -15,17 +15,17 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/aabb.hpp"
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/fileinfo.hpp"
-#include "datas/matrix44.hpp"
-#include "gltf.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/mod.hpp"
-#include "uni/model.hpp"
-#include "uni/skeleton.hpp"
+#include "spike/gltf.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
+#include "spike/type/matrix44.hpp"
+#include "spike/uni/model.hpp"
+#include "spike/uni/skeleton.hpp"
+#include "spike/util/aabb.hpp"
 
 std::string_view filters[]{".mod$", ".dom$"};
 

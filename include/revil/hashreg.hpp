@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2021 Lukas Cone
+    Copyright(C) 2020-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "datas/supercore.hpp"
+#include "spike/util/supercore.hpp"
 #include "platform.hpp"
 #include "settings.hpp"
 #include <functional>

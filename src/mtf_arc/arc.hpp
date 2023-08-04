@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2021 Lukas Cone
+    Copyright(C) 2020-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,9 +16,9 @@
 */
 
 #pragma once
-#include "datas/binreader_stream.hpp"
-#include "datas/bitfield.hpp"
-#include "datas/except.hpp"
+#include "spike/except.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/type/bitfield.hpp"
 #include <tuple>
 #include <vector>
 

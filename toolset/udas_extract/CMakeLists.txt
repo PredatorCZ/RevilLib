@@ -13,7 +13,7 @@ build_target(
   INCLUDES
   ${TPD_PATH}/mspack
   LINKS
-  precore
+  spike
   AUTHOR
   "Lukas Cone"
   DESCR

@@ -10,7 +10,7 @@ build_target(
   SOURCES
   sbk_to_json.cpp
   LINKS
-  precore
+  spike
   AUTHOR
   "Lukas Cone"
   DESCR

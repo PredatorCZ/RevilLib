@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/reflector.hpp"
 #include "internal.hpp"
+#include "spike/reflect/reflector.hpp"
 
 REFLECT(CLASS(TrackMinMax), MEMBER(min), MEMBER(max));
 
@@ -32,7 +32,9 @@ auto LMT::CreateAnimation() const {
   return LMTAnimation::Create(cProps);
 }
 
-LMT::operator uni::MotionsConst() const { return uni::MotionsConst{pi.get(), false}; }
+LMT::operator uni::MotionsConst() const {
+  return uni::MotionsConst{pi.get(), false};
+}
 
 void LMT::Version(LMTVersion _version, LMTArchType _arch) {
   if (!pi->masterBuffer.empty()) {

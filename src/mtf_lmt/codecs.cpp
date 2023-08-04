@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 */
 
 #include "codecs.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/macroLoop.hpp"
-#include "datas/master_printer.hpp"
-#include "datas/reflector_xml.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/master_printer.hpp"
+#include "spike/reflect/reflector_xml.hpp"
+#include "spike/util/macroLoop.hpp"
 
 #include <cmath>
 #include <sstream>
@@ -936,17 +936,18 @@ template <class C> void Buff_EvalShared<C>::FromString(std::string_view input) {
 
 template <class C>
 void Buff_EvalShared<C>::Assign(char *ptr, size_t size, bool swapEndian) {
-  if (!C::VARIABLE_SIZE) {
-    es::allocator_hybrid_base::LinkStorage(data, reinterpret_cast<C *>(ptr),
-                                           reinterpret_cast<C *>(ptr + size));
+  if constexpr (!C::VARIABLE_SIZE) {
+    data = {reinterpret_cast<C *>(ptr), reinterpret_cast<C *>(ptr + size)};
   } else {
     const char *bufferEnd = ptr + size;
 
     while (ptr < bufferEnd) {
       C *block = reinterpret_cast<C *>(ptr);
-      data.push_back(*block);
+      internalData.push_back(*block);
       ptr += block->Size();
     }
+
+    data = internalData;
   }
 
   if (swapEndian) {
@@ -964,10 +965,10 @@ void Buff_EvalShared<C>::Assign(char *ptr, size_t size, bool swapEndian) {
 }
 
 template <class C> void Buff_EvalShared<C>::Save(BinWritterRef wr) const {
-  if (!C::VARIABLE_SIZE) {
+  if constexpr (!C::VARIABLE_SIZE) {
     if (!wr.SwappedEndian()) {
       wr.WriteBuffer(reinterpret_cast<const char *>(data.data()),
-                     data.size() * sizeof(typename Store_Type::value_type));
+                     data.size() * sizeof(typename decltype(data)::value_type));
     } else {
       wr.WriteContainer(data);
     }

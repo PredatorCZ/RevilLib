@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -15,10 +15,10 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/endian.hpp"
 #include "header.hpp"
+#include "spike/io/binreader.hpp"
+#include "spike/io/binwritter.hpp"
+#include "spike/util/endian.hpp"
 #include "traits.hpp"
 #include <map>
 

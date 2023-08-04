@@ -17,13 +17,13 @@
 
 #include "../hfs.hpp"
 #include "arc.hpp"
-#include "datas/encrypt/blowfish.h"
-#include "datas/fileinfo.hpp"
-#include "datas/master_printer.hpp"
 #include "ext_base.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/hashreg.hpp"
+#include "spike/crypto/blowfish.h"
+#include "spike/io/fileinfo.hpp"
+#include "spike/master_printer.hpp"
 #include <set>
 
 static struct ValidateVFS : ReflectorBase<ValidateVFS> {

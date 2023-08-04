@@ -8,9 +8,7 @@ project(RevilLib VERSION 1)
 
 # ~~~
 # Valid targets:
-#  - revil-static: static library target (BUILD_STATIC_LIBS == ON OR BUILD_STATIC_OBJECTS == ON)
-#  - revil-objects: static objects target (BUILD_STATIC_OBJECTS == ON)
-#  - revil-shared: PIC objects target (BUILD_SHARED_OBJECTS == ON OR BUILD_SHARED_LIBS == ON)
+#  - revil-objects: static objects target (NO_OBJECTS == OFF)
 #  - revil: shared library target (BUILD_SHARED_LIBS == ON), revil-shared target will have exported symbols
 #
 # Definitions:
@@ -18,20 +16,31 @@ project(RevilLib VERSION 1)
 #  - RE_IMPORT: use to import dynamic symbols from shared library (API only)
 # ~~~
 
+option(TOOLSET "Build toolset." ON)
 option(ODR_TEST "Enable ODR testing." OFF)
-option(BUILD_STATIC_OBJECTS "Builds revil-objects target." ON)
-option(BUILD_SHARED_OBJECTS "Builds revil-shared target." OFF)
-option(BUILD_STATIC_LIBS "Builds revil-static target." OFF)
-option(BUILD_SHARED_LIBS "Builds revil target." OFF)
 
+option(OBJECTS_PID "Imply PID for all objects." OFF)
+option(BUILD_SHARED_LIBS "Builds revil target." ${TOOLSET})
+
+option(NO_OBJECTS "" OFF)
+option(CLI "" ${TOOLSET})
+option(GLTF "" ${TOOLSET})
+
+set(TPD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party)
 set(CMAKE_CXX_STANDARD 23)
-add_subdirectory(3rd_party/spike)
+add_compile_options(-Wall -Wextra)
+
+add_subdirectory(${TPD_PATH}/spike)
 include(targetex)
 
 add_subdirectory(classgen)
 add_subdirectory(src)
 
-if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR} AND NOT NO_OBJECTS)
   enable_testing()
   add_subdirectory(test)
+endif()
+
+if(TOOLSET)
+  add_subdirectory(toolset)
 endif()

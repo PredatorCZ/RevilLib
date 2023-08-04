@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2021 Lukas Cone
+    Copyright(C) 2021-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include "datas/binreader_stream.hpp"
+#include "spike/io/binreader_stream.hpp"
 #include <sstream>
 
 static constexpr uint32 SFHID = CompileFourCC("\0SFH");

@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 */
 
 #pragma once
-#include "datas/bincore_fwd.hpp"
-#include "datas/pugi_fwd.hpp"
+#include "spike/io/bincore_fwd.hpp"
+#include "spike/util/pugi_fwd.hpp"
 #include "settings.hpp"
-#include "uni/motion.hpp"
+#include "spike/uni/motion.hpp"
 #include <variant>
 #include <vector>
 #include <map>

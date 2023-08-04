@@ -1,5 +1,5 @@
-#include "datas/matrix44.hpp"
 #include "revil/mot.hpp"
+#include "spike/type/matrix44.hpp"
 
 struct LMTRawTrack {
   typedef std::vector<es::Matrix44> InputRaw;

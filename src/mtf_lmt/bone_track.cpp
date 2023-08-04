@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 */
 
 #include "bone_track.hpp"
-#include "datas/deleter_hybrid.hpp"
-#include "datas/reflector_xml.hpp"
 #include "fixup_storage.hpp"
 #include "pugixml.hpp"
+#include "spike/reflect/reflector_xml.hpp"
+#include "spike/uni/deleter_hybrid.hpp"
 
 MAKE_ENUM(ENUMSCOPE(class TrackType_er
                     : uint8, TrackType_er),

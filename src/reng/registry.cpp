@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -15,9 +15,9 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/except.hpp"
 #include "motion_list_528.hpp"
 #include "motion_list_99.hpp"
+#include "spike/except.hpp"
 #include <set>
 #include <unordered_map>
 
@@ -38,11 +38,11 @@ static const std::set<uint64> supAssets = {
 
 static const std::unordered_map<uint64, decltype(&f_<void>::creator)>
     assetRegistry = {
-        make<REMotlist60Asset>(), make<REMotlist85Asset>(),
-        make<REMotlist99Asset>(), make<REMotlist486Asset>(),
-        make<REMotlist528Asset>(),
-        make<REMotion43Asset>(),  make<REMotion78Asset>(),
-        make<REMotion65Asset>(),  make<REMotion458Asset>(),
+        make<REMotlist60Asset>(),  make<REMotlist85Asset>(),
+        make<REMotlist99Asset>(),  make<REMotlist486Asset>(),
+        make<REMotlist528Asset>(), make<REMotion43Asset>(),
+        make<REMotion78Asset>(),   make<REMotion65Asset>(),
+        make<REMotion458Asset>(),
 };
 
 REAssetImpl::Ptr REAssetImpl::Create(REAssetBase base) {

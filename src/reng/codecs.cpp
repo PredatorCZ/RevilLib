@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -15,9 +15,9 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/master_printer.hpp"
-#include "datas/vectors_simd.hpp"
 #include "motion_78.hpp"
+#include "spike/master_printer.hpp"
+#include "spike/type/vectors_simd.hpp"
 #include <unordered_map>
 
 struct RETrackController_internal : RETrackController {
@@ -30,6 +30,8 @@ struct RETrackController_internal : RETrackController {
   uint32 componentID;
   uint8 *frames;
   uint32 numFrames;
+
+  std::string dataBuffer;
 
   template <class C> void Assign_(C *data) {
     frameType = static_cast<FrameType>((data->flags >> 20) & 0xf);
@@ -82,13 +84,11 @@ struct RETrackController_internal : RETrackController {
 
 struct LinearVector3Controller : RETrackController_internal {
   static constexpr uint32 ID = 0xF2;
-  using Alloc_Type = es::allocator_hybrid<Vector>;
-  using Storage_Type = std::vector<Vector, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<Vector> dataStorage;
 
   void Assign(char *data) override {
     Vector *start = reinterpret_cast<Vector *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -98,9 +98,7 @@ struct LinearVector3Controller : RETrackController_internal {
 
 struct BiLinearVector3_5bitController : RETrackController_internal {
   static constexpr uint32 ID = 0x200F2;
-  using Alloc_Type = es::allocator_hybrid<uint16>;
-  using Storage_Type = std::vector<uint16, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<uint16> dataStorage;
 
   static constexpr uint32 componentMask = 0x1f;
   static constexpr float componentMultiplier =
@@ -108,7 +106,7 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     uint16 *start = reinterpret_cast<uint16 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
 
     minMaxBounds.max.Z = minMaxBounds.max.Y;
     minMaxBounds.max.Y = minMaxBounds.max.X;
@@ -126,9 +124,7 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
 
 struct BiLinearVector3_10bitController : RETrackController_internal {
   static constexpr uint32 ID = 0x400F2;
-  using Alloc_Type = es::allocator_hybrid<uint32>;
-  using Storage_Type = std::vector<uint32, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<uint32> dataStorage;
 
   static constexpr uint32 componentMask = 0x3ff;
   static constexpr float componentMultiplier =
@@ -136,7 +132,7 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     uint32 *start = reinterpret_cast<uint32 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
 
     minMaxBounds.max.Z = minMaxBounds.max.Y;
     minMaxBounds.max.Y = minMaxBounds.max.X;
@@ -144,7 +140,7 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
-    const uint32 retreived = dataStorage.at(id);
+    const uint32 retreived = dataStorage[id];
     IVector4A16 data(retreived, retreived >> 10, retreived >> 20, 0);
 
     out = data & componentMask;
@@ -154,9 +150,7 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
 
 struct BiLinearVector3_21bitController : RETrackController_internal {
   static constexpr uint32 ID = 0x800F2;
-  using Alloc_Type = es::allocator_hybrid<uint64>;
-  using Storage_Type = std::vector<uint64, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<uint64> dataStorage;
 
   static constexpr uint64 componentMask = (1 << 21) - 1;
   static constexpr float componentMultiplier =
@@ -164,7 +158,7 @@ struct BiLinearVector3_21bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     uint64 *start = reinterpret_cast<uint64 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
 
     minMaxBounds.max.Z = minMaxBounds.max.Y;
     minMaxBounds.max.Y = minMaxBounds.max.X;
@@ -185,9 +179,7 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
   struct SType {
     uint8 data[5];
   };
-  using Alloc_Type = es::allocator_hybrid<SType>;
-  using Storage_Type = std::vector<SType, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<SType> dataStorage;
 
   static constexpr uint64 componentMask = (1 << 13) - 1;
   static constexpr float componentMultiplier =
@@ -195,7 +187,7 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     SType *start = reinterpret_cast<SType *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -215,9 +207,7 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
 
 struct BiLinearQuat3_16bitController : RETrackController_internal {
   static constexpr uint32 ID = 0x60112;
-  using Alloc_Type = es::allocator_hybrid<USVector>;
-  using Storage_Type = std::vector<USVector, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<USVector> dataStorage;
 
   static constexpr uint32 componentMask = (1 << 16) - 1;
   static constexpr float componentMultiplier =
@@ -225,7 +215,7 @@ struct BiLinearQuat3_16bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     USVector *start = reinterpret_cast<USVector *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -241,9 +231,7 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
   struct SType {
     uint8 data[7];
   };
-  using Alloc_Type = es::allocator_hybrid<SType>;
-  using Storage_Type = std::vector<SType, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<SType> dataStorage;
 
   static constexpr uint64 componentMask = (1 << 18) - 1;
   static constexpr float componentMultiplier =
@@ -251,7 +239,7 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     SType *start = reinterpret_cast<SType *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -275,9 +263,7 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
 
 struct BiLinearQuat3_8bitController : RETrackController_internal {
   static constexpr uint32 ID = 0x30112;
-  using Alloc_Type = es::allocator_hybrid<UCVector>;
-  using Storage_Type = std::vector<UCVector, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<UCVector> dataStorage;
 
   static constexpr uint32 componentMask = 0xff;
   static constexpr float componentMultiplier =
@@ -285,7 +271,7 @@ struct BiLinearQuat3_8bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     UCVector *start = reinterpret_cast<UCVector *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -312,7 +298,7 @@ struct BiLinearQuat3_5bitController : BiLinearVector3_5bitController {
 
   void Assign(char *data) override {
     uint16 *start = reinterpret_cast<uint16 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -328,7 +314,7 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
 
   void Assign(char *data) override {
     uint32 *start = reinterpret_cast<uint32 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -344,7 +330,7 @@ struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
 
   void Assign(char *data) override {
     uint64 *start = reinterpret_cast<uint64 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -364,13 +350,11 @@ struct LinearSCVector3Controller : RETrackController_internal {
   static constexpr uint32 ID7 = 0x430F2;
   static constexpr uint32 ID8 = 0x440F2;
 
-  using Alloc_Type = es::allocator_hybrid<float>;
-  using Storage_Type = std::vector<Alloc_Type::value_type, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<float> dataStorage;
 
   void Assign(char *data) override {
     float *start = reinterpret_cast<float *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {
@@ -390,9 +374,7 @@ struct BiLinearSCVector3_16bitController : RETrackController_internal {
   static constexpr uint32 ID3 = 0x230F2;
   static constexpr uint32 ID4 = 0x240F2;
 
-  using Alloc_Type = es::allocator_hybrid<uint16>;
-  using Storage_Type = std::vector<Alloc_Type::value_type, Alloc_Type>;
-  Storage_Type dataStorage;
+  std::span<uint16> dataStorage;
 
   static constexpr uint32 componentMask = (1 << 16) - 1;
   static constexpr float componentMultiplier =
@@ -400,7 +382,7 @@ struct BiLinearSCVector3_16bitController : RETrackController_internal {
 
   void Assign(char *data) override {
     uint16 *start = reinterpret_cast<uint16 *>(data);
-    dataStorage = Storage_Type(start, start + numFrames, Alloc_Type(start));
+    dataStorage = {start, start + numFrames};
   }
 
   void Evaluate(uint32 id, Vector4A16 &out) const override {

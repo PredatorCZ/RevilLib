@@ -15,12 +15,12 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datas/binreader_stream.hpp"
-#include "datas/binwritter_stream.hpp"
-#include "datas/fileinfo.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/tex.hpp"
+#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
+#include "spike/io/fileinfo.hpp"
 
 std::string_view filters[]{
     ".tex$",
@@ -49,9 +49,7 @@ static AppInfo_s appInfo{
     .filters = filters,
 };
 
-AppInfo_s *AppInitModule() {
-  return &appInfo;
-}
+AppInfo_s *AppInitModule() { return &appInfo; }
 
 void AppProcessFile(AppContext *ctx) {
   TEX tex;

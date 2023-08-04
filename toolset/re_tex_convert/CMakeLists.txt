@@ -10,7 +10,7 @@ build_target(
   SOURCES
   tex_convert.cpp
   LINKS
-  precore
+  spike
   AUTHOR
   "Lukas Cone"
   DESCR

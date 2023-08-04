@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2020 Lukas Cone
+    Copyright(C) 2017-2023 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -17,12 +17,12 @@
 
 #include "animation.hpp"
 #include "bone_track.hpp"
-#include "datas/binreader.hpp"
-#include "datas/binwritter.hpp"
-#include "datas/except.hpp"
 #include "event.hpp"
 #include "fixup_storage.hpp"
 #include "float_track.hpp"
+#include "spike/except.hpp"
+#include "spike/io/binreader.hpp"
+#include "spike/io/binwritter.hpp"
 
 static constexpr uint32 MTMI = CompileFourCC("MTMI");
 static constexpr uint32 LMT_ID = CompileFourCC("LMT\0");
