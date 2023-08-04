@@ -25,7 +25,7 @@ option(BUILD_STATIC_LIBS "Builds revil-static target." OFF)
 option(BUILD_SHARED_LIBS "Builds revil target." OFF)
 
 set(CMAKE_CXX_STANDARD 23)
-add_subdirectory(3rd_party/PreCore)
+add_subdirectory(3rd_party/spike)
 include(targetex)
 
 add_subdirectory(classgen)

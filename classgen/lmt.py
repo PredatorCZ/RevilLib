@@ -1,6 +1,6 @@
 import sys
 import os.path as pt
-sys.path.append(pt.dirname(pt.abspath(__file__)) + '/../3rd_party/PreCore/classgen')
+sys.path.append(pt.dirname(pt.abspath(__file__)) + '/../3rd_party/spike/classgen')
 from classgen import *
 
 BASE = MainSettings()
