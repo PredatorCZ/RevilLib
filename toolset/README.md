@@ -4,9 +4,9 @@ Revil Toolset is a collection of modding tools for RE Engine/MT Framework titles
 
 This toolset runs on Spike foundation.
 
-Head to this **[Wiki](https://github.com/PredatorCZ/PreCore/wiki/Spike)** for more information on how to effectively use it.
+Head to this **[Wiki](https://github.com/PredatorCZ/Spike/wiki/Spike)** for more information on how to effectively use it.
 
-**[Latest Release](https://github.com/PredatorCZ/RevilToolset/releases)**
+**[Latest Release](https://github.com/PredatorCZ/RevilLib/releases)**
 
 ## Release authenticity
 

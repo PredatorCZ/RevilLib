@@ -1,7 +1,7 @@
-*.vs
-lib/*
-[Bb]in/*
-build/*
-test/build/*
-.vscode/*
+build/
+.vscode/
+bin/
+lib/
+*.7z
+*.bat
 __pycache__/

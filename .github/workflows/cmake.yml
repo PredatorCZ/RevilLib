@@ -1,30 +1,19 @@
 name: build
 
-on: [push]
+on:
+  push:
 
 env:
   BUILD_TYPE: Release
-  ARCH: amd64
+  SK_VERSION: nover
 
 jobs:
-  build-linux:
+  ubuntu-test:
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: G++ 12 & GCOV
-            CC: gcc-12
-            CXX: g++-12
-            use-gcov: true
-          - name: Clang 13
-            CC: clang-13
-            CXX: clang++-13
 
     env:
-      CC: ${{matrix.CC}}
-      CXX: ${{matrix.CXX}}
-      USE_GCOV: ${{matrix.use-gcov == true}}
+      CC: gcc-12
+      CXX: g++-12
 
     defaults:
       run:
@@ -37,9 +26,10 @@ jobs:
 
       - name: Configure stuff
         run: |
+          sudo apt install nasm g++-12
           mkdir ${{github.workspace}}/build
           cd ${{github.workspace}}/build
-          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_GCOV=$USE_GCOV -DCMAKE_INSTALL_PREFIX=${{github.workspace}} ..
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_GCOV=TRUE -DTOOLSET=FALSE -DODR_TEST=TRUE ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -49,19 +39,72 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ctest --output-on-failure
 
-      - name: Upload coverage report
+      - name: Install coverage parser
         working-directory: ${{github.workspace}}
-        if: ${{matrix.use-gcov == true}}
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.CoverallsToken }}
         run: |
           sudo apt install python3-setuptools python3-idna python3-requests python3-urllib3
           git clone https://github.com/PredatorCZ/cpp-coveralls.git
           pushd cpp-coveralls
           sudo python3 setup.py install
           popd
-          export COVERALLS_SERVICE_NAME="gitlab-ci"
-          coveralls -E ".*/build/.*.[ch]((pp)|(c)|(xx))?$" -e test -e 3rd_party --gcov-options '\-lp' > /dev/null
+
+      - name: Upload coverage report
+        working-directory: ${{github.workspace}}
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.CoverallsToken }}
+          COVERALLS_SERVICE_NAME: github-actions-ci
+        run: >
+          coveralls --gcov gcov-12
+          -E ".*/build/.*.[ch]((pp)|(c)|(xx))?$"
+          -e test
+          -e 3rd_party
+          -e toolset
+          --gcov-options '\-lp' > /dev/null
+
+  toolset:
+    runs-on: ubuntu-22.04
+
+    env:
+      CC: gcc-12
+      CXX: g++-12
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Configure stuff
+        run: |
+          sudo apt install nasm g++-12
+          mkdir ${{github.workspace}}/build
+          cd ${{github.workspace}}/build
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/tmp ..
+          echo "SK_VERSION=$(cat toolset/version)" >> $GITHUB_ENV
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . -j 6
+
+      - name: Install
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --target install
+          cd ../tmp
+          mv ../LICENSE .
+          mv ../toolset/README.md .
+          tar -cvaf ../RevilToolset-v${{env.SK_VERSION}}-linux-amd64.tar.xz .
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: RevilToolset-linux-amd64
+          path: ${{github.workspace}}/RevilToolset-v${{env.SK_VERSION}}-linux-amd64.tar.xz
+          retention-days: 5
 
   build-widle:
     runs-on: windows-2022
@@ -69,20 +112,31 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+          fetch-depth: 0
+
       - name: Configure stuff
         run: |
           choco install ninja
           mkdir ${{github.workspace}}/build
           cd ${{github.workspace}}/build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{github.workspace}} ..
+          echo "SK_VERSION=$(Get-Content -Path ./toolset/version)" >> $env:GITHUB_ENV
         env:
           CC: clang
           CXX: clang++
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: |
-          cmake --build . --target install
+        run: cmake --build . -j 6
 
-      - name: Test
-        working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure
+      - name: Install
+        run: |
+          cmake --build build --target install
+          copy LICENSE bin/LICENSE
+          copy toolset/README.md bin/README.md
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: RevilToolset-v${{env.SK_VERSION}}-win64
+          path: ${{github.workspace}}/bin
+          retention-days: 5
