@@ -3,7 +3,7 @@ name: release nightly
 on:
   workflow_run:
     workflows:
-      - build
+      - cmake
     types:
       - completed
     branches:
@@ -17,7 +17,7 @@ jobs:
     - name: Download artifacts
       uses: dawidd6/action-download-artifact@v2
       with:
-        workflow: build.yaml
+        workflow: cmake.yml
         branch: ${{ github.event.release.target_commitish }}
         workflow_conclusion: success
 
