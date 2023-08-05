@@ -6,7 +6,13 @@
 
 RevilLib is an independent library for various formats, used by RE Engine and MT Framework.
 
-Library is written for C++17 and compilable under MSVC 2017+, GCC 7+, Clang 5+.
+Library is written for C++20/23 and compilable under GCC 12+ and Clang 13+.
+
+## Toolset
+
+Toolset can be found in [Toolset folder](https://github.com/PredatorCZ/RevilLib/tree/master/toolset)
+
+[Toolset releases](https://github.com/PredatorCZ/RevilLib/releases)
 
 ## Supported titles/formats
 
@@ -17,9 +23,11 @@ Library is written for C++17 and compilable under MSVC 2017+, GCC 7+, Clang 5+.
 
 ## License
 
-This library is available under GPL v3 license. (See LICENSE.md)
+This library is available under GPL v3 license. (See LICENSE)
 
 This library uses following libraries:
 
-* PugiXml, Copyright (c) 2006-2020 Arseny Kapoulkine
-* PreCore, Copyright (c) 2016-2020 Lukas Cone
+* Spike, Copyright (c) 2016-2023 Lukas Cone (Apache 2)
+* libmspack, Copyright (c) 2003-2016 Stuart Caie (LGPLv2)
+* zlib, Copyright (c) 1995-2022 Jean-loup Gailly and Mark Adler (Zlib)
+* PoverVR Core, Copyright (c) Imagination Technologies Limited (MIT)
