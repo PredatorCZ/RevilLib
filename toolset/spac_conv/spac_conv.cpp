@@ -154,7 +154,7 @@ struct SPACHeader {
 };
 
 MAKE_ENUM(ENUMSCOPE(class SPACFileType, SPACFileType), EMEMBER(WAV),
-          EMEMBER(FWSE), EMEMBER(MSF));
+          EMEMBER(FWSE), EMEMBER(MSF), EMEMBER(XMA));
 
 struct ArchiveFileEntry {
   char *start;
@@ -171,7 +171,51 @@ struct ArchiveBuffer {
   std::vector<ArchiveFileEntry> entries;
 };
 
-void AppExtractFile(AppContext *ctx) {
+template <> void FByteswapper(WAVEGenericHeader &item, bool) {
+  FByteswapper(item.id);
+  FByteswapper(item.chunkSize);
+}
+
+template <> void FByteswapper(RIFFHeader &item, bool) {
+  FByteswapper<WAVEGenericHeader>(item);
+  FByteswapper(item.type);
+}
+
+template <> void FByteswapper(WAVE_data &item, bool) {
+  FByteswapper<WAVEGenericHeader>(item);
+}
+/*
+template <> void FByteswapper(WAVE_fmt &item, bool) {
+  FByteswapper<WAVEGenericHeader>(item);
+  FByteswapper(item.bitsPerSample);
+  FByteswapper(item.channels);
+  FByteswapper(item.chunkSize);
+  FByteswapper(item.format);
+  FByteswapper(item.interleave);
+  FByteswapper(item.sampleCount);
+  FByteswapper(item.sampleRate);
+}
+
+template <> void FByteswapper(WAVE_seek &item, bool) {
+  FByteswapper<WAVEGenericHeader>(item);
+  FByteswapper(item.data);
+}
+
+template <> void FByteswapper(WAVE_smpl &item, bool) {
+  FByteswapper<WAVEGenericHeader>(item);
+  FByteswapper(item.manufacturer);
+  FByteswapper(item.MIDIPitchFraction);
+  FByteswapper(item.MIDIUnityNote);
+  FByteswapper(item.numSampleLoops);
+  FByteswapper(item.product);
+  FByteswapper(item.sampleLoopsSize);
+  FByteswapper(item.samplePeriod);
+  FByteswapper(item.SMPTEFormat);
+  FByteswapper(item.SMPTEOffset);
+}*/
+
+
+void AppProcessFile(AppContext *ctx) {
   BinReaderRef_e rd(ctx->GetStream());
 
   SPACHeader hdr;
@@ -280,7 +324,56 @@ void AppExtractFile(AppContext *ctx) {
       msBuffer.curPos += fwseHdr->fileSize;
       curBuffITer = rd.Tell();
       rd.Pop();
-    } else {
+    } else if (firstFileID == CompileFourCC("FFIR")) {
+      char *bufferStart = &msBuffer.buffer[0] + msBuffer.curPos;
+      char *bufferIter = bufferStart;
+
+      RIFFHeader rhdr(0);
+      rd.SwapEndian(true);
+      rd.Read(rhdr);
+      memcpy(bufferIter, &rhdr, sizeof(rhdr));
+      bufferIter += sizeof(rhdr);
+
+      WAVEGenericHeader gHdr(0);
+
+      while (true) {
+        rd.Push();
+        rd.Read(gHdr);
+        rd.Pop();
+
+        if (gHdr.id == RIFFHeader::ID) {
+          break;
+        } else if (gHdr.id == WAVE_data::ID) {
+          rd.ReadBuffer(bufferIter, sizeof(WAVEGenericHeader));
+          WAVE_data *data = reinterpret_cast<WAVE_data *>(bufferIter);
+          FByteswapper(*data);
+          bufferIter += sizeof(WAVEGenericHeader);
+          rd.Push();
+          rd.Seek(curBuffITer);
+          rd.ReadBuffer(bufferIter, gHdr.chunkSize);
+          bufferIter += gHdr.chunkSize;
+          curBuffITer = rd.Tell();
+          rd.Pop();
+        } else if (IsValidWaveChunk(gHdr)) {
+          // VGMStream skips other chunks for now
+          rd.ReadBuffer(bufferIter, sizeof(WAVEGenericHeader) + gHdr.chunkSize);
+          WAVEGenericHeader *fmt = reinterpret_cast<WAVEGenericHeader *>(bufferIter);
+          FByteswapper(*fmt);
+
+          bufferIter += sizeof(WAVEGenericHeader) + gHdr.chunkSize;
+        } else if (f + 1 < hdr.numFiles) {
+          throw std::runtime_error("Invalid WAVE chunk!");
+        } else {
+          break;
+        }
+      }
+      const size_t fullSize = bufferIter - bufferStart;
+      msBuffer.entries.emplace_back(bufferStart, fullSize, SPACFileType::XMA);
+      msBuffer.curPos += fullSize;
+      rd.SwapEndian(false);
+    }
+
+    else {
       throw std::runtime_error("Invalid entry format!");
     }
   }

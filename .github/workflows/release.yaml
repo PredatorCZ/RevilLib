@@ -3,7 +3,7 @@ name: release nightly
 on:
   workflow_run:
     workflows:
-      - cmake
+      - build
     types:
       - completed
     branches:
