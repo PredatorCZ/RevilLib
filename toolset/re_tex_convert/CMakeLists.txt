@@ -10,7 +10,7 @@ build_target(
   SOURCES
   tex_convert.cpp
   LINKS
-  spike
+  spike-interface
   AUTHOR
   "Lukas Cone"
   DESCR

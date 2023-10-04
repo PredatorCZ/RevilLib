@@ -10,7 +10,7 @@ build_target(
   SOURCES
   ddon_sngw.cpp
   LINKS
-  spike
+  spike-interface
   AUTHOR
   "Lukas Cone"
   DESCR

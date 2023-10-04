@@ -16,7 +16,7 @@
 #include <cassert>
 #include <vector>
 
-namespace pvr {
+namespace pvrrvl {
 enum
 {
 	ETC_MIN_TEXWIDTH = 4,

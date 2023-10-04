@@ -1,5 +1,6 @@
 project(RevilToolset)
 set_target_properties(spike_cli PROPERTIES OUTPUT_NAME revil_toolset)
+target_link_libraries(spike_cli revil-objects)
 
 include(targetex)
 include(version)
@@ -31,7 +32,10 @@ add_spike_subdir(mtf_tex_convert)
 add_spike_subdir(xfs_conv)
 add_spike_subdir(udas_extract)
 add_spike_subdir(obb_extract)
-# add_spike_subdir(dev)
 add_spike_subdir(lmt_to_gltf)
 add_spike_subdir(sbk)
 add_spike_subdir(stq)
+
+if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    add_spike_subdir(dev)
+endif()

@@ -13,7 +13,7 @@ build_target(
   INCLUDES
   ${TPD_PATH}/mspack
   LINKS
-  spike
+  spike-interface
   AUTHOR
   "Lukas Cone"
   DESCR

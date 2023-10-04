@@ -10,8 +10,8 @@ build_target(
   SOURCES
   reasset_to_gltf.cpp
   LINKS
-  revil
-  gltf
+  revil-interface
+  gltf-interface
   AUTHOR
   "Lukas Cone"
   DESCR

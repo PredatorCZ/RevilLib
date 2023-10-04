@@ -10,7 +10,8 @@ build_target(
   SOURCES
   xfs_to_xml.cpp
   LINKS
-  revil
+  revil-interface
+  pugixml-interface
   AUTHOR
   "Lukas Cone"
   DESCR

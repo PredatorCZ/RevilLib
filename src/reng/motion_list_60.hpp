@@ -18,10 +18,10 @@
 #pragma once
 #include "asset.hpp"
 #include "motion_43.hpp"
-#include "spike/type/unicode.hpp"
 #include "spike/uni/list_vector.hpp"
 #include "spike/uni/rts.hpp"
 #include "spike/uni/skeleton.hpp"
+#include "spike/util/unicode.hpp"
 
 struct REMotlist60 : public REAssetBase {
   uint64 pad;

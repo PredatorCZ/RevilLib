@@ -18,10 +18,10 @@
 #pragma once
 #include "asset.hpp"
 #include "spike/type/flags.hpp"
-#include "spike/type/unicode.hpp"
 #include "spike/type/vectors_simd.hpp"
 #include "spike/uni/list_vector.hpp"
 #include "spike/uni/motion.hpp"
+#include "spike/util/unicode.hpp"
 
 struct RETrackCurve43;
 struct RETrackCurve65;

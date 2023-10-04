@@ -10,8 +10,8 @@ build_target(
   SOURCES
   mod_to_gltf.cpp
   LINKS
-  revil
-  gltf
+  revil-interface
+  gltf-interface
   AUTHOR
   "Lukas Cone"
   DESCR
@@ -31,8 +31,8 @@ build_target(
   SOURCES
   dwm_to_gltf.cpp
   LINKS
-  revil
-  gltf
+  revil-interface
+  gltf-interface
   AUTHOR
   "Lukas Cone"
   DESCR

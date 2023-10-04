@@ -6,7 +6,7 @@
 */
 #pragma once
 #include <stdint.h>
-namespace pvr {
+namespace pvrrvl {
 
 /// <summary>Decompresses PVRTC to RGBA 8888.</summary>
 /// <param name="compressedData">The PVRTC texture data to decompress</param>

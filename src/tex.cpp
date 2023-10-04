@@ -696,7 +696,7 @@ TEX LoadTEXx09(BinReaderRef_e rd_, Platform) {
     size_t curOffset = 0;
 
     for (size_t m = 0; m < header.numMips; m++) {
-      curOffset += pvr::PVRTDecompressPVRTC(
+      curOffset += pvrrvl::PVRTDecompressPVRTC(
           buffer.data() + curOffset, 0, header.width / (1 << m),
           header.height / (1 << m),
           reinterpret_cast<uint8 *>(main.buffer.data() + main.mips.offsets[m]));
@@ -710,7 +710,7 @@ TEX LoadTEXx09(BinReaderRef_e rd_, Platform) {
     size_t curOffset = 0;
 
     for (size_t m = 0; m < header.numMips; m++) {
-      curOffset += pvr::PVRTDecompressETC(
+      curOffset += pvrrvl::PVRTDecompressETC(
           buffer.data() + curOffset, header.width / (1 << m),
           header.height / (1 << m), main.buffer.data() + main.mips.offsets[m],
           0);

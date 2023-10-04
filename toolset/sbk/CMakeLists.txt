@@ -10,7 +10,7 @@ build_target(
   SOURCES
   sbk_to_json.cpp
   LINKS
-  spike
+  spike-interface
   AUTHOR
   "Lukas Cone"
   DESCR

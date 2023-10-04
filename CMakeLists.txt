@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "X86 architecture is not supported!")
 endif()
+
+set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/tmp)
 
 project(RevilLib VERSION 1)
 
@@ -20,11 +22,13 @@ option(TOOLSET "Build toolset." ON)
 option(ODR_TEST "Enable ODR testing." OFF)
 
 option(OBJECTS_PID "Imply PID for all objects." OFF)
-option(BUILD_SHARED_LIBS "Builds revil target." ${TOOLSET})
 
-option(NO_OBJECTS "" OFF)
 option(CLI "" ${TOOLSET})
 option(GLTF "" ${TOOLSET})
+
+if(TOOLSET)
+  set(EXPOSE_SYMBOLS spike;gltf;revil;pugixml)
+endif()
 
 set(TPD_PATH ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party)
 set(CMAKE_CXX_STANDARD 23)

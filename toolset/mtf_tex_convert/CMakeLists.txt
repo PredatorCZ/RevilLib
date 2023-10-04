@@ -10,7 +10,7 @@ build_target(
   SOURCES
   tex_convert.cpp
   LINKS
-  revil
+  revil-interface
   AUTHOR
   "Lukas Cone"
   DESCR

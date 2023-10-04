@@ -10,9 +10,9 @@ build_target(
   SOURCES
   validate_arcs.cpp
   LINKS
-  revil
+  revil-interface
   INCLUDES
-  ${TPD_PATH}/RevilLib/src/mtf_arc/
+  ${CMAKE_SOURCE_DIR}/src/mtf_arc/
   AUTHOR
   "Lukas Cone"
   DESCR

@@ -16,7 +16,7 @@ build_target(
   extract_arc.cpp
   ${TPD_PATH}/mspack/lzxd.c
   LINKS
-  revil
+  revil-interface
   zlib-objects
   INCLUDES
   ${TPD_PATH}/mspack
@@ -39,7 +39,7 @@ build_target(
   SOURCES
   make_arc.cpp
   LINKS
-  revil
+  revil-interface
   zlib-objects
   INCLUDES
   ${TPD_PATH}/../src/mtf_arc/

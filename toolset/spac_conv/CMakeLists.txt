@@ -10,7 +10,7 @@ build_target(
   SOURCES
   spac_conv.cpp
   LINKS
-  revil
+  revil-interface
   INCLUDES
   ../include
   AUTHOR
