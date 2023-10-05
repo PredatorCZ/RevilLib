@@ -96,7 +96,8 @@ static mspack_system mspackSystem{
 };
 
 static void DecompressLZX(char *inBuffer, uint32 compressedSize,
-                          char *outBuffer, uint32 uncompressedSize) {
+                          char *outBuffer, uint32 uncompressedSize,
+                          uint32 wBits) {
   mspack_file inStream{};
   mspack_file outStream{};
   inStream.buffer = reinterpret_cast<uint8 *>(inBuffer);
@@ -104,8 +105,8 @@ static void DecompressLZX(char *inBuffer, uint32 compressedSize,
   outStream.buffer = reinterpret_cast<uint8 *>(outBuffer);
   outStream.bufferSize = uncompressedSize;
 
-  lzxd_stream *lzxd = lzxd_init(&mspackSystem, &inStream, &outStream, 17, 0,
-                                0x40000, uncompressedSize, false);
+  lzxd_stream *lzxd = lzxd_init(&mspackSystem, &inStream, &outStream, wBits, 0,
+                                1 << wBits, uncompressedSize, false);
 
   int retVal = lzxd_decompress(lzxd, uncompressedSize);
 
@@ -250,7 +251,7 @@ void AppProcessFile(AppContext *ctx) {
 
         if (hdr.version == 0x11 && hdr.LZXTag) {
           DecompressLZX(&inBuffer[0], f.compressedSize, &outBuffer[0],
-                        f.uncompressedSize);
+                        f.uncompressedSize, id == ARCID ? 17 : 15);
         } else {
           z_stream infstream;
           infstream.zalloc = Z_NULL;
