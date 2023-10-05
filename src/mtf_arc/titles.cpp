@@ -49,9 +49,9 @@
 const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"ace_attorney_dual_destinies", &extPWAADD},
     {"ace_attorney_spirit_of_justice", &extPWAASOJ},
-    {"biohazzard_0", &extRE0},
-    {"biohazzard_5", &extRE5},
-    {"biohazzard_6", &extRE6},
+    {"biohazard_0", &extRE0},
+    {"biohazard_5", &extRE5},
+    {"biohazard_6", &extRE6},
     {"dai_gyakuten_saiban_2", &extDGS2},
     {"dai_gyakuten_saiban", &extDGS},
     {"dd", &extDD},
