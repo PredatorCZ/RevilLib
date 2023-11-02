@@ -29,6 +29,8 @@
 #include <deque>
 #include <vector>
 
+#include "shift_jis.inl"
+
 // #define XFS_DEBUG
 
 /*
@@ -142,16 +144,17 @@ template <class PadType> struct XFSClassMemberRaw {
     rd.Push();
     rd.Seek(memNameOffset);
     rd.ReadString(memberName);
+    memberName = sj2utf8(memberName);
     rd.Pop();
   }
 };
 
-template <class PtrType> struct XFSClassMemberV2 {
+template <class PtrType, bool PSN> struct XFSClassMemberV2 {
   std::string memberName;
   XFSType type;
   uint8 flags; // alignment flags??
   uint16 memberSize;
-  PtrType null[8];
+  PtrType null[4 * (PSN + 1)];
 
   void Read(BinReaderRef_e rd) {
     PtrType memNameOffset;
@@ -159,6 +162,7 @@ template <class PtrType> struct XFSClassMemberV2 {
     rd.Read(type);
     rd.Read(flags);
     rd.Read(memberSize);
+    // Padding
     if constexpr (sizeof(PtrType) == 8) {
       rd.Skip(4);
     }
@@ -166,6 +170,7 @@ template <class PtrType> struct XFSClassMemberV2 {
     rd.Push();
     rd.Seek(memNameOffset);
     rd.ReadString(memberName);
+    memberName = sj2utf8(memberName);
     rd.Pop();
   }
 };
@@ -182,15 +187,18 @@ template <class PadType> struct XFSClass {
   }
 };
 
-template <class PtrType> struct XFSClassV2 {
+template <class PtrType, bool PSN> struct XFSClassV2 {
   uint32 hash;
-  std::vector<XFSClassMemberV2<PtrType>> members;
+  std::vector<XFSClassMemberV2<PtrType, PSN>> members;
 
   void Read(BinReaderRef_e rd) {
     rd.Read(hash);
+
+    // Padding
     if constexpr (sizeof(PtrType) == 8) {
       rd.Skip(4);
     }
+
     rd.ReadContainer<PtrType>(members);
   }
 };
@@ -211,8 +219,8 @@ struct XFSClassMember {
     }
   }
 
-  template <class pad_type>
-  XFSClassMember(XFSClassMemberV2<pad_type> &&raw)
+  template <class pad_type, bool psn>
+  XFSClassMember(XFSClassMemberV2<pad_type, psn> &&raw)
       : name(std::move(raw.memberName)), type(raw.type), flags(raw.flags),
         size(raw.memberSize) {}
 };
@@ -235,8 +243,8 @@ struct XFSClassDesc {
                    [](auto &&item) { return std::move(item); });
   }
 
-  template <class PtrType>
-  XFSClassDesc(XFSClassV2<PtrType> &&raw) : hash(raw.hash) {
+  template <class PtrType, bool PSN>
+  XFSClassDesc(XFSClassV2<PtrType, PSN> &&raw) : hash(raw.hash) {
     members.reserve(raw.members.size());
 
     std::transform(std::make_move_iterator(raw.members.begin()),
@@ -869,15 +877,46 @@ template <class PtrType> void Load(XFSImpl &main, BinReaderRef_e rd) {
 template <class PtrType>
 void LoadV2(XFSImpl &main, BinReaderRef_e rd, XFSHeaderV2 &header) {
   std::vector<PtrType> layoutOffsets;
-  std::vector<XFSClassV2<PtrType>> layouts;
   rd.ReadContainer(layoutOffsets, header.numLayouts);
-  rd.ReadContainer(layouts, header.numLayouts);
-  rd.Seek(header.dataStart);
 
-  std::transform(std::make_move_iterator(layouts.begin()),
-                 std::make_move_iterator(layouts.end()),
-                 std::back_inserter(main.rtti),
-                 [](auto &&item) { return std::move(item); });
+  // Determine member padding
+  rd.Push();
+  rd.Skip(sizeof(PtrType));
+  PtrType numMembers;
+  rd.Read(numMembers);
+  const size_t memberBegin = rd.Tell();
+
+  PtrType nameOffset;
+  rd.Read(nameOffset);
+  rd.Pop();
+
+  const size_t expectedEnd =
+      layoutOffsets.size() > 1 ? layoutOffsets.at(1) : nameOffset;
+  const size_t memberSize = (expectedEnd - memberBegin) / numMembers;
+
+  constexpr size_t singleMemberSize = sizeof(PtrType) * 6;
+  constexpr size_t singleMemberSizePSN = sizeof(PtrType) * 10;
+
+  if (memberSize == singleMemberSize) {
+    std::vector<XFSClassV2<PtrType, false>> layouts;
+    rd.ReadContainer(layouts, header.numLayouts);
+    std::transform(std::make_move_iterator(layouts.begin()),
+                   std::make_move_iterator(layouts.end()),
+                   std::back_inserter(main.rtti),
+                   [](auto &&item) { return std::move(item); });
+
+  } else if (memberSize == singleMemberSizePSN) {
+    std::vector<XFSClassV2<PtrType, true>> layouts;
+    rd.ReadContainer(layouts, header.numLayouts);
+    std::transform(std::make_move_iterator(layouts.begin()),
+                   std::make_move_iterator(layouts.end()),
+                   std::back_inserter(main.rtti),
+                   [](auto &&item) { return std::move(item); });
+  } else {
+    std::runtime_error("Cannot detect member padding");
+  }
+
+  rd.Seek(header.dataStart);
 }
 
 bool LoadV2(XFSImpl &main, BinReaderRef_e rd) {
