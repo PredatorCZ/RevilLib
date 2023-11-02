@@ -43,6 +43,7 @@
 #include "ext_sb4s.hpp"
 #include "ext_sbsh.hpp"
 #include "ext_sbsyd.hpp"
+#include "ext_umvc3.hpp"
 #include "revil/hashreg.hpp"
 #include "spike/master_printer.hpp"
 
@@ -112,6 +113,8 @@ const std::map<std::string_view, const MtExtensions *> invertedExtensions{
     {"sengoku_basara_4", &extSB4},
     {"sengoku_basara_samurai_heroes", &extSBSH},
     {"sengoku_basara_sanada_yukimura_den", &extSBSYD},
+    {"ultimate_marvel_vs_capcom_3", &extUMVC3},
+    {"umvc3", &extUMVC3},
 };
 
 const MtExtFixupStorage *GetFixups(std::string_view title) {
@@ -216,7 +219,7 @@ const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
 static std::string_view shortNames[]{
     "dd",  "ddon", "dgs", "dgs2", "dmc4",  "dr",     "ext",     "lp",   "lp2",
     "mh3", "mh4",  "mhg", "mhs",  "mhxr",  "pwaadd", "pwaasoj", "re0",  "re5",
-    "re6", "rem",  "rer", "sbsh", "sbsyd", "sb3",    "sb4",     "sb4s",
+    "re6", "rem",  "rer", "sbsh", "sbsyd", "sb3",    "sb4",     "sb4s", "umvc3",
 };
 
 void RE_EXTERN CheckCollisions() {
