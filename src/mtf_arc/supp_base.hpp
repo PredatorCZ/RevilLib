@@ -39,7 +39,13 @@ struct TitleSupports {
     Assign(std::forward<type>(types)...);
   }
 
-  auto Get(Platform platform) const { return data.at(platform); }
+  auto Get(Platform platform) const {
+    try {
+      return data.at(platform);
+    } catch (const std::out_of_range &) {
+      throw std::runtime_error("Invalid platform specified for title");
+    }
+  }
 };
 
 static constexpr ArcSupport ARC_PS3_GENERIC{8, 14, true};
