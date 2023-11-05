@@ -35,4 +35,6 @@ public:
 private:
   std::unique_ptr<SDLImpl> pi;
 };
+
+void RE_EXTERN SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode);
 } // namespace revil

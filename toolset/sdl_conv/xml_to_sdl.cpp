@@ -18,11 +18,11 @@
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/sdl.hpp"
-#include "spike/io/binreader_stream.hpp"
+#include "spike/io/binwritter_stream.hpp"
 #include "spike/util/pugiex.hpp"
 
 std::string_view filters[]{
-    ".sdl$",
+    ".xml$",
 };
 
 static AppInfo_s appInfo{
@@ -35,12 +35,15 @@ static AppInfo_s appInfo{
 AppInfo_s *AppInitModule() { return &appInfo; }
 
 void AppProcessFile(AppContext *ctx) {
-  SDL sdl;
-  sdl.Load(ctx->GetStream());
-
-  auto &outStr = ctx->NewFile(ctx->workingFile.ChangeExtension(".xml")).str;
-
   pugi::xml_document doc;
-  sdl.ToXML(doc);
-  doc.save(outStr);
+
+  if (auto result = doc.load(ctx->GetStream()); !result) {
+    throw std::runtime_error(
+        std::string("Couldn't load XML [") +
+        GetReflectedEnum<XMLError>()->names[result.status] + "] at offset " +
+        std::to_string(result.offset));
+  }
+
+  auto &str = ctx->NewFile(ctx->workingFile.ChangeExtension2("sdl")).str;
+  revil::SDLFromXML(str, doc);
 }
