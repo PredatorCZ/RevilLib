@@ -232,9 +232,9 @@ struct ArcMakeContext : AppPackContext {
     }
 
     const size_t dataOffset =
-        wr.Tell() + arc.numFiles * ts->arc.extendedFilePath
+        wr.Tell() + arc.numFiles * (ts->arc.extendedFilePath
             ? sizeof(ARCExtendedFile)
-            : sizeof(ARCFile);
+            : sizeof(ARCFile));
 
     std::vector<AFile> files;
     size_t curOffset = dataOffset;
@@ -246,7 +246,7 @@ struct ArcMakeContext : AppPackContext {
                        item.offset += curOffset;
                        return std::move(item);
                      });
-      curOffset = dataOffset + tFiles.back().cSize + tFiles.back().offset;
+      curOffset = tFiles.back().cSize + tFiles.back().offset;
     }
 
     auto WriteFile = [&](auto cFile, auto &f) {
@@ -260,17 +260,17 @@ struct ArcMakeContext : AppPackContext {
         std::replace(std::begin(cFile.fileName), std::end(cFile.fileName), '/',
                      '\\');
       }
+
+      wr.Write(cFile);
     };
 
     if (ts->arc.extendedFilePath) {
       for (auto &f : files) {
-        ARCExtendedFile cFile{};
-        WriteFile(cFile, f);
+        WriteFile(ARCExtendedFile{}, f);
       }
     } else {
       for (auto &f : files) {
-        ARCFile cFile{};
-        WriteFile(cFile, f);
+        WriteFile(ARCFile{}, f);
       }
     }
 
