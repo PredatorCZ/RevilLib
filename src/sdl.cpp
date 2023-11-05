@@ -180,7 +180,7 @@ struct StringPointer {
 };
 
 struct DataBuilder {
-  // std::vector<PaddingRange> paddingRanges;
+  std::vector<PaddingRange> paddingRanges;
   std::vector<StringPointer> stringPointers;
   std::map<std::string, size_t> strings;
   std::stringstream sstr;
@@ -189,7 +189,6 @@ struct DataBuilder {
   std::map<std::string_view, uint32> classNodes;
   std::vector<NodeRef> nodeRefs;
   bool firstFrame = true;
-  // std::vector<uint32> frameOffsetStack;
 
   void WriteValues(pugi::xml_node entries, size_t parentIndex) {
     auto SetString = [this](auto &ptr, auto str) {
@@ -215,14 +214,35 @@ struct DataBuilder {
 
     auto DoValues = [&](pugi::xml_node &node, SDLEntry &entry) {
       auto SaveFrames = [&] {
-        entry.frames = reinterpret_cast<SDLFrame *>(dataWr.Tell());
+        std::vector<SDLFrame> frames;
 
         for (auto frame : node.children("frame")) {
-          SDLFrame sFrame;
-          ::FromXML(sFrame, frame);
-          dataWr.Write(sFrame);
-          entry.numFrames++;
+          ::FromXML(frames.emplace_back(), frame);
         }
+
+        entry.numFrames = frames.size();
+        size_t reqArea = frames.size() * sizeof(SDLFrame);
+
+        for (auto it = paddingRanges.begin(); it != paddingRanges.end(); it++) {
+          if (it->size >= reqArea) {
+            dataWr.Push();
+            dataWr.Seek(it->offset);
+            entry.frames = reinterpret_cast<SDLFrame *>(dataWr.Tell());
+            dataWr.WriteContainer(frames);
+            dataWr.Pop();
+
+            if (it->size == reqArea) {
+              paddingRanges.erase(it);
+            } else {
+              it->offset += reqArea;
+              it->size -= reqArea;
+            }
+            return;
+          }
+        }
+
+        entry.frames = reinterpret_cast<SDLFrame *>(dataWr.Tell());
+        dataWr.WriteContainer(frames);
       };
 
       auto WriteValues = [&](auto value, const char *attrName = "value") {
@@ -236,7 +256,16 @@ struct DataBuilder {
         SaveFrames();
       }
 
-      dataWr.ApplyPadding();
+      const size_t padding = GetPadding(dataWr.Tell(), 16);
+
+      if (padding > 0) {
+        paddingRanges.emplace_back(PaddingRange{
+            .offset = uint32(dataWr.Tell()),
+            .size = uint32(padding),
+        });
+        dataWr.Skip(padding);
+      }
+
       entry.data = reinterpret_cast<char *>(dataWr.Tell());
 
       switch (entry.type) {
@@ -272,6 +301,11 @@ struct DataBuilder {
         break;
       case SDLType::ResourceInstance:
         for (auto frame : node.children("frame")) {
+          if (frame.attribute("path").empty()) {
+            dataWr.Write<uintptr_t>(0);
+            continue;
+          }
+
           const uint32 cHash = ResourceType(frame);
           std::string wString(sizeof(cHash), '-');
           wString.append(FromXMLAttr<const char *>(frame, "path"));
@@ -457,31 +491,32 @@ void revil::SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode) {
   es::Dispose(dataBuffer);
   uintptr_t stringBegin = wr.Tell();
   hdr.strings = reinterpret_cast<char *>(stringBegin);
-  std::vector<uintptr_t> strings;
+  std::vector<uintptr_t> stringOffsets;
+  std::vector<std::string_view> strings;
   strings.resize(dataBuilder.strings.size());
 
   for (auto &[str, id] : dataBuilder.strings) {
-    strings.at(id) = wr.Tell() - stringBegin;
-    wr.WriteT(str);
+    strings.at(id) = str.c_str();
   }
 
-  // size_t curFrame = 0;
+  for (size_t i = 0; i < strings.size(); i++) {
+    stringOffsets.emplace_back(wr.Tell() - stringBegin);
+    wr.WriteT(strings.at(i));
+  }
 
   for (auto &e : dataBuilder.items) {
     e.name = reinterpret_cast<char *>(
-        strings.at(reinterpret_cast<uintptr_t &>(e.name)));
+        stringOffsets.at(reinterpret_cast<uintptr_t &>(e.name)));
 
     if (e.numFrames > 0) {
       e.data.FixupRelative(reinterpret_cast<char *>(dataOffset));
       e.frames.FixupRelative(reinterpret_cast<char *>(dataOffset));
-      // e.frames = reinterpret_cast<SDLFrame *>(
-      //     dataOffset + dataBuilder.frameOffsetStack.at(curFrame++));
     }
   }
 
   for (auto p : dataBuilder.stringPointers) {
     wr.Seek(dataOffset + p.offset);
-    wr.Write(strings.at(p.stringId));
+    wr.Write(stringOffsets.at(p.stringId));
   }
 
   for (auto r : dataBuilder.nodeRefs) {
@@ -574,7 +609,6 @@ public:
 
       xEntry.append_attribute("name").set_value(entry.name);
       xEntry.append_attribute("type").set_value(uint8(entry.usageType));
-      // xEntry.append_attribute("id").set_value(i);
 
       if (entry.numFrames > 0) {
         SDLFrame *frames = entry.frames;
@@ -615,12 +649,14 @@ public:
             break;
 
           case SDLType::ResourceInstance: {
-            SetClassName(xFrame, *reinterpret_cast<es::PointerX64<uint32> *>(
-                                     static_cast<char *>(entry.data))[f]);
-            xFrame.append_attribute("path").set_value(
-                reinterpret_cast<es::PointerX64<char> *>(
-                    static_cast<char *>(entry.data))[f] +
-                4);
+            auto &dataPtr = reinterpret_cast<es::PointerX64<uint32> *>(
+                static_cast<char *>(entry.data))[f];
+
+            if (dataPtr) {
+              SetClassName(xFrame, *dataPtr);
+              xFrame.append_attribute("path").set_value(
+                  reinterpret_cast<const char *>(dataPtr.operator->() + 1));
+            }
 
             break;
           }
@@ -666,6 +702,7 @@ public:
     for (size_t i = 0; i < hdr->numTracks; i++) {
       auto &entry = hdr->entries[i];
       es::FixupPointers(buffer.data(), entry.data, entry.frames);
+      // This can be misleading, since null is allowed only for root nodes
       entry.name.FixupRelative(hdr->strings);
 
       if (entry.type == SDLType::ResourceInstance ||
@@ -673,7 +710,7 @@ public:
         for (auto f = 0; f < entry.numFrames; f++) {
           reinterpret_cast<es::PointerX64<char> *>(
               static_cast<char *>(entry.data))[f]
-              .FixupRelative(hdr->strings);
+              .Fixup(hdr->strings);
         }
       }
     }
