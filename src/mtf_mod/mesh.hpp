@@ -93,9 +93,10 @@ struct MODMeshXC5 {
   using Unk00 = BitMemberDecl<3, 5>;
   using Unk01 = BitMemberDecl<4, 8>;
   using VertexBufferStride = BitMemberDecl<5, 8>;
-  using PrimitiveType = BitMemberDecl<6, 8>;
+  using PrimitiveType = BitMemberDecl<6, 5>;
+  using Unk02 = BitMemberDecl<7, 3>;
   using BitField01 = BitFieldType<uint32, Visible, Flag0, Flag1, Unk00, Unk01,
-                                  VertexBufferStride, PrimitiveType>;
+                                  VertexBufferStride, PrimitiveType, Unk02>;
 
   enum class PrimitiveType_e : uint8 {
     Points,
@@ -145,6 +146,12 @@ struct MODMeshXD2 {
 
   MODPrimitiveProxy ReflectLE(revil::MODImpl &);
   MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+};
+
+struct MODMeshXD3 : MODMeshXD2 {
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  void NoSwap();
 };
 
 struct MODMeshXD3PS4 : MODMeshXD2 {

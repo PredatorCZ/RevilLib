@@ -439,8 +439,7 @@ void MODGLTF::ProcessModel(const uni::Model &model) {
     prim.indices = indicesIndices.at(p->IndexArrayIndex());
     prim.attributes = attrs;
     prim.material = p->MaterialIndex();
-    prim.mode = gltf::Primitive::Mode::TriangleStrip;
-    [&] {
+    prim.mode = [&] {
       switch (p->IndexType()) {
       case uni::Primitive::IndexType_e::Triangle:
         return gltf::Primitive::Mode::Triangles;

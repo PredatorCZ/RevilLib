@@ -88,6 +88,10 @@ struct MODTraitsXD3PS4 : MODTraitsXD2 {
   using mesh = MODMeshXD3PS4;
 };
 
+struct MODTraitsXD3x64 : MODTraitsXD2 {
+  using mesh = MODMeshXD3;
+};
+
 struct MODTraitsX06 {
   static constexpr size_t numSkinRemaps = 32;
   static constexpr size_t numRemaps = 0x100;

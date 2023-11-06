@@ -1001,12 +1001,27 @@ std::map<uint32, MODVertices> formats{
                       V{F::UNORM, D::R8G8B8A8, U::BoneWeights},
                       TexCoordPhone),
     },
+    {
+        0x667B1019, // P3s_unk1s_N4c_VC4c_U2h_T4c
+        BuildVertices(VertexQPosition,
+                      V{F::UINT, D::R16, U::Undefined},
+                      VertexNormal,
+                      VertexColor,
+                      TexCoord,
+                      VertexTangent),
+    },
 };
 
 // clang-format on
 
 static const std::set<uint32> edgeModels{
     0xdb7da014,
+    // P3s_unk1s_B4c_W4c_N4c
+    0x0CB68015,
+    // P3s_B1s_N4c
+    0xB0983013,
+    // P3s_unk1s_B8c_W8c_N4c
+    0xA320C016,
 };
 
 static const auto makeV2 = [](auto &self, revil::MODImpl &main, bool swap,
@@ -1016,7 +1031,22 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, bool swap,
   retval.lodIndex =
       convertLod(reinterpret_cast<es::Flags<uint8> &>(visibleLOD));
   retval.materialIndex = self.data0.template Get<MODMeshXC5::MaterialIndex>();
-  retval.indexType = uni::Primitive::IndexType_e::Strip;
+  const MODMeshXC5::PrimitiveType_e primitiveType = MODMeshXC5::PrimitiveType_e(
+      self.data1.template Get<MODMeshXC5::PrimitiveType>());
+
+  switch (primitiveType) {
+  case MODMeshXC5::PrimitiveType_e::Triangles:
+    retval.indexType = uni::Primitive::IndexType_e::Triangle;
+    break;
+
+  case MODMeshXC5::PrimitiveType_e::Strips:
+    retval.indexType = uni::Primitive::IndexType_e::Strip;
+    break;
+
+  default:
+    retval.indexType = uni::Primitive::IndexType_e::None;
+    break;
+  }
   retval.indexIndex = main.indices.Size();
   retval.vertexIndex = main.vertices.Size();
   retval.name = std::to_string(self.meshIndex) + ":" +
@@ -1041,8 +1071,11 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, bool swap,
     main.vertices.storage.emplace_back(std::move(tmpl));
   } else {
     main.vertices.storage.emplace_back();
-    // throw std::runtime_error("Unregistered vertex format: " +
-    //         std::to_string(vertexFormat));
+
+    /*if (!edgeModels.contains(self.vertexFormat)) {
+      throw std::runtime_error("Unregistered vertex format: " +
+                               std::to_string(self.vertexFormat));
+    }*/
   }
 
   uint16 *indexBuffer = reinterpret_cast<uint16 *>(
@@ -1146,6 +1179,17 @@ MODPrimitiveProxy MODMeshXD3PS4::ReflectLE(revil::MODImpl &main_) {
     } else if (d.usage == uni::PrimitiveDescriptor::Usage_e::Tangent) {
       d.type = VertexTangentSigned.type;
       d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::None;
+    }
+  });
+}
+
+MODPrimitiveProxy MODMeshXD3::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD2> &>(main_);
+  return makeV2(*this, main, false, [&](MODVertexDescriptor &d) {
+    if (d.usage == uni::PrimitiveDescriptor::Usage_e::BoneIndices &&
+        skinBoneBegin) {
+      d.unpackType = uni::PrimitiveDescriptor::UnpackDataType_e::Add;
+      d.unpackData.min = Vector4A16(skinBoneBegin);
     }
   });
 }

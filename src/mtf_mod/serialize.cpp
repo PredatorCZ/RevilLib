@@ -837,9 +837,10 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
+template<class Traits>
 MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
   MODHeaderXD3X64 header;
-  MODInner<MODTraitsXD3PS4> main;
+  MODInner<Traits> main;
   BinReaderRef rd(rdn);
   rd.Push();
   rd.Read(header);
@@ -959,7 +960,8 @@ static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     {{MODVersion::XC5, false}, LoadMODXC5},
     {{MODVersion::XD2, true}, LoadMODXD2x32<MODTraitsXD2>},
     {{MODVersion::XD3, true}, LoadMODXD2x32<MODTraitsXD2>},
-    {{MODVersion::XD3, false}, LoadMODXD3x64},
+    {{MODVersion::XD3, false, false, Platform::PS4}, LoadMODXD3x64<MODTraitsXD3PS4>},
+    {{MODVersion::XD3, false}, LoadMODXD3x64<MODTraitsXD3x64>},
     {{MODVersion::X05, false}, LoadMODX06},
     {{MODVersion::X06, false}, LoadMODX06},
 };
