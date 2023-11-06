@@ -15,6 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
+#define ES_COPYABLE_POINTER
+
 #include "revil/sdl.hpp"
 #include "pugixml.hpp"
 #include "revil/hashreg.hpp"
@@ -25,6 +27,7 @@
 #include "spike/type/bitfield.hpp"
 #include "spike/type/pointer.hpp"
 #include "spike/type/vectors.hpp"
+#include "spike/util/endian.hpp"
 #include <array>
 #include <cassert>
 #include <sstream>
@@ -33,8 +36,28 @@ using namespace revil;
 
 struct XFSClassMember;
 
-MAKE_ENUM(ENUMSCOPE(class SDLType
-                    : uint8, SDLType),
+MAKE_ENUM(ENUMSCOPE(class SDLType1
+                    : uint8, SDLType1),
+          EMEMBERVAL(RootNode, 1),        //
+          EMEMBER(ClassNode),             //
+          EMEMBER(SpecialClassNode),      //
+          EMEMBERVAL(ClassMemberNode, 5), //
+          EMEMBER(Int32),                 //
+          EMEMBER(Vector4),               //
+          EMEMBER(Float),                 //
+          EMEMBER(Bool),                  //
+          EMEMBER(NodeIndex),             //
+          EMEMBER(ResourceInstance),      //
+          EMEMBERVAL(BitFlags, 13),       //
+          // UNUSED BELOW
+          EMEMBERVAL(String, 128), //
+          EMEMBER(Unit),           //
+          EMEMBER(Curve)           //
+
+);
+
+MAKE_ENUM(ENUMSCOPE(class SDLType2
+                    : uint8, SDLType2),
           EMEMBERVAL(RootNode, 1),          //
           EMEMBER(ClassNode),               //
           EMEMBERVAL(ClassMemberNode, 5),   //
@@ -46,7 +69,9 @@ MAKE_ENUM(ENUMSCOPE(class SDLType
           EMEMBERVAL(ResourceInstance, 13), //
           EMEMBER(String),                  //
           EMEMBER(Unit),                    //
-          EMEMBER(Curve)                    //
+          EMEMBER(Curve),                   //
+          // UNUSED BELOW
+          EMEMBERVAL(BitFlags, 128) //
 );
 
 enum class UsageType : uint8 {
@@ -75,8 +100,32 @@ struct SDLFrame {
   type *operator->() { return &data; }
 };
 
-struct SDLEntry {
-  SDLType type;
+struct SDLHeaderBase {
+  uint32 id;
+  uint16 version;
+  uint16 numTracks;
+};
+
+struct SDLEntryV1 {
+  SDLType1 type;
+  UsageType usageType;
+  uint16 numFrames;
+  uint32 parentOrSlot;
+  es::PointerX86<char> name;
+  uint32 hashOrArrayIndex;
+  es::PointerX86<SDLFrame> frames;
+  es::PointerX86<char> data;
+};
+
+struct SDLHeaderV1 : SDLHeaderBase {
+  SDLFrame maxFrame;
+  uint32 baseTrack;
+  es::PointerX86<char> strings;
+  SDLEntryV1 entries[];
+};
+
+struct SDLEntryV2_x64 {
+  SDLType2 type;
   UsageType usageType;
   uint16 numFrames;
   uint32 parentOrSlot;
@@ -88,18 +137,102 @@ struct SDLEntry {
   es::PointerX64<char> data;
 };
 
-struct SDLHeader {
-  uint32 id;
-  uint16 version;
-  uint16 numTracks;
+struct SDLHeaderV2_x64 : SDLHeaderBase {
   uint32 unk0;
   SDLFrame maxFrame;
-  es::PointerX64<char> baseTrack;
+  uint32 baseTrack;
   es::PointerX64<char> strings;
-  SDLEntry entries[];
+  SDLEntryV2_x64 entries[];
 };
 
-static_assert(sizeof(SDLHeader) == 32);
+struct SDLHeaderV2_x86 : SDLHeaderBase {
+  uint32 unk0;
+  SDLFrame maxFrame;
+  uint32 baseTrack;
+  es::PointerX86<char> strings;
+  SDLEntryV1 entries[];
+};
+
+static_assert(sizeof(SDLHeaderV2_x64) == 32);
+static_assert(sizeof(SDLHeaderV2_x86) == 24);
+
+template <> void FByteswapper(SDLEntryV1 &item, bool) {
+  FByteswapper(item.parentOrSlot);
+  FByteswapper(item.numFrames);
+  FByteswapper(item.name);
+  FByteswapper(item.hashOrArrayIndex);
+  FByteswapper(item.frames);
+  FByteswapper(item.data);
+}
+
+template <> void FByteswapper(SDLEntryV2_x64 &, bool) {
+  // Not implemented
+}
+
+template <> void FByteswapper(SDLHeaderBase &item, bool) {
+  FByteswapper(item.numTracks);
+  FByteswapper(item.version);
+}
+
+template <> void FByteswapper(SDLHeaderV1 &item, bool way) {
+  FByteswapper(static_cast<SDLHeaderBase &>(item));
+  FByteswapper(item.baseTrack);
+  FByteswapper(item.maxFrame.data, way);
+  FByteswapper(item.strings);
+}
+
+template <> void FByteswapper(SDLHeaderV2_x86 &item, bool way) {
+  FByteswapper(static_cast<SDLHeaderBase &>(item));
+  FByteswapper(item.baseTrack);
+  FByteswapper(item.maxFrame.data, way);
+  FByteswapper(item.strings);
+  FByteswapper(item.unk0);
+}
+
+template <> void FByteswapper(SDLHeaderV2_x64 &, bool) {
+  // Not implemented
+}
+
+template <class C> void SwapData(C &entry, bool way = false) {
+  size_t numBlocks = 0;
+  using EnumType = decltype(entry.type);
+
+  switch (entry.type) {
+  case EnumType::Float:
+  case EnumType::Int32:
+  case EnumType::NodeIndex:
+  case EnumType::ResourceInstance:
+  case EnumType::String:
+  case EnumType::Unit:
+  case EnumType::BitFlags:
+    numBlocks = 1;
+    break;
+
+  case EnumType::Vector4:
+    numBlocks = 4;
+    break;
+  case EnumType::Curve:
+    numBlocks = 16;
+    break;
+
+  default:
+    break;
+  }
+
+  const size_t numSwaps = numBlocks * entry.numFrames;
+  char *dataRaw = entry.data;
+  uint32 *data = reinterpret_cast<uint32 *>(dataRaw);
+
+  for (size_t i = 0; i < numSwaps; i++) {
+    FByteswapper(data[i]);
+  }
+
+  SDLFrame *frames = entry.frames;
+
+  for (size_t i = 0; i < numSwaps; i++) {
+    FByteswapper(frames[i].data, way);
+  }
+}
 
 template <class C> C FromXMLAttr(pugi::xml_node node, const char *attrName) {
   auto attr = node.attribute(attrName);
@@ -155,18 +288,18 @@ struct PaddingRange {
   uint32 size;
 };
 
-SDLType GetSDLType(pugi::xml_node node) {
-  static const auto refEnum = GetReflectedEnum<SDLType>();
+SDLType2 GetSDLTypeV2(pugi::xml_node node) {
+  static const auto refEnum = GetReflectedEnum<SDLType2>();
 
   for (size_t i = 0; i < refEnum->numMembers; ++i) {
     if (std::string_view(refEnum->names[i]) == node.name()) {
-      return SDLType(refEnum->values[i]);
+      return SDLType2(refEnum->values[i]);
     }
   }
 
   throw std::runtime_error(std::string("Unknown node type: ") + node.name());
 
-  return SDLType::RootNode;
+  return SDLType2::RootNode;
 };
 
 struct NodeRef {
@@ -185,7 +318,7 @@ struct DataBuilder {
   std::map<std::string, size_t> strings;
   std::stringstream sstr;
   BinWritterRef dataWr{sstr};
-  std::vector<SDLEntry> items;
+  std::vector<SDLEntryV2_x64> items;
   std::map<std::string_view, uint32> classNodes;
   std::vector<NodeRef> nodeRefs;
   bool firstFrame = true;
@@ -212,7 +345,7 @@ struct DataBuilder {
       return strtoul(hashText, nullptr, 16);
     };
 
-    auto DoValues = [&](pugi::xml_node &node, SDLEntry &entry) {
+    auto DoValues = [&](pugi::xml_node &node, SDLEntryV2_x64 &entry) {
       auto SaveFrames = [&] {
         std::vector<SDLFrame> frames;
 
@@ -269,10 +402,10 @@ struct DataBuilder {
       entry.data = reinterpret_cast<char *>(dataWr.Tell());
 
       switch (entry.type) {
-      case SDLType::Float:
+      case SDLType2::Float:
         WriteValues(float());
         break;
-      case SDLType::Vector4:
+      case SDLType2::Vector4:
         for (auto frame : node.children("frame")) {
           dataWr.Write(FromXMLAttr<float>(frame, "x"));
           dataWr.Write(FromXMLAttr<float>(frame, "y"));
@@ -280,11 +413,11 @@ struct DataBuilder {
           dataWr.Write(FromXMLAttr<float>(frame, "w"));
         }
         break;
-      case SDLType::Int32:
-      case SDLType::Unit:
+      case SDLType2::Int32:
+      case SDLType2::Unit:
         WriteValues(int32());
         break;
-      case SDLType::NodeIndex: {
+      case SDLType2::NodeIndex: {
         auto &nodeRef = nodeRefs.emplace_back();
         nodeRef.offset = dataWr.Tell();
 
@@ -295,11 +428,11 @@ struct DataBuilder {
         }
         break;
       }
-      case SDLType::Bool:
+      case SDLType2::Bool:
         WriteValues(bool());
         dataWr.ApplyPadding(4);
         break;
-      case SDLType::ResourceInstance:
+      case SDLType2::ResourceInstance:
         for (auto frame : node.children("frame")) {
           if (frame.attribute("path").empty()) {
             dataWr.Write<uintptr_t>(0);
@@ -319,7 +452,7 @@ struct DataBuilder {
           dataWr.Write(ptr);
         }
         break;
-      case SDLType::String:
+      case SDLType2::String:
         for (auto frame : node.children("frame")) {
           const char *ptr;
           SetString(ptr, FromXMLAttr<const char *>(frame, "value"));
@@ -330,7 +463,7 @@ struct DataBuilder {
           dataWr.Write(ptr);
         }
         break;
-      case SDLType::Curve:
+      case SDLType2::Curve:
         for (auto frame : node.children("frame")) {
           for (size_t i = 0; i < 16; i++) {
             auto aName = "e" + std::to_string(i);
@@ -350,20 +483,20 @@ struct DataBuilder {
     };
 
     for (auto c : entries.children()) {
-      SDLEntry entry{};
-      entry.type = GetSDLType(c);
+      SDLEntryV2_x64 entry{};
+      entry.type = GetSDLTypeV2(c);
       entry.usageType = UsageType(FromXMLAttr<uint32>(c, "type"));
       auto nodeName = FromXMLAttr<const char *>(c, "name");
       SetString(entry.name, nodeName);
 
       switch (entry.type) {
-      case SDLType::RootNode:
+      case SDLType2::RootNode:
         classNodes.emplace(nodeName, items.size());
         items.emplace_back(entry);
         WriteValues(c, 0);
         break;
 
-      case SDLType::ClassNode:
+      case SDLType2::ClassNode:
         entry.hashOrArrayIndex = ResourceType(c);
         entry.parentOrSlot = FromXMLAttr<uint32>(c, "entrySlot");
         classNodes.emplace(nodeName, items.size());
@@ -371,7 +504,7 @@ struct DataBuilder {
         WriteValues(c, items.size() - 1);
         break;
 
-      case SDLType::ClassMemberNode:
+      case SDLType2::ClassMemberNode:
         entry.hashOrArrayIndex = FromXMLAttr<uint32>(c, "arrayIndex");
         entry.parentOrSlot = parentIndex;
         items.emplace_back(entry);
@@ -464,6 +597,7 @@ struct DataBuilder {
 };
 
 constexpr uint32 SDL_ID = CompileFourCC("SDL");
+constexpr uint32 SDL_ID_BE = CompileFourCC("\0LDS");
 
 void revil::SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode) {
   auto classNode = XMLChild(rootNode, "class");
@@ -473,7 +607,7 @@ void revil::SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode) {
     throw std::runtime_error("Invalid class type, expected rScheduler");
   }
 
-  SDLHeader hdr{};
+  SDLHeaderV2_x64 hdr{};
   hdr.id = SDL_ID;
   hdr.version = 0x16;
   hdr.unk0 = 0xE2316427;
@@ -532,156 +666,207 @@ void revil::SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode) {
   wr.WriteContainer(dataBuilder.items);
 }
 
+template <class HdrType> void ToXML(HdrType *hdr, pugi::xml_node root) {
+  using EntryType = std::decay_t<decltype(hdr->entries[0])>;
+  using EnumType = decltype(EntryType::type);
+  using PtrTypeChar = decltype(hdr->strings);
+  using PtrTypeUint =
+      std::conditional_t<sizeof(PtrTypeChar) == 8, es::PointerX64<uint32>,
+                         es::PointerX86<uint32>>;
+
+  ::ToXML(hdr->maxFrame, root.append_child("maxFrame"));
+
+  if (hdr->baseTrack > 0) {
+    auto &entry = hdr->entries[hdr->baseTrack];
+    std::string xmlTrack(
+        static_cast<const char *>(hdr->entries[entry.parentOrSlot].name));
+    xmlTrack.append("::");
+    xmlTrack.append(static_cast<const char *>(entry.name));
+
+    root.append_attribute("baseTrack").set_value(xmlTrack.c_str());
+  }
+
+  auto entries = root.append_child("entries");
+  std::vector<pugi::xml_node> nodes;
+  pugi::xml_node currentRoot;
+
+  for (size_t i = 0; i < hdr->numTracks; i++) {
+    auto &entry = hdr->entries[i];
+
+    if constexpr (std::is_same_v<HdrType, SDLHeaderV2_x64>) {
+      assert(entry.unk2 == 0);
+      assert(entry.unk3 == 0);
+    }
+    static const auto refEnum = GetReflectedEnum<EnumType>();
+    auto typeName = [&] {
+      const size_t numEns = refEnum->numMembers;
+
+      for (size_t i = 0; i < numEns; i++) {
+        if (refEnum->values[i] == static_cast<uint64>(entry.type)) {
+          return refEnum->names[i];
+        }
+      }
+
+      return "__UNREGISTERED__";
+    }();
+
+    pugi::xml_node xEntry;
+
+    auto SetClassName = [](pugi::xml_node &node, uint32 hash) {
+      auto clName = GetClassName(hash, Platform::Win32);
+
+      if (clName.empty()) {
+        char buffer[0x10]{};
+        snprintf(buffer, sizeof(buffer), "%X", hash);
+        node.append_attribute("resourceHash").set_value(buffer);
+      } else {
+        node.append_attribute("resourceType").set_value(clName.data());
+      }
+    };
+
+    switch (entry.type) {
+    case EnumType::Float:
+    case EnumType::Vector4:
+    case EnumType::Int32:
+    case EnumType::ClassMemberNode:
+    case EnumType::Bool:
+    case EnumType::NodeIndex:
+    case EnumType::ResourceInstance:
+    case EnumType::String:
+    case EnumType::Unit:
+    case EnumType::Curve:
+    case EnumType::BitFlags:
+      xEntry = nodes.at(entry.parentOrSlot).append_child(typeName);
+      xEntry.append_attribute("arrayIndex").set_value(entry.hashOrArrayIndex);
+      break;
+
+    default:
+      xEntry = currentRoot.append_child(typeName);
+      xEntry.append_attribute("entrySlot").set_value(entry.parentOrSlot);
+      SetClassName(xEntry, entry.hashOrArrayIndex);
+      break;
+    case EnumType::RootNode:
+      xEntry = currentRoot = entries.append_child(typeName);
+      assert(entry.parentOrSlot == 0);
+      break;
+    }
+
+    nodes.emplace_back(xEntry);
+
+    xEntry.append_attribute("name").set_value(
+        static_cast<const char *>(entry.name));
+    xEntry.append_attribute("type").set_value(uint8(entry.usageType));
+    //xEntry.append_attribute("id").set_value(i);
+
+    if (entry.numFrames > 0) {
+      SDLFrame *frames = entry.frames;
+
+      for (auto f = 0; f < entry.numFrames; f++) {
+        auto frame = frames[f];
+        auto xFrame = xEntry.append_child("frame");
+        ::ToXML(frame, xFrame);
+
+        switch (entry.type) {
+        case EnumType::Int32:
+        case EnumType::Unit:
+          xFrame.append_attribute("value").set_value(
+              reinterpret_cast<int32 *>(static_cast<char *>(entry.data))[f]);
+          break;
+        case EnumType::Vector4: {
+          auto &value =
+              reinterpret_cast<Vector4 *>(static_cast<char *>(entry.data))[f];
+          xFrame.append_attribute("x").set_value(value.x);
+          xFrame.append_attribute("y").set_value(value.y);
+          xFrame.append_attribute("z").set_value(value.z);
+          xFrame.append_attribute("w").set_value(value.w);
+          break;
+        }
+        case EnumType::Float:
+          xFrame.append_attribute("value").set_value(
+              reinterpret_cast<float *>(static_cast<char *>(entry.data))[f]);
+          break;
+        case EnumType::Bool:
+          xFrame.append_attribute("value").set_value(
+              reinterpret_cast<bool *>(static_cast<char *>(entry.data))[f]);
+          break;
+        case EnumType::BitFlags:
+          xFrame.append_attribute("value").set_value(
+              reinterpret_cast<uint32 *>(static_cast<char *>(entry.data))[f]);
+          break;
+        case EnumType::NodeIndex:
+          xFrame.append_attribute("nodeName")
+              .set_value(static_cast<const char *>(
+                  hdr->entries[reinterpret_cast<uint32 *>(
+                                   static_cast<char *>(entry.data))[f]]
+                      .name));
+          break;
+
+        case EnumType::ResourceInstance: {
+          auto &dataPtr = reinterpret_cast<PtrTypeUint *>(
+              static_cast<char *>(entry.data))[f];
+
+          if (dataPtr) {
+            SetClassName(xFrame, *dataPtr);
+            xFrame.append_attribute("path").set_value(
+                reinterpret_cast<const char *>(dataPtr.operator->() + 1));
+          }
+
+          break;
+        }
+
+        case EnumType::Curve: {
+          auto &value = reinterpret_cast<std::array<float, 16> *>(
+              static_cast<char *>(entry.data))[f];
+          for (size_t i = 0; i < value.size(); i++) {
+            auto aName = "e" + std::to_string(i);
+            xFrame.append_attribute(aName.c_str()).set_value(value[i]);
+          }
+          break;
+        }
+
+        case EnumType::String:
+          xFrame.append_attribute("value").set_value(
+              static_cast<const char *>(reinterpret_cast<PtrTypeChar *>(
+                  static_cast<char *>(entry.data))[f]));
+
+          break;
+
+        default:
+          break;
+        }
+      }
+    }
+  }
+}
+
 class revil::SDLImpl {
 public:
   std::string buffer;
 
+  bool IsX86() const {
+    auto hdr = reinterpret_cast<const SDLHeaderV2_x86 *>(buffer.data());
+    // Member strings overlaps with padding after baseTrack
+    // Big endian are always x86
+    // There are no MTF V1 x64 schedulers
+
+    return hdr->version < 0x10 || hdr->id == SDL_ID_BE || hdr->strings;
+  }
+
   void ToXML(pugi::xml_node node) {
     auto root = node.append_child("class");
-    auto hdr = reinterpret_cast<SDLHeader *>(buffer.data());
-
     root.append_attribute("type").set_value("rScheduler");
-    ::ToXML(hdr->maxFrame, root.append_child("maxFrame"));
-    assert(hdr->baseTrack == nullptr);
+    auto hdrBase = reinterpret_cast<SDLHeaderBase *>(buffer.data());
 
-    auto entries = root.append_child("entries");
-    std::vector<pugi::xml_node> nodes;
-    pugi::xml_node currentRoot;
-
-    for (size_t i = 0; i < hdr->numTracks; i++) {
-      auto &entry = hdr->entries[i];
-      assert(entry.unk2 == 0);
-      assert(entry.unk3 == 0);
-      static const auto refEnum = GetReflectedEnum<SDLType>();
-      auto typeName = [&] {
-        const size_t numEns = refEnum->numMembers;
-
-        for (size_t i = 0; i < numEns; i++) {
-          if (refEnum->values[i] == static_cast<uint64>(entry.type)) {
-            return refEnum->names[i];
-          }
-        }
-
-        return "__UNREGISTERED__";
-      }();
-
-      pugi::xml_node xEntry;
-
-      auto SetClassName = [](pugi::xml_node &node, uint32 hash) {
-        auto clName = GetClassName(hash, Platform::Win32);
-
-        if (clName.empty()) {
-          char buffer[0x10]{};
-          snprintf(buffer, sizeof(buffer), "%X", hash);
-          node.append_attribute("resourceHash").set_value(buffer);
-        } else {
-          node.append_attribute("resourceType").set_value(clName.data());
-        }
-      };
-
-      switch (entry.type) {
-      case SDLType::Float:
-      case SDLType::Vector4:
-      case SDLType::Int32:
-      case SDLType::ClassMemberNode:
-      case SDLType::Bool:
-      case SDLType::NodeIndex:
-      case SDLType::ResourceInstance:
-      case SDLType::String:
-      case SDLType::Unit:
-      case SDLType::Curve:
-        xEntry = nodes.at(entry.parentOrSlot).append_child(typeName);
-        xEntry.append_attribute("arrayIndex").set_value(entry.hashOrArrayIndex);
-        break;
-
-      default:
-        xEntry = currentRoot.append_child(typeName);
-        xEntry.append_attribute("entrySlot").set_value(entry.parentOrSlot);
-        SetClassName(xEntry, entry.hashOrArrayIndex);
-        break;
-      case SDLType::RootNode:
-        xEntry = currentRoot = entries.append_child(typeName);
-        assert(entry.parentOrSlot == 0);
-        break;
-      }
-
-      nodes.emplace_back(xEntry);
-
-      xEntry.append_attribute("name").set_value(entry.name);
-      xEntry.append_attribute("type").set_value(uint8(entry.usageType));
-
-      if (entry.numFrames > 0) {
-        SDLFrame *frames = entry.frames;
-
-        for (auto f = 0; f < entry.numFrames; f++) {
-          auto frame = frames[f];
-          auto xFrame = xEntry.append_child("frame");
-          ::ToXML(frame, xFrame);
-
-          switch (entry.type) {
-          case SDLType::Int32:
-          case SDLType::Unit:
-            xFrame.append_attribute("value").set_value(
-                reinterpret_cast<int32 *>(static_cast<char *>(entry.data))[f]);
-            break;
-          case SDLType::Vector4: {
-            auto &value =
-                reinterpret_cast<Vector4 *>(static_cast<char *>(entry.data))[f];
-            xFrame.append_attribute("x").set_value(value.x);
-            xFrame.append_attribute("y").set_value(value.y);
-            xFrame.append_attribute("z").set_value(value.z);
-            xFrame.append_attribute("w").set_value(value.w);
-            break;
-          }
-          case SDLType::Float:
-            xFrame.append_attribute("value").set_value(
-                reinterpret_cast<float *>(static_cast<char *>(entry.data))[f]);
-            break;
-          case SDLType::Bool:
-            xFrame.append_attribute("value").set_value(
-                reinterpret_cast<bool *>(static_cast<char *>(entry.data))[f]);
-            break;
-          case SDLType::NodeIndex:
-            xFrame.append_attribute("nodeName")
-                .set_value(hdr->entries[reinterpret_cast<uint32 *>(
-                                            static_cast<char *>(entry.data))[f]]
-                               .name);
-            break;
-
-          case SDLType::ResourceInstance: {
-            auto &dataPtr = reinterpret_cast<es::PointerX64<uint32> *>(
-                static_cast<char *>(entry.data))[f];
-
-            if (dataPtr) {
-              SetClassName(xFrame, *dataPtr);
-              xFrame.append_attribute("path").set_value(
-                  reinterpret_cast<const char *>(dataPtr.operator->() + 1));
-            }
-
-            break;
-          }
-
-          case SDLType::Curve: {
-            auto &value = reinterpret_cast<std::array<float, 16> *>(
-                static_cast<char *>(entry.data))[f];
-            for (size_t i = 0; i < value.size(); i++) {
-              auto aName = "e" + std::to_string(i);
-              xFrame.append_attribute(aName.c_str()).set_value(value[i]);
-            }
-            break;
-          }
-
-          case SDLType::String:
-            xFrame.append_attribute("value").set_value(
-                reinterpret_cast<es::PointerX64<char> *>(
-                    static_cast<char *>(entry.data))[f]);
-
-            break;
-
-          default:
-            break;
-          }
-        }
+    if (hdrBase->version < 0x10) {
+      auto hdr = reinterpret_cast<SDLHeaderV1 *>(buffer.data());
+      ::ToXML(hdr, root);
+    } else {
+      if (IsX86()) {
+        auto hdr = reinterpret_cast<SDLHeaderV2_x86 *>(buffer.data());
+        ::ToXML(hdr, root);
+      } else {
+        auto hdrx64 = reinterpret_cast<SDLHeaderV2_x64 *>(buffer.data());
+        ::ToXML(hdrx64, root);
       }
     }
   }
@@ -690,28 +875,78 @@ public:
     rd.Read(id);
     rd.Seek(0);
 
-    if (id != SDL_ID) {
+    if (id == SDL_ID_BE) {
+      rd.SwapEndian(true);
+    } else if (id != SDL_ID) {
       throw es::InvalidHeaderError(id);
     }
 
     rd.ReadContainer(buffer, rd.GetSize());
 
-    auto hdr = reinterpret_cast<SDLHeader *>(buffer.data());
-    es::FixupPointers(buffer.data(), hdr->baseTrack, hdr->strings);
+    auto hdrBase = reinterpret_cast<SDLHeaderBase *>(buffer.data());
 
-    for (size_t i = 0; i < hdr->numTracks; i++) {
-      auto &entry = hdr->entries[i];
-      es::FixupPointers(buffer.data(), entry.data, entry.frames);
-      // This can be misleading, since null is allowed only for root nodes
-      entry.name.FixupRelative(hdr->strings);
+    if (hdrBase->version < 0x10) {
+      auto hdr = reinterpret_cast<SDLHeaderV1 *>(buffer.data());
+      hdr->strings.Fixup(buffer.data());
 
-      if (entry.type == SDLType::ResourceInstance ||
-          entry.type == SDLType::String) {
-        for (auto f = 0; f < entry.numFrames; f++) {
-          reinterpret_cast<es::PointerX64<char> *>(
-              static_cast<char *>(entry.data))[f]
-              .Fixup(hdr->strings);
+      for (size_t i = 0; i < hdr->numTracks; i++) {
+        auto &entry = hdr->entries[i];
+        es::FixupPointers(buffer.data(), entry.data, entry.frames);
+        // This can be misleading, since null is allowed only for root nodes
+        entry.name.FixupRelative(hdr->strings);
+
+        if (entry.type == SDLType1::ResourceInstance ||
+            entry.type == SDLType1::String) {
+          for (auto f = 0; f < entry.numFrames; f++) {
+            reinterpret_cast<es::PointerX86<char> *>(
+                static_cast<char *>(entry.data))[f]
+                .Fixup(hdr->strings);
+          }
         }
+      }
+    } else {
+      auto FixupStuff = [&](auto *hdr) {
+        const bool shouldSwap = hdr->id == SDL_ID_BE;
+
+        if (shouldSwap) {
+          FByteswapper(*hdr);
+        }
+
+        hdr->strings.Fixup(buffer.data());
+
+        for (size_t i = 0; i < hdr->numTracks; i++) {
+          auto &entry = hdr->entries[i];
+          if (shouldSwap) {
+            FByteswapper(entry);
+          }
+
+          es::FixupPointers(buffer.data(), entry.data, entry.frames);
+          // This can be misleading, since null is allowed only for root nodes
+          entry.name.FixupRelative(hdr->strings);
+
+          if (shouldSwap) {
+            SwapData(entry);
+          }
+
+          using EnumType = decltype(entry.type);
+
+          if (entry.type == EnumType::ResourceInstance ||
+              entry.type == EnumType::String) {
+            for (auto f = 0; f < entry.numFrames; f++) {
+              reinterpret_cast<es::PointerX64<char> *>(
+                  static_cast<char *>(entry.data))[f]
+                  .Fixup(hdr->strings);
+            }
+          }
+        }
+      };
+
+      if (IsX86()) {
+        auto hdr = reinterpret_cast<SDLHeaderV2_x86 *>(buffer.data());
+        FixupStuff(hdr);
+      } else {
+        auto hdr = reinterpret_cast<SDLHeaderV2_x64 *>(buffer.data());
+        FixupStuff(hdr);
       }
     }
   }
