@@ -49,7 +49,8 @@ void AppProcessFile(AppContext *ctx) {
     return;
   }
 
-  auto &outStr = ctx->NewFile(ctx->workingFile.ChangeExtension(".xml")).str;
+  auto &outStr =
+      ctx->NewFile(std::string(ctx->workingFile.GetFullPath()) + ".xml").str;
 
   pugi::xml_document doc;
   xfs.ToXML(doc);
