@@ -12,7 +12,7 @@ build_target(
   LINKS
   revil-interface
   INCLUDES
-  ${CMAKE_SOURCE_DIR}/src/mtf_arc/
+  ${CMAKE_SOURCE_DIR}/src/
   AUTHOR
   "Lukas Cone"
   DESCR

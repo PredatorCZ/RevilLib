@@ -21,6 +21,7 @@ if(NOT NO_OBJECTS)
     pugixml-interface
     spike-interface
     revil-interface
+    generated_redb
     NO_VERINFO
     NO_PROJECT_H)
 

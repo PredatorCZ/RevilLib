@@ -16,10 +16,11 @@
 */
 
 #pragma once
-#include "spike/util/supercore.hpp"
 #include "platform.hpp"
 #include "settings.hpp"
+#include "spike/util/supercore.hpp"
 #include <functional>
+#include <span>
 #include <string_view>
 
 namespace revil {
@@ -27,12 +28,14 @@ using Platforms = std::vector<Platform>;
 Platforms RE_EXTERN GetPlatformSupport(std::string_view title);
 const TitleSupport RE_EXTERN *GetTitleSupport(std::string_view title,
                                               Platform platform);
-std::string_view RE_EXTERN GetExtension(uint32 hash, std::string_view title = {},
-                                       Platform platform = Platform::Win32);
-std::string_view RE_EXTERN GetClassName(uint32 hash,
-                                       Platform platform = Platform::Win32);
-uint32 RE_EXTERN GetHash(std::string_view extension, std::string_view title,
-                         Platform platform = Platform::Win32);
+std::string_view RE_EXTERN GetExtension(uint32 hash,
+                                        std::string_view title = {},
+                                        Platform platform = Platform::Win32);
+std::string_view RE_EXTERN GetClassName(uint32 hash);
+
+std::span<const uint32> RE_EXTERN GetHash(std::string_view extension,
+                                          std::string_view title,
+                                          Platform platform = Platform::Win32);
 using TitleCallback = std::function<void(std::string_view)>;
 void RE_EXTERN GetTitles(TitleCallback cb);
 

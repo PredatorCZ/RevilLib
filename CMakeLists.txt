@@ -4,9 +4,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "X86 architecture is not supported!")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/tmp)
-
-project(RevilLib VERSION 1)
+project(RevilLib VERSION 2)
 
 # ~~~
 # Valid targets:
@@ -37,6 +35,7 @@ add_compile_options(-Wall -Wextra)
 add_subdirectory(${TPD_PATH}/spike)
 include(targetex)
 
+add_subdirectory(database)
 add_subdirectory(classgen)
 add_subdirectory(src)
 

@@ -15,8 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "../hfs.hpp"
 #include "arc_conv.hpp"
+#include "hfs.hpp"
 #include "project.h"
 #include "spike/crypto/blowfish.h"
 #include "spike/io/fileinfo.hpp"
@@ -290,18 +290,20 @@ void AppProcessFile(AppContext *ctx) {
 
   auto ts = revil::GetTitleSupport(settings.title, settings.platform);
 
-  if (ts->arc.extendedFilePath) {
+  if (ts->arc.flags & revil::DbArc_ExtendedPath) {
     ARCExtendedFiles files;
     std::tie(hdr, files) = ReadExtendedARC(rd);
     WriteFiles(files);
   } else {
     ARCFiles files;
     if (id == ARCCID) {
-      if (ts->arc.blowfishKey.empty()) {
+      std::string_view key(ts->arc.key);
+
+      if (key.empty()) {
         throw std::runtime_error(
             "Encrypted archives not supported for this title");
       }
-      enc.SetKey(ts->arc.blowfishKey);
+      enc.SetKey(key);
       std::tie(hdr, files) = ReadARCC(rd, enc);
     } else {
       std::tie(hdr, files) = ReadARC(rd);

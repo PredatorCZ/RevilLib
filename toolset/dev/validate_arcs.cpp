@@ -15,9 +15,8 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "../hfs.hpp"
 #include "arc.hpp"
-#include "ext_base.hpp"
+#include "hfs.hpp"
 #include "project.h"
 #include "re_common.hpp"
 #include "revil/hashreg.hpp"
@@ -76,7 +75,6 @@ std::map<uint32, std::string> newHashes;
 std::map<uint32, std::string> missingHashes;
 std::set<uint32> usedHashes;
 std::mutex mergeMtx;
-const MtExtensions *reg = nullptr;
 
 void AppProcessFile(AppContext *ctx) {
   std::stringstream backup;
@@ -97,10 +95,6 @@ void AppProcessFile(AppContext *ctx) {
   std::map<uint32, std::string> missingHashes;
   std::set<uint32> usedHashes;
 
-  if (!reg) {
-    reg = revil::GetTitleRegistry(settings.title);
-  }
-
   auto WriteFiles = [&](auto &files) {
     for (auto &f : files) {
       auto ext =
@@ -111,9 +105,9 @@ void AppProcessFile(AppContext *ctx) {
           newHashes[f.typeHash] = f.fileName;
         }
       } else {
-        auto retHash = reg->GetHash(ext, settings.platform);
+        auto retHash = revil::GetHash(ext, {}, settings.platform);
 
-        if (!retHash) {
+        if (retHash.empty()) {
           if (!missingHashes.count(f.typeHash) &&
               !::missingHashes.count(f.typeHash)) {
             missingHashes[f.typeHash] = f.fileName;
@@ -127,20 +121,21 @@ void AppProcessFile(AppContext *ctx) {
 
   auto ts = revil::GetTitleSupport(settings.title, settings.platform);
 
-  if (ts->arc.extendedFilePath) {
+  if (ts->arc.flags & revil::DbArc_ExtendedPath) {
     ARCExtendedFiles files;
     std::tie(hdr, files) = ReadExtendedARC(rd);
     WriteFiles(files);
   } else {
     ARCFiles files;
     if (id == ARCCID) {
-      if (ts->arc.blowfishKey.empty()) {
+      std::string_view key(ts->arc.key);
+
+      if (key.empty()) {
         throw std::runtime_error(
             "Encrypted archives not supported for this title");
       }
-
       BlowfishEncoder enc;
-      enc.SetKey(ts->arc.blowfishKey);
+      enc.SetKey(key);
 
       std::tie(hdr, files) = ReadARCC(rd, enc);
     } else {
@@ -191,17 +186,13 @@ void AppFinishContext() {
   }
 
   if (!usedHashes.empty()) {
-    printline("Unused hashes:");
+    /*printline("Unused hashes:");
     for (auto &h : *reg->Base()) {
       if (!usedHashes.count(h.second)) {
         printline(h.first);
       }
-    }
+    }*/
   }
-
-#ifndef NDEBUG
-  CheckCollisions();
-#endif
 }
 
 size_t AppExtractStat(request_chunk requester) {

@@ -99,16 +99,21 @@ struct ArcMakeContext : AppPackContext {
     }
 
     auto extension = path.substr(extPos + 1);
-    auto hash = GetHash(extension, settings.title, settings.platform);
+    auto hashes = GetHash(extension, settings.title, settings.platform);
 
-    if (!hash) {
+    if (hashes.empty()) {
       printwarning("Skipped (invalid format): " << path);
+      return;
+    }
+
+    if (hashes.size() > 1) {
+      printwarning("Skipped (multiple classes from extension): " << path);
       return;
     }
 
     auto noExt = path.substr(0, extPos);
 
-    if (noExt.size() > (ts->arc.extendedFilePath
+    if (noExt.size() > ((ts->arc.flags & revil::DbArc_ExtendedPath)
                             ? sizeof(ARCExtendedFile::fileName)
                             : sizeof(ARCFile::fileName))) {
       printwarning("Skipped (filename too large): " << path);
@@ -163,7 +168,7 @@ struct ArcMakeContext : AppPackContext {
     auto &streamStore = tStream->streamStore;
     AFile curFile;
     curFile.offset = streamStore.Tell();
-    curFile.hash = hash;
+    curFile.hash = hashes.front();
     curFile.uSize = streamSize;
     curFile.path = noExt;
 
@@ -224,7 +229,7 @@ struct ArcMakeContext : AppPackContext {
     arc.numFiles = numFiles;
     arc.version = ts->arc.version;
 
-    if (arc.version < 10 || ts->arc.xmemOnly) {
+    if (arc.version < 10 || (ts->arc.flags & revil::DbArc_XMemCompress)) {
       wr.Write(arc);
     } else {
       ARC arcEx{arc};
@@ -232,9 +237,9 @@ struct ArcMakeContext : AppPackContext {
     }
 
     const size_t dataOffset =
-        wr.Tell() + arc.numFiles * (ts->arc.extendedFilePath
-            ? sizeof(ARCExtendedFile)
-            : sizeof(ARCFile));
+        wr.Tell() + arc.numFiles * ((ts->arc.flags & revil::DbArc_ExtendedPath)
+                                        ? sizeof(ARCExtendedFile)
+                                        : sizeof(ARCFile));
 
     std::vector<AFile> files;
     size_t curOffset = dataOffset;
@@ -264,7 +269,7 @@ struct ArcMakeContext : AppPackContext {
       wr.Write(cFile);
     };
 
-    if (ts->arc.extendedFilePath) {
+    if (ts->arc.flags & revil::DbArc_ExtendedPath) {
       for (auto &f : files) {
         WriteFile(ARCExtendedFile{}, f);
       }

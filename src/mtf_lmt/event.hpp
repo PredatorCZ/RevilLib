@@ -36,6 +36,7 @@ public:
   float frameRate = 60.f;
   void Save(BinWritterRef wr) const;
   void SaveBuffer(BinWritterRef wr, LMTFixupStorage &fixups) const;
+  void Save(pugi::xml_node node) const;
 };
 
 MAKE_ENUM(ENUMSCOPE(class EventFrameV2DataType

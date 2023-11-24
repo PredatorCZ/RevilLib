@@ -713,7 +713,7 @@ template <class HdrType> void ToXML(HdrType *hdr, pugi::xml_node root) {
     pugi::xml_node xEntry;
 
     auto SetClassName = [](pugi::xml_node &node, uint32 hash) {
-      auto clName = GetClassName(hash, Platform::Win32);
+      auto clName = GetClassName(hash);
 
       if (clName.empty()) {
         char buffer[0x10]{};

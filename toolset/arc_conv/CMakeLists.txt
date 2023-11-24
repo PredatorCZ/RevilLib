@@ -20,7 +20,7 @@ build_target(
   zlib-objects
   INCLUDES
   ${TPD_PATH}/mspack
-  ${TPD_PATH}/../src/mtf_arc/
+  ${CMAKE_SOURCE_DIR}/src/
   ${TPD_PATH}/zlib
   AUTHOR
   "Lukas Cone"
@@ -42,7 +42,7 @@ build_target(
   revil-interface
   zlib-objects
   INCLUDES
-  ${TPD_PATH}/../src/mtf_arc/
+  ${CMAKE_SOURCE_DIR}/src/
   ${TPD_PATH}/zlib
   AUTHOR
   "Lukas Cone"

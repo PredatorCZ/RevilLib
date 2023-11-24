@@ -968,7 +968,7 @@ void XFSImpl::Load(BinReaderRef_e rd) {
   }
 
   for (auto &c : rtti) {
-    c.className = GetClassName(c.hash, Platform::Win32);
+    c.className = GetClassName(c.hash);
 #ifdef XFS_DEBUG
     if (c.className.empty() && !rttiStore.count(c.hash)) {
       rttiStore[c.hash] = c;

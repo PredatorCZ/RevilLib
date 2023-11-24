@@ -24,10 +24,10 @@ enum class Platform {
   Auto,
   Win32,
   N3DS,
-  PS3 = 0100,
+  PS3 = 0100 | ((N3DS & 077) + 1),
   X360,
   CAFE,
-  NSW = 0200,
+  NSW = 0200 | ((CAFE & 077) + 1),
   PS4,
   Android,
   IOS,
@@ -42,35 +42,45 @@ struct PlatformInfo {
       : x64(uint32(p) & 0200), bigEndian(uint32(p) & 0100) {}
 };
 
-struct ArcSupport {
-  uint16 version = 7;
-  uint16 windowSize = 15;
-  bool allowRaw = false;
-  bool xmemOnly = false;
-  bool extendedFilePath = false;
-  std::string_view blowfishKey{};
+template <class C> struct SmallArray {
+  uint32 size : 8;
+  int32 offset : 24;
+
+  const C *operator->() const {
+    return reinterpret_cast<const C *>(
+        (offset != 0) * reinterpret_cast<intptr_t>(this) + offset);
+  }
+
+  const C *begin() const { return operator->(); }
+  const C *end() const { return begin() + size; }
 };
 
-struct ModSupport {
-  uint16 version = 0;
-  bool x64 = false;
+struct StringEntry : SmallArray<char> {
+  operator std::string_view() const { return {operator->(), size}; }
 };
 
-struct TexSupport {
-  uint16 version = 0;
-  bool x64 = false;
+static_assert(sizeof(StringEntry) == 4);
+
+enum DbArcFlags {
+  DbArc_AllowRaw = 1,
+  DbArc_ExtendedPath = 2,
+  DbArc_XMemCompress = 4,
+  DbArc_Version1 = 8,
 };
 
-struct LmtSupport {
-  uint16 version = 0;
-  bool x64 = false;
+struct DbArcSupport {
+  uint8 version;
+  uint8 windowSize;
+  uint8 flags;
+  StringEntry key;
 };
 
 struct TitleSupport {
-  ArcSupport arc;
-  ModSupport mod;
-  TexSupport tex;
-  LmtSupport lmt;
+  DbArcSupport arc;
+  uint16 modVersion;
+  uint16 lmtVersion;
+  uint16 texVersion;
+  uint16 xfsVersion;
 };
 
 } // namespace revil

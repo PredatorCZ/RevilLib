@@ -45,8 +45,14 @@ public:
   size_t GetNumGroups() const override { return 4; }
   virtual const FloatFrame *GetFrames(size_t groupID) const = 0;
   virtual FloatFrame *GetFrames(size_t groupID) = 0;
+
+  void Save(pugi::xml_node node) const;
+  void Load(pugi::xml_node node);
 };
 
 enum class FloatTrackComponentRemap : uint8 {
-  NONE, X_COMP, Y_COMP, Z_COMP
+  NONE,
+  X_COMP,
+  Y_COMP,
+  Z_COMP,
 };
