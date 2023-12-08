@@ -48,12 +48,11 @@ jobs:
           fi
         done
 
-    - name: Clear nightly assets
-      uses: andreaswilli/delete-release-assets-action@v3.0.0
+    - name: Remove old nightly release
+      uses: dev-drprasad/delete-tag-and-release@v1.0
       with:
+        tag_name: nightly
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        tag: nightly
-        deleteOnlyFromDrafts: false
 
     - name: Release them
       uses: softprops/action-gh-release@v1
@@ -63,11 +62,3 @@ jobs:
           *.7z
           *.sig
         tag_name: nightly
-
-    - uses: actions/checkout@v2
-    - name: Redirect nightly tag
-      run: |
-        git config --global user.email "nightly-bot"
-        git config --global user.name "nightly-bot"
-        git tag nightly --message "" --force
-        git push origin nightly --force
