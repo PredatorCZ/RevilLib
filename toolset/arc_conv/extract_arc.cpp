@@ -288,7 +288,7 @@ void AppProcessFile(AppContext *ctx) {
     }
   };
 
-  auto ts = revil::GetTitleSupport(settings.title, settings.platform);
+  auto ts = revil::GetTitleSupport(settings.title, platform);
 
   if (ts->arc.flags & revil::DbArc_ExtendedPath) {
     ARCExtendedFiles files;

@@ -4,7 +4,7 @@
 #include "spike/reflect/detail/reflector_enum.hpp"
 #include <stdexcept>
 
-extern "C" const revil::Header *REDB;
+extern "C" const revil::Header REDB;
 
 using namespace revil;
 
@@ -20,9 +20,9 @@ std::string_view GetExtension(uint32 hash, std::string_view title,
   const uint8 platform = uint8(platform_) & 077;
 
   if (!title.empty()) {
-    auto oKey = LowerBound(title, REDB->titles);
+    auto oKey = LowerBound(title, REDB.titles);
 
-    if (oKey != REDB->titles.end() && std::string_view(oKey->name) == title) {
+    if (oKey != REDB.titles.end() && std::string_view(oKey->name) == title) {
       for (auto &fx : oKey->data->fixups) {
         if (fx.platform == platform) {
           const ResourceClass *fClasses = fx.classes.operator->();
@@ -37,17 +37,16 @@ std::string_view GetExtension(uint32 hash, std::string_view title,
     }
   }
 
-  auto foundClass = LowerBound(hash, REDB->resourceClasses[platform]);
+  auto foundClass = LowerBound(hash, REDB.resourceClasses[platform]);
 
-  if (foundClass != REDB->resourceClasses[platform].end() &&
+  if (foundClass != REDB.resourceClasses[platform].end() &&
       foundClass->hash == hash) {
     return foundClass->extension;
   }
 
-  foundClass = LowerBound(hash, REDB->resourceClasses[0]);
+  foundClass = LowerBound(hash, REDB.resourceClasses[0]);
 
-  if (foundClass != REDB->resourceClasses[0].end() &&
-      foundClass->hash == hash) {
+  if (foundClass != REDB.resourceClasses[0].end() && foundClass->hash == hash) {
     return foundClass->extension;
   }
 
@@ -55,16 +54,16 @@ std::string_view GetExtension(uint32 hash, std::string_view title,
 }
 
 std::string_view GetClassName(uint32 hash) {
-  auto foundResClass = LowerBound(hash, REDB->resourceClasses[0]);
+  auto foundResClass = LowerBound(hash, REDB.resourceClasses[0]);
 
-  if (foundResClass != REDB->resourceClasses[0].end() &&
+  if (foundResClass != REDB.resourceClasses[0].end() &&
       foundResClass->hash == hash) {
     return foundResClass->name;
   }
 
-  auto foundClass = LowerBound(hash, REDB->classes);
+  auto foundClass = LowerBound(hash, REDB.classes);
 
-  if (foundClass != REDB->classes.end() && foundClass->hash == hash) {
+  if (foundClass != REDB.classes.end() && foundClass->hash == hash) {
     return foundClass->name;
   }
 
@@ -72,7 +71,7 @@ std::string_view GetClassName(uint32 hash) {
 }
 
 void GetTitles(TitleCallback cb) {
-  for (auto &p : REDB->titles) {
+  for (auto &p : REDB.titles) {
     cb(p.name);
   }
 }
@@ -86,7 +85,7 @@ std::span<const uint32> GetHash(std::string_view extension,
   auto supp = GetTitleSupport(title, platform);
 
   auto hashes =
-      ClassesFromExtension(*REDB, extension, supp->arc.flags & DbArc_Version1);
+      ClassesFromExtension(REDB, extension, supp->arc.flags & DbArc_Version1);
 
   if (hashes.size() > 0) {
     return hashes;
@@ -111,9 +110,9 @@ std::span<const uint32> GetHash(std::string_view extension,
 }
 
 Platforms GetPlatformSupport(std::string_view title) {
-  auto found = LowerBound(title, REDB->titles);
+  auto found = LowerBound(title, REDB.titles);
 
-  if (found == REDB->titles.end() || found->name != title) {
+  if (found == REDB.titles.end() || found->name != title) {
     throw std::runtime_error("Coundn't find title.");
   }
 
@@ -131,14 +130,26 @@ Platforms GetPlatformSupport(std::string_view title) {
 }
 
 const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
-  auto found = LowerBound(title, REDB->titles);
+  auto found = LowerBound(title, REDB.titles);
 
-  if (found == REDB->titles.end() || found->name != title) {
+  if (found == REDB.titles.end() || found->name != title) {
     throw std::runtime_error("Coundn't find title.");
   }
 
+  if (platform == Platform::Auto) {
+    platform = Platform::Win32;
+  }
+
   auto foundSec =
-      found->data->support.operator->()[uint8(platform) & 077].operator->();
+      found->data->support.operator->()[(uint8(platform) & 077) - 1].
+      operator->();
+
+  if (!foundSec && platform != Platform::Win32) {
+    foundSec =
+        found->data->support.operator->()[(uint8(Platform::Win32) & 077) - 1]
+            .
+            operator->();
+  }
 
   if (!foundSec) {
     throw std::runtime_error("Title support is null.");
