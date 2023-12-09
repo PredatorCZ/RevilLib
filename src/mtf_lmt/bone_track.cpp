@@ -193,9 +193,8 @@ static const TrackTypesShared buffRemapRegistry[][16] = {
 struct LMTTrackMidInterface : LMTTrackInterface {
   clgen::BoneTrack::Interface interface;
 
-  LMTTrackMidInterface(clgen::LayoutLookup rules, char *data) : interface {
-    data, rules
-  } {
+  LMTTrackMidInterface(clgen::LayoutLookup rules, char *data)
+      : interface{data, rules} {
     useRefFrame = interface.m(clgen::BoneTrack::referenceData) >= 0;
   }
 
@@ -273,6 +272,10 @@ void ProcessClass(LMTTrackMidInterface &item, LMTConstructorProperties flags) {
           FByteswapper(*extr);
         }
       }
+
+      FByteswapper(*reinterpret_cast<uint32 *>(
+          item.interface.data +
+          item.interface.m(clgen::BoneTrack::compression)));
     }
   }
 
