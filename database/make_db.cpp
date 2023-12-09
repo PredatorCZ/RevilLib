@@ -14,10 +14,9 @@ MAKE_ENUM(ENUMSCOPE(class revil__Family, revil__Family), EMEMBER(NONE),
           EMEMBER(TEX), EMEMBER(XFS));
 
 MAKE_ENUM(ENUMSCOPE(class revil__Platform, revil__Platform), EMEMBER(Auto),
-          EMEMBER(Win32), EMEMBER(PS3), EMEMBER(X360), EMEMBER(N3DS),
+          EMEMBER(Win32), EMEMBER(N3DS), EMEMBER(PS3), EMEMBER(X360),
           EMEMBER(CAFE), EMEMBER(NSW), EMEMBER(PS4), EMEMBER(Android),
           EMEMBER(IOS), EMEMBER(Win64));
-
 using namespace revil;
 
 using Executor = void (*)(revil__Platform, std::string_view, std::string_view);
