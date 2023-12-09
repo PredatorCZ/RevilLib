@@ -36,6 +36,8 @@ enum MODVersion : uint16 {
   X2CFF = 0x2CFF, // RE6 PS3
   XC5 = 0xC5,     // LP2 PC
   XC3 = 0xC3,     // LP2 PS3
+  XE5 = 0xE6,
+  XE6 = 0xE6,
 };
 
 struct alignas(8) MODMaker {

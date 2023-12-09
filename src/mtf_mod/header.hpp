@@ -123,3 +123,16 @@ struct MODHeaderX05 : MODHeaderCommon {
 struct MODHeaderX06 : MODHeaderX05 {
   uint64 dataEnd;
 };
+
+struct MODHeaderXE5 : MODHeaderCommon {
+  uint32 vertexBufferSize;
+  uint32 numTextures;
+  uint32 numGroups;
+  uint32 numSkins;
+  uint32 bones;
+  uint32 groups;
+  uint32 materials;
+  uint32 meshes;
+  uint32 vertexBuffer;
+  uint32 indices;
+};

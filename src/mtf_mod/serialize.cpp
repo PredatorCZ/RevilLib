@@ -191,6 +191,10 @@ template <> void FByteswapper(MODMetaDataV2 &self, bool) {
   FByteswapper(self.numEnvelopes);
 }
 
+template <> void FByteswapper(MODSkinRemap<24> &self, bool) {
+  FByteswapper(self.count);
+}
+
 template <> void FByteswapper(MODSkinRemap<32> &self, bool) {
   FByteswapper(self.count);
 }
@@ -263,6 +267,20 @@ template <> void FByteswapper(MODHeaderX70 &self, bool) {
   FByteswapper(self.meshes);
   FByteswapper(self.vertexBuffer);
   FByteswapper(self.unkBuffer);
+  FByteswapper(self.indices);
+}
+
+template <> void FByteswapper(MODHeaderXE5 &self, bool) {
+  FByteswapper(static_cast<MODHeaderCommon &>(self));
+  FByteswapper(self.vertexBufferSize);
+  FByteswapper(self.numTextures);
+  FByteswapper(self.numGroups);
+  FByteswapper(self.numSkins);
+  FByteswapper(self.bones);
+  FByteswapper(self.groups);
+  FByteswapper(self.materials);
+  FByteswapper(self.meshes);
+  FByteswapper(self.vertexBuffer);
   FByteswapper(self.indices);
 }
 
@@ -429,6 +447,10 @@ template <> void FByteswapper(MODMeshXD2 &self, bool way) {
   FByteswapper(self.minVertex);
   FByteswapper(self.maxVertex);
   FByteswapper(self.unk);
+}
+
+template <> void FByteswapper(MODMeshXE5 &self, bool way) {
+  FByteswapper<MODMeshXD2>(self, way);
 }
 
 #pragma endregion
@@ -795,6 +817,11 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
   rd.Read(main.bounds);
   rd.Read(main.metadata);
 
+  if (header.bones <= 0x80) {
+    // UMVC3 PS3 uses unique model
+    throw std::runtime_error("Unsupported model format");
+  }
+
   if (header.numBones) {
     rd.Seek(header.bones);
     rd.ReadContainer(main.bones, header.numBones);
@@ -837,8 +864,7 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
-template<class Traits>
-MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
+template <class Traits> MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
   MODHeaderXD3X64 header;
   MODInner<Traits> main;
   BinReaderRef rd(rdn);
@@ -944,6 +970,49 @@ MODImpl::ptr LoadMODX06(BinReaderRef_e rdn) {
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
+MODImpl::ptr LoadMODXE5(BinReaderRef_e rd) {
+  MODHeaderXE5 header;
+  MODInner<MODTraitsXE5> main;
+  rd.Push();
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+    rd.ReadContainer(main.skinRemaps, header.numSkins);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rd.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainer(main.meshes, header.numMeshes);
+  rd.ReadContainer(main.envelopes);
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
 #pragma endregion
 
 bool MODMaker::operator<(const MODMaker &i0) const {
@@ -960,10 +1029,15 @@ static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     {{MODVersion::XC5, false}, LoadMODXC5},
     {{MODVersion::XD2, true}, LoadMODXD2x32<MODTraitsXD2>},
     {{MODVersion::XD3, true}, LoadMODXD2x32<MODTraitsXD2>},
-    {{MODVersion::XD3, false, false, Platform::PS4}, LoadMODXD3x64<MODTraitsXD3PS4>},
+    {{MODVersion::XD3, false, false, Platform::PS4},
+     LoadMODXD3x64<MODTraitsXD3PS4>},
     {{MODVersion::XD3, false}, LoadMODXD3x64<MODTraitsXD3x64>},
     {{MODVersion::X05, false}, LoadMODX06},
     {{MODVersion::X06, false}, LoadMODX06},
+    {{MODVersion::XE5, true}, LoadMODXE5},
+    {{MODVersion::XE5, false}, LoadMODXE5},
+    {{MODVersion::XE6, true}, LoadMODXE5},
+    {{MODVersion::XE6, false}, LoadMODXE5},
 };
 
 template <class C> MODImpl::ptr makeMod() {

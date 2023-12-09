@@ -1010,6 +1010,109 @@ std::map<uint32, MODVertices> formats{
                       TexCoord,
                       VertexTangent),
     },
+    {
+      0xF606F017,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        VertexTangentSigned,
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights}
+      ),
+    },
+    {
+      0x01B36016,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        VertexTangentSigned, // always zero?
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights}
+      ),
+    },
+    {
+      0xD6784014,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights}
+      ),
+    },
+    {
+      0x82917009,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante}
+      ),
+    },
+    {
+      0x59DC400B,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        VertexTangentSigned
+      ),
+    },
+    {
+      0x43FB3015,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        VertexTangentSigned
+      ),
+    },
+    {
+      0x7BA7401B,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        VertexColor
+      ),
+    },
+    {
+      0xAE252019,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        VertexTangentSigned,
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights},
+        V{F::UINT, D::R8G8, U::BoneIndices},
+        V{F::UNORM, D::R8G8, U::BoneWeights}
+      ),
+    },
+    {
+      0x3D62B012,
+      BuildVertices(
+        VertexPosition,
+        VertexNormalSigned,
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante},
+        VertexColor,
+        VertexTangentSigned, // always zero?
+        V{F::FLOAT, D::R32G32, U::TextureCoordiante}
+      ),
+    },
 };
 
 // clang-format on
@@ -1072,10 +1175,10 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, bool swap,
   } else {
     main.vertices.storage.emplace_back();
 
-    /*if (!edgeModels.contains(self.vertexFormat)) {
+    if (!edgeModels.contains(self.vertexFormat)) {
       throw std::runtime_error("Unregistered vertex format: " +
                                std::to_string(self.vertexFormat));
-    }*/
+    }
   }
 
   uint16 *indexBuffer = reinterpret_cast<uint16 *>(
@@ -1247,6 +1350,24 @@ MODPrimitiveProxy MODMeshX06::ReflectLE(revil::MODImpl &main_) {
                      return d.usage == MODVertexDescriptor::Usage_e::Tangent;
                    });
   }*/
+
+  return retval;
+}
+
+MODPrimitiveProxy MODMeshXE5::ReflectBE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD2> &>(main_);
+  auto retval = makeV2(*this, main, true, [&](MODVertexDescriptor &d) {
+    swapBuffers(d, numVertices);
+  });
+  retval.skinIndex = numEnvelopes;
+
+  return retval;
+}
+
+MODPrimitiveProxy MODMeshXE5::ReflectLE(revil::MODImpl &main_) {
+  auto &main = static_cast<MODInner<MODTraitsXD2> &>(main_);
+  auto retval = makeV2(*this, main, false, [&](MODVertexDescriptor &) {});
+  retval.skinIndex = numEnvelopes;
 
   return retval;
 }

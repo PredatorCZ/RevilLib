@@ -148,8 +148,13 @@ gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
   std::vector<UCVector4> weights[2];
   std::vector<UCVector4> bones[2];
   size_t curWeight = 0;
+  size_t curBone = 0;
 
   for (auto d : *descs) {
+    static constexpr size_t fmtNumElements[]{
+        0, 4, 3, 4, 2, 3, 1, 2, 4, 3, 4, 2, 3, 2, 1, 3, 4, 1,
+    };
+
     using u = uni::PrimitiveDescriptor::Usage_e;
     switch (d->Usage()) {
     case u::Position: {
@@ -202,18 +207,35 @@ gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
     }
 
     case u::BoneIndices: {
+      size_t numElems = fmtNumElements[uint8(d->Type().compType)];
+
       if (d->Type().outType == uni::FormatType::FLOAT) {
         uni::FormatCodec::fvec sampled;
         d->Codec().Sample(sampled, d->RawBuffer(), vertexCount, d->Stride());
         d->Resample(sampled);
 
-        auto &curBones = bones[d->Index()];
-        if (curBones.empty()) {
-          curBones.resize(vertexCount);
-        }
+        if (numElems == 4) {
+          curBone += 4;
+          auto &curBones = bones[d->Index()];
+          if (curBones.empty()) {
+            curBones.resize(vertexCount);
+          }
 
-        for (size_t index = 0; auto &v : sampled) {
-          curBones[index++] = v.Convert<uint8>();
+          for (size_t index = 0; auto &v : sampled) {
+            curBones[index++] = v.Convert<uint8>();
+          }
+        } else {
+          for (size_t e = 0; e < numElems; e++, curBone++) {
+            auto &curBones = bones[curBone / 4];
+            if (curBones.empty()) {
+              curBones.resize(vertexCount);
+            }
+
+            for (size_t index = 0; auto &v : sampled) {
+              auto cvted = v.Convert<uint8>();
+              curBones[index++][curBone % 4] = cvted._arr[e];
+            }
+          }
         }
       } else {
         uni::FormatCodec::ivec sampled;
@@ -228,13 +250,28 @@ gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
           }
         }
 
-        auto &curBones = bones[d->Index()];
-        if (curBones.empty()) {
-          curBones.resize(vertexCount);
-        }
+        if (numElems == 4) {
+          curBone += 4;
+          auto &curBones = bones[d->Index()];
+          if (curBones.empty()) {
+            curBones.resize(vertexCount);
+          }
 
-        for (size_t index = 0; auto &v : sampled) {
-          curBones[index++] = v.Convert<uint8>();
+          for (size_t index = 0; auto &v : sampled) {
+            curBones[index++] = v.Convert<uint8>();
+          }
+        } else {
+          for (size_t e = 0; e < numElems; e++, curBone++) {
+            auto &curBones = bones[curBone / 4];
+            if (curBones.empty()) {
+              curBones.resize(vertexCount);
+            }
+
+            for (size_t index = 0; auto &v : sampled) {
+              auto cvted = v.Convert<uint8>();
+              curBones[index++][curBone % 4] = cvted._arr[e];
+            }
+          }
         }
       }
 
@@ -308,7 +345,7 @@ gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
   const size_t numWeights = weights[0].size();
 
   if (!weights[1].empty()) {
-    if (curWeight < 8) {
+    if (curWeight != curBone && curWeight < 8) {
       for (size_t i = 0; i < numWeights; i++) {
         auto &wt0 = weights[0].at(i);
         auto &wt1 = weights[1].at(i);
@@ -323,20 +360,22 @@ gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
     WriteWeights(1);
     WriteBones(1);
   } else if (!weights[0].empty()) {
-    if (curWeight == 3) {
-      for (size_t i = 0; i < numWeights; i++) {
-        auto &wt0 = weights[0].at(i);
-        wt0[3] = std::max(0xff - wt0[2] - wt0[1] - wt0[0], 0);
-      }
-    } else if (curWeight == 2) {
-      for (size_t i = 0; i < numWeights; i++) {
-        auto &wt0 = weights[0].at(i);
-        wt0[2] = std::max(0xff - wt0[1] - wt0[0], 0);
-      }
-    } else if (curWeight == 1) {
-      for (size_t i = 0; i < numWeights; i++) {
-        auto &wt0 = weights[0].at(i);
-        wt0[1] = std::max(0xff - wt0[0], 0);
+    if (curWeight != curBone) {
+      if (curWeight == 3) {
+        for (size_t i = 0; i < numWeights; i++) {
+          auto &wt0 = weights[0].at(i);
+          wt0[3] = std::max(0xff - wt0[2] - wt0[1] - wt0[0], 0);
+        }
+      } else if (curWeight == 2) {
+        for (size_t i = 0; i < numWeights; i++) {
+          auto &wt0 = weights[0].at(i);
+          wt0[2] = std::max(0xff - wt0[1] - wt0[0], 0);
+        }
+      } else if (curWeight == 1) {
+        for (size_t i = 0; i < numWeights; i++) {
+          auto &wt0 = weights[0].at(i);
+          wt0[1] = std::max(0xff - wt0[0], 0);
+        }
       }
     }
 

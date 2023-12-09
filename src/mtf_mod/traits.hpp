@@ -102,3 +102,14 @@ struct MODTraitsX06 {
   using mesh = MODMeshX06;
   using metadata = MODMetaDataV1;
 };
+
+struct MODTraitsXE5 {
+  static constexpr size_t numSkinRemaps = 24;
+  static constexpr size_t numRemaps = 0x100;
+  static constexpr size_t pathSize = 1;
+  using primitive = MODPrimitiveProxy;
+  using bone = MODBoneV1_5;
+  using material = MODMaterialName;
+  using mesh = MODMeshXE5;
+  using metadata = MODMetaDataV1;
+};
