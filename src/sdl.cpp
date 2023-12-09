@@ -720,7 +720,8 @@ template <class HdrType> void ToXML(HdrType *hdr, pugi::xml_node root) {
         snprintf(buffer, sizeof(buffer), "%X", hash);
         node.append_attribute("resourceHash").set_value(buffer);
       } else {
-        node.append_attribute("resourceType").set_value(clName.data());
+        std::string resNme(clName);
+        node.append_attribute("resourceType").set_value(resNme.c_str());
       }
     };
 

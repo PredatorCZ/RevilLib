@@ -264,7 +264,8 @@ void XFSClassDesc::ToXML(pugi::xml_node node) const {
     snprintf(buffer, sizeof(buffer), "%X", hash);
     cNode.append_attribute("hash").set_value(buffer);
   } else {
-    cNode.append_attribute("name").set_value(className.data());
+    std::string resNme(className);
+    cNode.append_attribute("name").set_value(resNme.c_str());
   }
 
   for (auto &m : members) {
@@ -636,7 +637,8 @@ void XMLSetType(const XFSClassData &item, pugi::xml_node node) {
     return;
   }
 
-  attr.set_value(item.rtti->className.data());
+  std::string resNme(item.rtti->className);
+  attr.set_value(resNme.c_str());
 }
 
 void XFSImpl::RTTIToXML(pugi::xml_node node) {
