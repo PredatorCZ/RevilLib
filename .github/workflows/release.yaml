@@ -9,6 +9,9 @@ on:
     branches:
       - master
 
+env:
+  SK_VERSION: nover
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -38,9 +41,11 @@ jobs:
                 # 7z a ../$file-modulesonly.7z '-ir!*.spk' '-ir!revil*.dll'
                 # gpg --detach-sign ../$file-modulesonly.7z
               else
+                BASENAME=$(basename *.tar.xz .tar.xz)
+                echo "SK_VERSION=$(echo ${BASENAME} | cut -d'-' -f 2)" >> $GITHUB_ENV
                 # tar -xf *.tar.xz
-                # 7z a ../$(basename *.tar.xz .tar.xz)-modulesonly.7z '-ir!*.spk' '-ir!librevil.so*'
-                # gpg --detach-sign ../$(basename *.tar.xz .tar.xz)-modulesonly.7z
+                # 7z a ../${BASENAME}-modulesonly.7z '-ir!*.spk' '-ir!librevil.so*'
+                # gpg --detach-sign ../${BASENAME}-modulesonly.7z
                 mv *.tar.xz ..
                 gpg --detach-sign ../*.tar.xz
               fi
@@ -54,6 +59,9 @@ jobs:
         tag_name: nightly
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Wait a sec
+      run: sleep 2
+
     - name: Release them
       uses: softprops/action-gh-release@v1
       with:
@@ -62,3 +70,4 @@ jobs:
           *.7z
           *.sig
         tag_name: nightly
+        name: nightly ${{env.SK_VERSION}}
