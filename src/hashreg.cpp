@@ -17,7 +17,7 @@ namespace revil {
 
 std::string_view GetExtension(uint32 hash, std::string_view title,
                               Platform platform_) {
-  const uint8 platform = uint8(platform_) & 077;
+  const uint8 platform = uint8(platform_) & PLATFORM_MASK;
 
   if (!title.empty()) {
     auto oKey = LowerBound(title, REDB.titles);
@@ -140,15 +140,29 @@ const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
     platform = Platform::Win32;
   }
 
-  auto foundSec =
-      found->data->support.operator->()[(uint8(platform) & 077) - 1].
-      operator->();
+  auto platforms = found->data->support.operator->();
+
+  auto foundSec = platforms[(uint8(platform) & PLATFORM_MASK) - 1].operator->();
 
   if (!foundSec && platform != Platform::Win32) {
     foundSec =
-        found->data->support.operator->()[(uint8(Platform::Win32) & 077) - 1]
-            .
-            operator->();
+        platforms[(uint8(Platform::Win32) & PLATFORM_MASK) - 1].operator->();
+  }
+
+  if (!foundSec) {
+    static const auto refl = GetReflectedEnum<Platform>();
+    const bool inputPlatformBE = IsPlatformBigEndian(platform);
+
+    for (uint32 i = 1; i < refl->numMembers; i++) {
+      if (IsPlatformBigEndian(Platform(refl->values[i])) == inputPlatformBE &&
+          platforms[i - 1].varPtr) {
+            if (foundSec) {
+              throw std::runtime_error("Ambiguous title support found from fallback.");
+            }
+
+            foundSec = platforms[i - 1].operator->();
+      }
+    }
   }
 
   if (!foundSec) {

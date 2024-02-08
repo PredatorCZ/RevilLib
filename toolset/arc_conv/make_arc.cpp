@@ -85,7 +85,7 @@ struct ArcMakeContext : AppPackContext {
   }
 
   ArcMakeContext() = default;
-  ArcMakeContext(const std::string &path, const AppPackStats &)
+  ArcMakeContext(const std::string &path)
       : outArc(path),
         ts(revil::GetTitleSupport(settings.title, settings.platform)) {}
   ArcMakeContext &operator=(ArcMakeContext &&) = default;
@@ -302,13 +302,12 @@ struct ArcMakeContext : AppPackContext {
   }
 };
 
-AppPackContext *AppNewArchive(const std::string &folder,
-                              const AppPackStats &stats) {
+AppPackContext *AppNewArchive(const std::string &folder) {
   auto file = folder;
   while (file.back() == '/') {
     file.pop_back();
   }
 
   file += ".arc";
-  return new ArcMakeContext(file, stats);
+  return new ArcMakeContext(file);
 }

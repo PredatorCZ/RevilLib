@@ -20,27 +20,33 @@
 #include <string_view>
 
 namespace revil {
+constexpr uint32 PLATFORM_BE = 0x100;
+constexpr uint32 PLATFORM_X64 = 0x200;
+constexpr uint32 PLATFORM_MASK = 077;
+
 enum class Platform {
   Auto,
   Win32,
   N3DS,
-  PS3 = 0100 | ((N3DS & 077) + 1),
+  PS3 = PLATFORM_BE | ((N3DS & PLATFORM_MASK) + 1),
   X360,
   CAFE,
-  NSW = 0200 | ((CAFE & 077) + 1),
+  NSW = PLATFORM_X64 | ((CAFE & PLATFORM_MASK) + 1),
   PS4,
   Android,
   IOS,
   Win64,
 };
 
-struct PlatformInfo {
-  bool x64 = false;
-  bool bigEndian = false;
+constexpr uint32 PLATFORM_MAX_INDEX = uint32(Platform::Win64) & PLATFORM_MASK;
 
-  PlatformInfo(Platform p)
-      : x64(uint32(p) & 0200), bigEndian(uint32(p) & 0100) {}
-};
+inline bool IsPlatformX64(Platform platform) {
+  return uint32(platform) & PLATFORM_X64;
+}
+
+inline bool IsPlatformBigEndian(Platform platform) {
+  return uint32(platform) & PLATFORM_BE;
+}
 
 template <class C> struct SmallArray {
   uint32 size : 8;

@@ -21,6 +21,7 @@
 #include "spike/crypto/blowfish.h"
 #include "spike/io/fileinfo.hpp"
 #include "spike/master_printer.hpp"
+#include <set>
 
 #include "lzx.h"
 #include "mspack.h"
@@ -123,12 +124,17 @@ static void DecompressLZX(char *inBuffer, uint32 compressedSize,
 static struct ARCExtract : ReflectorBase<ARCExtract> {
   std::string title;
   Platform platform = Platform::Auto;
+  std::string classWhitelist;
+  std::set<uint32> classWhitelist_;
 } settings;
 
 REFLECT(CLASS(ARCExtract),
         MEMBER(title, "t", ReflDesc{"Set title for correct archive handling."}),
         MEMBER(platform, "p",
-               ReflDesc{"Set platform for correct archive handling."}));
+               ReflDesc{"Set platform for correct archive handling."}),
+        MEMBERNAME(classWhitelist, "class-whitelist",
+                   ReflDesc{"Extract only specified (comma separated) classes. "
+                            "Extract all if empty."}));
 
 std::string_view filters[]{
     ".arc$",
@@ -145,6 +151,28 @@ static AppInfo_s appInfo{
 static constexpr uint32 ARCCID = CompileFourCC("ARCC");
 
 AppInfo_s *AppInitModule() { return &appInfo; }
+
+bool AppInitContext(const std::string &) {
+  std::string_view sv(settings.classWhitelist);
+  size_t lastPost = 0;
+  auto found = sv.find(',');
+
+  while (found != sv.npos) {
+    auto sub = sv.substr(lastPost, found - lastPost);
+    settings.classWhitelist_.insert(revil::MTHashV1(es::TrimWhitespace(sub)));
+    settings.classWhitelist_.insert(revil::MTHashV2(es::TrimWhitespace(sub)));
+    lastPost = ++found;
+    found = sv.find(',', lastPost);
+  }
+
+  if (lastPost < sv.size()) {
+    std::string_view sub = sv.substr(lastPost);
+    settings.classWhitelist_.insert(revil::MTHashV1(es::TrimWhitespace(sub)));
+    settings.classWhitelist_.insert(revil::MTHashV2(es::TrimWhitespace(sub)));
+  }
+
+  return true;
+}
 
 auto ReadARCC(BinReaderRef_e rd, BlowfishEncoder &enc) {
   ARC hdr;
@@ -184,8 +212,8 @@ void AppProcessFile(AppContext *ctx) {
   Platform platform = id == CRAID ? Platform::PS3 : Platform::Win32;
 
   if (settings.platform != Platform::Auto) {
-    if (revil::PlatformInfo(platform).bigEndian !=
-        revil::PlatformInfo(settings.platform).bigEndian) {
+    if (revil::IsPlatformBigEndian(platform) !=
+        revil::IsPlatformBigEndian(settings.platform)) {
       printwarning("Platform setting mistmatch, using fallback platform: "
                    << (id == CRAID ? "PS3" : "Win32"));
     } else {
@@ -234,6 +262,11 @@ void AppProcessFile(AppContext *ctx) {
         continue;
       }
 
+      if (settings.classWhitelist_.size() > 0 &&
+          !settings.classWhitelist_.contains(f.typeHash)) {
+        continue;
+      }
+
       rd.Seek(f.offset);
 
       if (platform == Platform::PS3 && f.compressedSize == f.uncompressedSize) {
@@ -249,7 +282,7 @@ void AppProcessFile(AppContext *ctx) {
           enc.Decode(&inBuffer[0], f.compressedSize);
         }
 
-        if (hdr.version == 0x11 && hdr.LZXTag) {
+        if (hdr.IsLZX()) {
           DecompressLZX(&inBuffer[0], f.compressedSize, &outBuffer[0],
                         f.uncompressedSize, id == ARCID ? 17 : 15);
         } else {

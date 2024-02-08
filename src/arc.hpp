@@ -86,7 +86,11 @@ struct ARCBase {
 };
 
 struct ARC : ARCBase {
-  uint32 LZXTag = 0;
+  int32 LZXTag = 0;
+
+  bool IsLZX() const {
+    return version == 0x11 && LZXTag > 0;
+  }
 };
 
 using ARCFiles = std::vector<ARCFile>;
@@ -103,7 +107,7 @@ auto ReadARC(BinReaderRef_e rd) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
-  if (hdr.LZXTag) {
+  if (hdr.IsLZX()) {
     rd.Skip(-4);
   }
 
