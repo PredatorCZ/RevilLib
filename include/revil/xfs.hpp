@@ -26,7 +26,7 @@ class XFSImpl;
 
 class RE_EXTERN XFS {
 public:
-  void Load(BinReaderRef_e rd);
+  void Load(BinReaderRef_e rd, bool openEnded = false);
   void ToXML(pugi::xml_node node) const;
   void RTTIToXML(pugi::xml_node node) const;
 

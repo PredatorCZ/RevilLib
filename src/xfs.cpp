@@ -67,7 +67,8 @@ MAKE_ENUM(ENUMSCOPE(class XFSType
           EMEMBER(vector4_),           //
           EMEMBER(_vector4_),          // colour
           EMEMBERVAL(string2_, 32),    //
-          EMEMBERVAL(vector3_, 35),    //
+          EMEMBERVAL(vector2_, 34),    //
+          EMEMBER(vector3_),           //
           EMEMBERVAL(_resource_, 0x80) // 8+, custom?
 );
 
@@ -433,13 +434,13 @@ public:
   void ToXML(const XFSClassData &item, pugi::xml_node node);
   void ToXML(pugi::xml_node node);
   void RTTIToXML(pugi::xml_node node);
-  void Load(BinReaderRef_e rd);
+  void Load(BinReaderRef_e rd, bool openEnded);
 };
 
 XFS::XFS() : pi(std::make_unique<XFSImpl>()) {}
 XFS::~XFS() = default;
 
-void XFS::Load(BinReaderRef_e rd) { pi->Load(rd); }
+void XFS::Load(BinReaderRef_e rd, bool openEnded) { pi->Load(rd, openEnded); }
 
 void XFS::ToXML(pugi::xml_node node) const { pi->ToXML(node); }
 
@@ -489,6 +490,7 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
         break;
       case XFSType::point_:
       case XFSType::size_:
+      case XFSType::vector2_:
         rd.Read(cType.data.asVector2);
         break;
       case XFSType::vector3_:
@@ -732,6 +734,19 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
+
+      case XFSType::color_: {
+        auto adata = reinterpret_cast<const UCVector4 *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("r").set_value(adata[i].X);
+          aNode.append_attribute("g").set_value(adata[i].Y);
+          aNode.append_attribute("b").set_value(adata[i].Z);
+          aNode.append_attribute("a").set_value(adata[i].W);
+        }
+        break;
+      }
       default:
         throw std::runtime_error("Unhandled xml array type");
       }
@@ -792,6 +807,11 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         value.set_value(m.data.asUIVector2.X);
         cNode.append_attribute("h").set_value(m.data.asUIVector2.Y);
         break;
+      case XFSType::vector2_:
+        value.set_name("x");
+        value.set_value(m.data.asVector2.X);
+        cNode.append_attribute("y").set_value(m.data.asVector2.Y);
+        break;
       case XFSType::vector3_:
         value.set_name("x");
         value.set_value(m.data.asVector3.X);
@@ -832,6 +852,31 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         value.set_name("type");
         value.set_value(adata->type.data());
         cNode.append_attribute("value").set_value(adata->file.data());
+        break;
+      }
+
+      case XFSType::_matrix_: {
+        auto adata = static_cast<const es::Matrix44 *>(m.data.asPointer);
+        value.set_name("m00");
+        value.set_value(adata->r1().x);
+        cNode.append_attribute("m01").set_value(adata->r1().y);
+        cNode.append_attribute("m02").set_value(adata->r1().z);
+        cNode.append_attribute("m03").set_value(adata->r1().w);
+
+        cNode.append_attribute("m10").set_value(adata->r2().x);
+        cNode.append_attribute("m11").set_value(adata->r2().y);
+        cNode.append_attribute("m12").set_value(adata->r2().z);
+        cNode.append_attribute("m13").set_value(adata->r2().w);
+
+        cNode.append_attribute("m20").set_value(adata->r3().x);
+        cNode.append_attribute("m21").set_value(adata->r3().y);
+        cNode.append_attribute("m22").set_value(adata->r3().z);
+        cNode.append_attribute("m23").set_value(adata->r3().w);
+
+        cNode.append_attribute("m30").set_value(adata->r4().x);
+        cNode.append_attribute("m31").set_value(adata->r4().y);
+        cNode.append_attribute("m32").set_value(adata->r4().z);
+        cNode.append_attribute("m33").set_value(adata->r4().w);
         break;
       }
       default:
@@ -939,10 +984,9 @@ bool LoadV2(XFSImpl &main, BinReaderRef_e rd) {
   return false;
 }
 
-void XFSImpl::Load(BinReaderRef_e rd) {
+void XFSImpl::Load(BinReaderRef_e rd, bool openEnded) {
   using pt = Platform;
   XFSHeaderBase hdr;
-  pt platform = pt::Win32;
   rd.Push();
   rd.Read(hdr);
   rd.Pop();
@@ -950,11 +994,11 @@ void XFSImpl::Load(BinReaderRef_e rd) {
   if (hdr.id == XFSIDBE) {
     rd.SwapEndian(true);
     hdr.SwapEndian();
-    platform = Platform::PS3;
   } else if (hdr.id != XFSID) {
     throw es::InvalidHeaderError(hdr.id);
   }
 
+  pt platform = rd.SwappedEndian() ? pt::PS3 : pt::Win32;
   bool isX64 = false;
 
   if (hdr.version == 0xf || hdr.version == 0x10) {
@@ -987,7 +1031,7 @@ void XFSImpl::Load(BinReaderRef_e rd) {
 
   const size_t eof = rd.GetSize();
 
-  if (eof != rd.Tell()) {
+  if (!openEnded && eof != rd.Tell()) {
     throw std::runtime_error("Unexpected eof");
   }
 }
