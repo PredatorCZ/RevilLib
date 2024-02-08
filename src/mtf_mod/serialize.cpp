@@ -16,6 +16,8 @@
 */
 
 #include "header.hpp"
+#include "pugixml.hpp"
+#include "revil/xfs.hpp"
 #include "spike/io/binreader.hpp"
 #include "spike/io/binwritter.hpp"
 #include "spike/util/endian.hpp"
@@ -26,6 +28,7 @@ using namespace revil;
 
 static constexpr uint32 MODID = CompileFourCC("MOD");
 static constexpr uint32 DOMID = CompileFourCC("\0DOM");
+static constexpr uint32 RMDID = CompileFourCC("\0DMR");
 
 template <class traits> void MODInner<traits>::Reflect(bool swap) {
   this->boneData.storage.reserve(bones.size());
@@ -243,7 +246,7 @@ template <> void FByteswapper(MODHeaderXC5 &self, bool) {
   FByteswapper(self.indices);
 }
 
-template <> void FByteswapper(MODHeaderXD2 &self, bool) {
+template <> void FByteswapper(MODHeaderXDx32 &self, bool) {
   FByteswapper(static_cast<MODHeaderCommon &>(self));
   FByteswapper(self.vertexBufferSize);
   FByteswapper(self.numTextures);
@@ -295,6 +298,21 @@ template <> void FByteswapper(MODHeaderX170 &self, bool) {
   FByteswapper(self.vertexBuffer);
   FByteswapper(self.unkBuffer);
   FByteswapper(self.indices);
+}
+
+template <> void FByteswapper(MODHeaderX21 &self, bool) {
+  FByteswapper(static_cast<MODHeaderCommon &>(self));
+  FByteswapper(self.vertexBufferSize);
+  FByteswapper(self.numGroups);
+  FByteswapper(self.numSkins);
+  FByteswapper(self.bones);
+  FByteswapper(self.groups);
+  FByteswapper(self.materials);
+  FByteswapper(self.meshes);
+  FByteswapper(self.vertexBuffer);
+  FByteswapper(self.indices);
+  FByteswapper(self.unkSize);
+  FByteswapper(self.unkData);
 }
 
 template <> void FByteswapper(MODMaterialX70 &self, bool way) {
@@ -648,6 +666,14 @@ MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize + header.unkBufferSize],
                 main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(
+        main.buffer.data() + header.vertexBufferSize + header.unkBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
@@ -748,6 +774,14 @@ MODImpl::ptr LoadMODXC3(BinReaderRef_e rd) {
   rd.Seek(header.indices);
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
@@ -806,18 +840,26 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize + header.unkBufferSize],
                 main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(
+        main.buffer.data() + header.vertexBufferSize + header.unkBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
 template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
-  MODHeaderXD2 header;
+  MODHeaderXDx32 header;
   MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
   rd.Read(main.bounds);
   rd.Read(main.metadata);
 
-  if (header.bones <= 0x80) {
+  if (header.bones > 0 && header.bones <= 0x80) {
     // UMVC3 PS3 uses unique model
     throw std::runtime_error("Unsupported model format");
   }
@@ -861,13 +903,69 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
   rd.Seek(header.indices);
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
-template <class Traits> MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
-  MODHeaderXD3X64 header;
-  MODInner<Traits> main;
+template <class Traits> MODImpl::ptr LoadMODXDxLEx32(BinReaderRef_e rdn) {
   BinReaderRef rd(rdn);
+  MODHeaderXDx32 header;
+  MODInner<Traits> main;
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rdn.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainer(main.meshes, header.numMeshes);
+
+  if constexpr (std::is_same_v<MODMetaDataV2, typename Traits::metadata>) {
+    rd.ReadContainer(main.envelopes, main.metadata.numEnvelopes);
+  } else {
+    rd.ReadContainer(main.envelopes);
+  }
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
+template <class Traits, class TraitsFallback>
+MODImpl::ptr LoadMODXDxLE(BinReaderRef_e rdn) {
+  BinReaderRef rd(rdn);
+  MODHeaderXDx64 header;
+  MODInner<Traits> main;
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
@@ -881,7 +979,7 @@ template <class Traits> MODImpl::ptr LoadMODXD3x64(BinReaderRef_e rdn) {
 
     if (maxPtr > fileSize) {
       rd.Pop();
-      return LoadMODXD2x32<MODTraitsXD3>(rdn);
+      return LoadMODXDxLEx32<TraitsFallback>(rd);
     }
   }
 
@@ -967,6 +1065,14 @@ MODImpl::ptr LoadMODX06(BinReaderRef_e rdn) {
   rd.Seek(header.indices);
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
@@ -1010,6 +1116,141 @@ MODImpl::ptr LoadMODXE5(BinReaderRef_e rd) {
   rd.Seek(header.indices);
   rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
 
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
+MODImpl::ptr LoadMODXFF2C(BinReaderRef_e rd) {
+  MODHeaderXE5 header;
+  MODInner<MODTraitsXD3LE> main;
+  rd.Push();
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rd.ReadContainer(main.materials.storage, header.numMaterials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainerLambda(main.meshes, header.numMeshes,
+                         [](BinReaderRef_e rd, auto &m) {
+                           rd.Read(m);
+                           rd.Skip(8);
+                         });
+  rd.ReadContainer(main.envelopes);
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
+  return std::make_unique<decltype(main)>(std::move(main));
+}
+
+std::vector<MODMaterialProxy<MODMaterialX21>>
+XFSToMaterials(const revil::XFS &main) {
+  pugi::xml_document root;
+  main.ToXML(root);
+  std::vector<MODMaterialProxy<MODMaterialX21>> retval;
+  auto mtArr = root.child("class").child("array");
+  retval.resize(mtArr.attribute("count").as_int());
+
+  for (uint32 curMat = 0; auto &c : mtArr.children()) {
+    auto &mat = retval.at(curMat++).main;
+    mat.name = "Material_";
+    mat.name.append(c.find_child_by_attribute("name", "mTagID")
+                        .attribute("value")
+                        .as_string());
+  }
+
+  return retval;
+}
+
+MODImpl::ptr LoadMODX21(BinReaderRef_e rd) {
+  MODHeaderX21 header;
+  MODInner<MODTraitsX21> main;
+  rd.Push();
+  rd.Read(header);
+  rd.ApplyPadding();
+  rd.Read(main.bounds);
+  rd.Read(main.metadata);
+
+  if (header.numBones) {
+    rd.Seek(header.bones);
+    rd.ReadContainer(main.bones, header.numBones);
+    rd.ReadContainer(main.refPoses, header.numBones);
+    rd.ReadContainer(main.transforms, header.numBones);
+    rd.Read(main.remaps);
+    // skins??
+  }
+
+  if (header.numGroups) {
+    rd.Seek(header.groups);
+    rd.ReadContainer(main.groups, header.numGroups);
+  }
+
+  rd.Seek(header.materials);
+  revil::XFS materials;
+  materials.Load(rd, true);
+  main.materials.storage = XFSToMaterials(materials);
+
+  rd.Seek(header.meshes);
+  rd.ReadContainer(main.meshes, header.numMeshes);
+  rd.ReadContainer(main.envelopes);
+
+  main.vertexBufferSize = header.vertexBufferSize;
+  main.indexBufferSize = header.numIndices * sizeof(uint16);
+
+  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
+
+  rd.Seek(header.vertexBuffer);
+  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+
+  rd.Seek(header.indices);
+  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+
+  if (rd.SwappedEndian()) {
+    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
+                                                  header.vertexBufferSize);
+    for (uint32 i = 0; i < header.numIndices; i++) {
+      FByteswapper(curIndex[i]);
+    }
+  }
+
   return std::make_unique<decltype(main)>(std::move(main));
 }
 
@@ -1022,22 +1263,31 @@ bool MODMaker::operator<(const MODMaker &i0) const {
 
 static const std::map<MODMaker, MODImpl::ptr (*)(BinReaderRef_e)> modLoaders{
     {{MODVersion::X70, true}, LoadMODX70<MODHeaderX70, MODTraitsX70>},
-    //{{0x170, false}, LoadMODX70<MODHeaderX170, MODTraitsX170>},
-    {{MODVersion::X99, false}, LoadMODX99<MODTraitsX99LE>},
+    {{MODVersion::X170}, LoadMODX70<MODHeaderX170, MODTraitsX170>},
+    {{MODVersion::X99}, LoadMODX99<MODTraitsX99LE>},
+    {{MODVersion::X19C}, LoadMODX99<MODTraitsX99LE>},
     {{MODVersion::X99, true}, LoadMODX99<MODTraitsX99BE>},
     {{MODVersion::XC3, true}, LoadMODXC3},
-    {{MODVersion::XC5, false}, LoadMODXC5},
+    {{MODVersion::XC5}, LoadMODXC5},
+    {{MODVersion::XD2}, LoadMODXDxLEx32<MODTraitsXD2>},
+    {{MODVersion::XD3}, LoadMODXDxLE<MODTraitsXD3x64, MODTraitsXD3LE>},
+    {{MODVersion::XD6},
+     LoadMODXDxLE<MODTraitsXD6, MODTraitsXD3LE>}, // unused fallback
+    {{MODVersion::XD4},
+     LoadMODXDxLEx32<MODTraitsXD3PS4>}, // todo normals (different traits)
+
     {{MODVersion::XD2, true}, LoadMODXD2x32<MODTraitsXD2>},
     {{MODVersion::XD3, true}, LoadMODXD2x32<MODTraitsXD2>},
-    {{MODVersion::XD3, false, false, Platform::PS4},
-     LoadMODXD3x64<MODTraitsXD3PS4>},
-    {{MODVersion::XD3, false}, LoadMODXD3x64<MODTraitsXD3x64>},
-    {{MODVersion::X05, false}, LoadMODX06},
-    {{MODVersion::X06, false}, LoadMODX06},
+    {{MODVersion::XD4, true}, LoadMODXD2x32<MODTraitsXD2>},
+    {{MODVersion::X05}, LoadMODX06},
+    {{MODVersion::X06}, LoadMODX06},
     {{MODVersion::XE5, true}, LoadMODXE5},
-    {{MODVersion::XE5, false}, LoadMODXE5},
+    {{MODVersion::XE5}, LoadMODXE5},
     {{MODVersion::XE6, true}, LoadMODXE5},
-    {{MODVersion::XE6, false}, LoadMODXE5},
+    {{MODVersion::XE6}, LoadMODXE5},
+    {{MODVersion::XE7}, LoadMODXE5},
+    {{MODVersion::XFF2C, true}, LoadMODXFF2C},
+    {{MODVersion::X21, true}, LoadMODX21},
 };
 
 template <class C> MODImpl::ptr makeMod() {
@@ -1069,7 +1319,7 @@ void MOD::Load(BinReaderRef_e rd) {
   rd.Read(header);
   rd.Pop();
 
-  if (header.id == DOMID) {
+  if (header.id == DOMID || header.id == RMDID) {
     rd.SwapEndian(true);
     FByteswapper(header);
   } else if (header.id != MODID) {

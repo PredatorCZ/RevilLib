@@ -20,7 +20,6 @@
 #include "spike/type/flags.hpp"
 #include "spike/type/vectors_simd.hpp"
 
-struct MODPrimitiveProxyV1;
 namespace revil {
 class MODImpl;
 }
@@ -54,8 +53,8 @@ struct MODMeshX99 {
   MODMeshSkinInfo skinInfo;
   uint32 firstEnvelope; // assigned at runtime
 
-  MODPrimitiveProxyV1 ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxyV1 ReflectBE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshX70 {
@@ -77,8 +76,8 @@ struct MODMeshX70 {
   Vector4A16 bboxMin;
   Vector4A16 bboxMax;
 
-  MODPrimitiveProxyV1 ReflectBE(revil::MODImpl &);
-  MODPrimitiveProxyV1 ReflectLE(revil::MODImpl &) { return {}; }
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
 };
 
 struct MODMeshXC5 {
@@ -93,10 +92,9 @@ struct MODMeshXC5 {
   using Unk00 = BitMemberDecl<3, 5>;
   using Unk01 = BitMemberDecl<4, 8>;
   using VertexBufferStride = BitMemberDecl<5, 8>;
-  using PrimitiveType = BitMemberDecl<6, 6>;
-  using Unk02 = BitMemberDecl<7, 2>;
+  using PrimitiveType = BitMemberDecl<6, 8>;
   using BitField01 = BitFieldType<uint32, Visible, Flag0, Flag1, Unk00, Unk01,
-                                  VertexBufferStride, PrimitiveType, Unk02>;
+                                  VertexBufferStride, PrimitiveType>;
 
   enum class PrimitiveType_e : uint8 {
     Points,
@@ -123,14 +121,21 @@ struct MODMeshXC5 {
   uint32 hash;
 
   MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(const revil::MODImpl &) const { return {}; }
+  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshXD2 {
+  using PrimitiveType = BitMemberDecl<6, 6>;
+  using Unk02 = BitMemberDecl<7, 2>;
+  using BitField01 =
+      BitFieldType<uint32, MODMeshXC5::Visible, MODMeshXC5::Flag0,
+                   MODMeshXC5::Flag1, MODMeshXC5::Unk00, MODMeshXC5::Unk01,
+                   MODMeshXC5::VertexBufferStride, PrimitiveType, Unk02>;
+
   int16 unk; // somehow essential, must be an odd number
   uint16 numVertices;
   MODMeshXC5::BitField00 data0;
-  MODMeshXC5::BitField01 data1;
+  BitField01 data1;
   uint32 vertexStart;
   uint32 vertexStreamOffset;
   uint32 vertexFormat;

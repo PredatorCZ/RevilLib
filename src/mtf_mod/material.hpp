@@ -70,6 +70,7 @@ struct MODMaterialX70 {
 
 struct MODMaterialX170 {
   static constexpr size_t Version() { return 1; }
+  using SkinType = MODMaterialX70::SkinType;
 
   uint32 pshData;
   MODMaterialX70::VSHData vshData;
@@ -176,4 +177,10 @@ struct MODMaterialName {
   static constexpr size_t Version() { return 1; }
   std::string Name() const;
   void NoSwap();
+};
+
+struct MODMaterialX21 {
+  std::string name;
+  static constexpr size_t Version() { return 1; }
+  std::string Name() const { return name; }
 };

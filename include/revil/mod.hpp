@@ -16,8 +16,8 @@
 */
 
 #pragma once
-#include "spike/io/bincore_fwd.hpp"
 #include "revil/platform.hpp"
+#include "spike/io/bincore_fwd.hpp"
 #include <memory>
 #include <string>
 
@@ -28,16 +28,21 @@ class MODImpl;
 enum MODVersion : uint16 {
   X05 = 0x05,
   X06 = 0x06,
-  X70 = 0x70,     // DR X360
-  X170 = 0x170,   // DR PC
-  X99 = 0x99,     // MTF1 generic
-  XD3 = 0xD3,     // RE6 PC
+  X70 = 0x70,   // DR X360
+  X170 = 0x170, // DR PC
+  X99 = 0x99,   // MTF1 generic
+  X19C = 0x19c, // RE5 PC
   XD2 = 0xD2,
-  X2CFF = 0x2CFF, // RE6 PS3
-  XC5 = 0xC5,     // LP2 PC
+  XD3 = 0xD3, // RE6 PC
+  XD4 = 0xD4,
+  XD6 = 0xD6,
+  XFF2C = 0xFF2C, // RE6 PS3
   XC3 = 0xC3,     // LP2 PS3
-  XE5 = 0xE6,
+  XC5 = 0xC5,     // LP2 PC
+  XE5 = 0xE5,
   XE6 = 0xE6,
+  XE7 = 0xE7,
+  X21 = 0x21,
 };
 
 struct alignas(8) MODMaker {

@@ -115,10 +115,6 @@ struct MODPrimitiveProxy : uni::Primitive {
   }
 };
 
-struct MODPrimitiveProxyV1 : MODPrimitiveProxy {
-  char *additionalBuffer;
-};
-
 struct MODIndices : uni::IndexArray {
   const char *indexData;
   size_t numIndices;
@@ -140,6 +136,8 @@ struct MODVertexDescriptor : uni::PrimitiveDescriptor {
   uni::FormatDescr type;
   uni::BBOX unpackData;
   UnpackDataType_e unpackType = UnpackDataType_e::None;
+  uint32 typeSize = 0;
+  bool packed = false;
 
   MODVertexDescriptor() = default;
   MODVertexDescriptor(uni::FormatType fmtType, uni::DataType dtType,
@@ -162,7 +160,8 @@ struct MODVertexDescriptor : uni::PrimitiveDescriptor {
 
 struct MODVertices : uni::VertexArray {
   uni::VectorList<uni::PrimitiveDescriptor, MODVertexDescriptor> descs;
-  size_t numVertices = 0;
+  uint32 numVertices = 0;
+  uint32 vertexStride = 0;
 
   MODVertices(MODVertices &&) = default;
   MODVertices(const MODVertices &) = default;
@@ -246,7 +245,7 @@ public:
 };
 
 template <class traits> struct MODInner : revil::MODImpl {
-  uni::VectorList<uni::Primitive, typename traits::primitive> primitives;
+  uni::VectorList<uni::Primitive, MODPrimitiveProxy> primitives;
   uni::VectorList<uni::Skin, MODSkinProxy> skins;
   uni::VectorList<std::string, MODPathProxy> paths;
   uni::VectorList<uni::Material, MODMaterialProxy<typename traits::material>>

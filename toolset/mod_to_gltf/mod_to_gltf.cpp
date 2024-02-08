@@ -407,10 +407,15 @@ std::string LODName(revil::LODIndex &lod) {
 }
 
 void MODGLTF::ProcessModel(const uni::Model &model) {
+  size_t curMaterial = 0;
   for (auto materials = model.Materials(); auto m : *materials) {
     gltf::Material gMat;
     gMat.name = m->Name();
+    if (gMat.name.empty()) {
+      gMat.name = "Material_" + std::to_string(curMaterial);
+    }
     this->materials.emplace_back(std::move(gMat));
+    curMaterial++;
   }
 
   std::map<std::string, size_t> lodNodes;

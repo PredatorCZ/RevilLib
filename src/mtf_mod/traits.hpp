@@ -25,7 +25,6 @@ struct MODTraitsX70 {
   static constexpr size_t numSkinRemaps = 1;
   static constexpr size_t numRemaps = 1;
   static constexpr size_t pathSize = 64;
-  using primitive = MODPrimitiveProxyV1;
   using bone = MODBoneV1_5;
   using material = MODMaterialX70;
   using mesh = MODMeshX70;
@@ -40,7 +39,6 @@ struct MODTraitsX99LE {
   static constexpr size_t numSkinRemaps = 32;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 64;
-  using primitive = MODPrimitiveProxyV1;
   using bone = MODBoneV1_5;
   using material = MODMaterialX70;
   using mesh = MODMeshX99;
@@ -55,29 +53,26 @@ struct MODTraitsXC5 {
   static constexpr size_t numSkinRemaps = 1;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 64;
-  using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialXC5;
   using mesh = MODMeshXC5;
   using metadata = MODMetaDataV1;
 };
 
-struct MODTraitsXD3 {
+struct MODTraitsXD3LE {
   static constexpr size_t numSkinRemaps = 1;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 1;
-  using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialHash;
   using mesh = MODMeshXD2;
-  using metadata = MODMetaDataV2;
+  using metadata = MODMetaDataV1;
 };
 
 struct MODTraitsXD2 {
   static constexpr size_t numSkinRemaps = 1;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 1;
-  using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
   using mesh = MODMeshXD2;
@@ -92,11 +87,20 @@ struct MODTraitsXD3x64 : MODTraitsXD2 {
   using mesh = MODMeshXD3;
 };
 
+struct MODTraitsXD6 {
+  static constexpr size_t numSkinRemaps = 1;
+  static constexpr size_t numRemaps = 0x200;
+  static constexpr size_t pathSize = 1;
+  using bone = MODBoneV2;
+  using material = MODMaterialName;
+  using mesh = MODMeshXD3PS4;
+  using metadata = MODMetaDataV2;
+};
+
 struct MODTraitsX06 {
   static constexpr size_t numSkinRemaps = 32;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 1;
-  using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
   using mesh = MODMeshX06;
@@ -107,9 +111,18 @@ struct MODTraitsXE5 {
   static constexpr size_t numSkinRemaps = 24;
   static constexpr size_t numRemaps = 0x100;
   static constexpr size_t pathSize = 1;
-  using primitive = MODPrimitiveProxy;
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
   using mesh = MODMeshXE5;
+  using metadata = MODMetaDataV1;
+};
+
+struct MODTraitsX21 {
+  static constexpr size_t numSkinRemaps = 1;
+  static constexpr size_t numRemaps = 0x100;
+  static constexpr size_t pathSize = 1;
+  using bone = MODBoneV1_5;
+  using material = MODMaterialX21;
+  using mesh = MODMeshXC5;
   using metadata = MODMetaDataV1;
 };
