@@ -1,12 +1,23 @@
-<?xml version="1.0"?>
-<toolset_name>RevilToolset</toolset_name>
-<toolset_description>Revil Toolset is a collection of modding tools for RE Engine/MT Framework titles.
+<toolset_description><![CDATA[
+<h1 align="center">Revil Toolset</h1>
 
-This toolset runs on Spike foundation.
+<p align="center">
+    Revil Toolset is a collection of modding tools for RE Engine/MT Framework titles.
+</p>
 
-Head to this **[Wiki](https://github.com/PredatorCZ/Spike/wiki/Spike)** for more information on how to effectively use it.
+<p align="center">
+    This toolset runs on Spike foundation.
+</p>
 
-**[Latest Release](https://github.com/PredatorCZ/RevilLib/releases)**
+<p align="center">
+    Head to this
+    <b><a href="https://github.com/PredatorCZ/Spike/wiki/Spike">Wiki</a></b>
+    for more information on how to effectively use it.
+</p>
+
+<p align="center">
+<b><a href="https://github.com/PredatorCZ/RevilLib/releases">Latest Release</a></b>
+</p>]]>
 
 ## Release authenticity
 
@@ -18,9 +29,12 @@ Simple usage:
 gpg --import sign_key.asc # Required only once
 gpg --verify &lt;asset_name&gt;.sig
 ```</toolset_description>
-<ddon_sngw name="Encrypt/Decrypt DDON SNGW">Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.</ddon_sngw>
+<ddon_sngw name="Encrypt or Decrypt DDON SNGW">Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.</ddon_sngw>
 <mod_to_gltf name="MOD to GLTF">Converts MT Framework `.mod` model into GLTF format.</mod_to_gltf>
+<lmt_to_gltf name="LMT to GLTF">Converts MT Framework `.lmt` motion list into GLTF format.</lmt_to_gltf>
 <mtf_tex_to_dds name="MTF TEX to DDS">Converts MT Framework `.tex` texture into DDS format.</mtf_tex_to_dds>
+<sdl_to_xml name="SDL to XML">Converts MT Framework `.sdl` scheduler into XML format.</sdl_to_xml>
+<xml_to_sdl name="XML to SDL">Converts XML format back to MT Framework `.sdl` scheduler.</xml_to_sdl>
 <re_tex_to_dds name="RE TEX to DDS">Converts RE Engine `.tex` texture into DDS format.</re_tex_to_dds>
 <reasset_to_gltf name="REAsset to GLTF">Converts RE Engine various assets into GLTF format.
 Currently only supports animations.</reasset_to_gltf>
@@ -41,5 +55,5 @@ Currently only supports animations.</reasset_to_gltf>
 This toolset is available under GPL v3 license. (See LICENSE.md)\
 This toolset uses following libraries:
 
-- RevilLib, Copyright (c) 2017-2022 Lukas Cone
+- RevilLib, Copyright (c) 2017-2024 Lukas Cone
 </toolset_footer>
