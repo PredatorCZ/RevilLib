@@ -18,14 +18,14 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
     - name: Download artifacts
-      uses: dawidd6/action-download-artifact@v2
+      uses: dawidd6/action-download-artifact@v3
       with:
         workflow: cmake.yml
         branch: ${{ github.event.release.target_commitish }}
         workflow_conclusion: success
 
     - name: Import signature key
-      uses: crazy-max/ghaction-import-gpg@v5
+      uses: crazy-max/ghaction-import-gpg@v6
       with:
         gpg_private_key: ${{ secrets.GHA_GPG_KEY }}
         passphrase: ${{ secrets.GHA_GPG_PWD }}
@@ -53,21 +53,25 @@ jobs:
           fi
         done
 
-    - name: Remove old nightly release
-      uses: dev-drprasad/delete-tag-and-release@v1.0
+    - uses: actions/checkout@v4
       with:
-        tag_name: nightly
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        path: repo
+
+    - name: Delete release
+      working-directory: repo
+      run: gh release delete nightly --cleanup-tag
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait a sec
       run: sleep 2
 
     - name: Release them
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           *.xz
           *.7z
           *.sig
         tag_name: nightly
-        name: nightly ${{env.SK_VERSION}}
+        name: RevilToolset ${{env.SK_VERSION}} (nightly)

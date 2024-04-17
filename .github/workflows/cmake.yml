@@ -20,7 +20,7 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -73,7 +73,7 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -100,7 +100,7 @@ jobs:
           tar -cvaf ../RevilToolset-v${{env.SK_VERSION}}-linux-amd64.tar.xz .
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: RevilToolset-linux-amd64
           path: ${{github.workspace}}/RevilToolset-v${{env.SK_VERSION}}-linux-amd64.tar.xz
@@ -109,7 +109,7 @@ jobs:
   build-widle:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -135,7 +135,7 @@ jobs:
           copy toolset/README.md bin/README.md
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: RevilToolset-v${{env.SK_VERSION}}-win64
           path: ${{github.workspace}}/bin
