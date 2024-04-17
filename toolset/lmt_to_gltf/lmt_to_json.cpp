@@ -27,20 +27,10 @@ std::string_view filters[]{
     ".lmt$",
 };
 
-struct LMT2JSON : ReflectorBase<LMT2JSON> {
-  std::string modelSource;
-} settings;
-
-REFLECT(CLASS(LMT2JSON),
-        MEMBERNAME(modelSource, "model-source", "s",
-                   ReflDesc{
-                       "Set path to model gltf as a base for animtions."}));
-
 static AppInfo_s appInfo{
     .filteredLoad = true,
     .header = LMT2JSON_DESC " v" LMT2JSON_VERSION ", " LMT2JSON_COPYRIGHT
                             "Lukas Cone",
-    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
     .filters = filters,
 };
 

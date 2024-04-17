@@ -45,20 +45,10 @@ std::string_view controlFilters[]{
 
 static const float SCALE = 0.01;
 
-struct LMT2GLTF : ReflectorBase<LMT2GLTF> {
-  std::string modelSource;
-} settings;
-
-REFLECT(CLASS(LMT2GLTF),
-        MEMBERNAME(modelSource, "model-source", "s",
-                   ReflDesc{
-                       "Set path to model gltf as a base for animtions."}));
-
 static AppInfo_s appInfo{
     .filteredLoad = true,
     .header = LMT2GLTF_DESC " v" LMT2GLTF_VERSION ", " LMT2GLTF_COPYRIGHT
                             "Lukas Cone",
-    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
     .filters = filters,
     .batchControlFilters = controlFilters,
 };
@@ -378,21 +368,31 @@ void SetupChains(AnimEngine &eng) {
   Hierarchy marks;
 
   for (auto &[nodeIndex, node] : eng.nodes) {
-    if (node.boneType && node.boneType != 2) {
+    /*if (node.boneType && node.boneType != 2) {
       IkChain nChain;
       nChain.base = nodeIndex;
 
-      /*if (node.boneType > 20) {
+      / *if (node.boneType > 20) {
         nChain.controlBase = 9;
         MarkHierarchy(eng, marks, 9);
         marks.emplace(9);
-      }*/
+      }* /
 
       chains.emplace_back(nChain);
 
       node.positions.clear(); // Unknown purpose, not positions
       MarkHierarchy(eng, marks, nodeIndex + 2);
-    }
+    }*/
+
+    /*if (node.boneType && node.boneType != 2) {
+      IkChain nChain;
+      nChain.base = nodeIndex;
+
+      chains.emplace_back(nChain);
+
+      node.positions.clear(); // Unknown purpose, not positions
+      MarkHierarchy(eng, marks, nodeIndex + 2);
+    }*/
   }
 
   if (chains.empty()) {
@@ -758,7 +758,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
         for (auto k : times) {
           Vector4A16 value;
           t->GetValue(value, k);
-          value *= SCALE;
+          //value *= SCALE;
           aNode.positions.emplace_back(value);
         }
         break;
