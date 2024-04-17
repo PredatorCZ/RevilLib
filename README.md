@@ -21,7 +21,7 @@ Library is written for C++20/23 and compilable under GCC 12+ and Clang 13+.
 
 <p>
     Toolset can be found in
-    <a href="https://github.com/PredatorCZ/RevilLib/tree/master/toolse">
+    <a href="https://github.com/PredatorCZ/RevilLib/tree/master/toolset">
         Toolset folder
     </a>
 </p>
