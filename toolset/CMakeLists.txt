@@ -33,8 +33,6 @@ add_spike_subdir(xfs_conv)
 add_spike_subdir(udas_extract)
 add_spike_subdir(obb_extract)
 add_spike_subdir(lmt_to_gltf)
-add_spike_subdir(sbk)
-add_spike_subdir(stq)
 add_spike_subdir(sdl_conv)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")

@@ -57,6 +57,25 @@ struct Morph {
 
 void AppProcessFile(AppContext *ctx) {
   BinReaderRef rd(ctx->GetStream());
+  rd.Seek(0x00035770);
+  std::vector<std::string> strs;
+
+  rd.ReadContainerLambda(strs, [](BinReaderRef rd, auto &item) {
+    rd.Skip(4);
+    rd.ReadContainer(item);
+    rd.Skip(8);
+  });
+
+  auto &ost = ctx->NewFile("dump.txt").str;
+
+  for (auto &f : strs) {
+    ost << f << '\n';
+  }
+
+
+
+  return ;
+  
   GLTFModel main;
   uint32 id;
   uint32 version;
