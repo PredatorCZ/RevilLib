@@ -227,7 +227,9 @@ void AppProcessFile(AppContext *ctx) {
     auto ectx = ctx->ExtractContext();
     if (ectx->RequiresFolders()) {
       for (auto &f : files) {
-        ectx->AddFolderPath(f.fileName);
+        AFileInfo inf(f.fileName);
+        const std::string cFolder(inf.GetFolder());
+        ectx->AddFolderPath(cFolder);
       }
 
       ectx->GenerateFolders();
