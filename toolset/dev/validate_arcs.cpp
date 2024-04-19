@@ -105,7 +105,7 @@ void AppProcessFile(AppContext *ctx) {
           newHashes[f.typeHash] = f.fileName;
         }
       } else {
-        auto retHash = revil::GetHash(ext, {}, settings.platform);
+        auto retHash = revil::GetHash(ext, settings.title, settings.platform);
 
         if (retHash.empty()) {
           if (!missingHashes.count(f.typeHash) &&
