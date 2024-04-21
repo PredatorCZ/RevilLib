@@ -273,9 +273,11 @@ void ProcessClass(LMTTrackMidInterface &item, LMTConstructorProperties flags) {
         }
       }
 
-      FByteswapper(*reinterpret_cast<uint32 *>(
-          item.interface.data +
-          item.interface.m(clgen::BoneTrack::compression)));
+      if (flags.swapEndian) {
+        FByteswapper(*reinterpret_cast<uint32 *>(
+            item.interface.data +
+            item.interface.m(clgen::BoneTrack::compression)));
+      }
     }
   }
 

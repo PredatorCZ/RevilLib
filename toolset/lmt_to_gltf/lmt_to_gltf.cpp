@@ -758,7 +758,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
         for (auto k : times) {
           Vector4A16 value;
           t->GetValue(value, k);
-          //value *= SCALE;
+          value *= SCALE;
           aNode.positions.emplace_back(value);
         }
         break;
