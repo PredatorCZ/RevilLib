@@ -16,9 +16,8 @@
 */
 
 #pragma once
-#include "spike/type/vectors.hpp"
-#include "spike/uni/skeleton.hpp"
 #include "common.hpp"
+#include "spike/type/vectors.hpp"
 
 struct MODBoneV1 {
   uint8 index;
@@ -26,10 +25,6 @@ struct MODBoneV1 {
   uint32 null;
   float parentDistance;
   Vector absolutePosition;
-
-  operator MODBone() const {
-    return {index, parentIndex, 0xffff, -1.f, parentDistance, absolutePosition};
-  }
 };
 
 struct MODBoneV1_5 {
@@ -40,12 +35,6 @@ struct MODBoneV1_5 {
                                 // this bone
   float parentDistance;
   Vector absolutePosition;
-
-  operator MODBone() const {
-    return {index,          parentIndex,
-            mirrorIndex,    furthestVertexDistance,
-            parentDistance, absolutePosition};
-  }
 };
 
 struct MODBoneV2 {
@@ -56,10 +45,4 @@ struct MODBoneV2 {
                                 // this bone
   float parentDistance;
   Vector absolutePosition;
-
-  operator MODBone() const {
-    return {index,          parentIndex,
-            mirrorIndex,    furthestVertexDistance,
-            parentDistance, absolutePosition};
-  }
 };

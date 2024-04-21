@@ -21,18 +21,35 @@
 #include "spike/gltf.hpp"
 #include "spike/io/binreader_stream.hpp"
 #include "spike/io/binwritter_stream.hpp"
-#include "spike/io/fileinfo.hpp"
-#include "spike/type/matrix44.hpp"
-#include "spike/uni/model.hpp"
-#include "spike/uni/skeleton.hpp"
-#include "spike/util/aabb.hpp"
 
-std::string_view filters[]{".mod$", ".dom$"};
+std::string_view filters[]{
+    ".mod$",
+    ".dom$",
+};
+
+struct MOD2GLTF : ReflectorBase<MOD2GLTF> {
+  bool quantizeMesh = true;
+  bool quantizeMeshFake = false;
+  bool noLods = true;
+  bool mergeMeshes = true;
+} settings;
+
+REFLECT(
+    CLASS(MOD2GLTF),
+    MEMBERNAME(quantizeMesh, "quantize-mesh", "q",
+               ReflDesc{"Apply KHR_mesh_quantization."}),
+    MEMBERNAME(
+        quantizeMeshFake, "quantize-mesh-fake", "Q",
+        ReflDesc{"KHR_mesh_quantization is not marked as required extension."}),
+    MEMBERNAME(noLods, "no-lods", "l", ReflDesc{"Do not export LOD meshes."}),
+    MEMBERNAME(mergeMeshes, "merge-meshes", "m",
+               ReflDesc{"Merge meshes as groups"}), );
 
 static AppInfo_s appInfo{
     .filteredLoad = true,
     .header = MOD2GLTF_DESC " v" MOD2GLTF_VERSION ", " MOD2GLTF_COPYRIGHT
                             "Lukas Cone",
+    .settings = reinterpret_cast<ReflectorFriend *>(&settings),
     .filters = filters,
 };
 
@@ -40,53 +57,37 @@ AppInfo_s *AppInitModule() { return &appInfo; }
 
 struct MODGLTF : GLTFModel {
 public:
-  using GLTF::FinishAndSave;
-
-  void ProcessSkeletons(const uni::Skeleton &skel);
-  void ProcessModel(const uni::Model &model);
+  void ProcessSkeletons(std::span<const MODBone> bones,
+                        std::span<const es::Matrix44> tms);
+  void ProcessModel(const revil::MOD &model);
   void Pipeline(const revil::MOD &model);
-  size_t MakeSkin(const uni::Skin &skin);
-
-  GLTFStream &AnimStream() {
-    if (aniStream < 0) {
-      auto &newStream = NewStream("anims");
-      aniStream = newStream.slot;
-      return newStream;
-    }
-    return Stream(aniStream);
-  }
+  size_t MakeSkin(const revil::MODSkinJoints skin,
+                  std::span<const es::Matrix44> binds);
 
 private:
-  gltf::Attributes SaveVertices(const uni::VertexArray &vtArray);
   std::vector<int32> skeleton;
-
-  int32 aniStream = -1;
 };
 
 static const float SCALE = 0.01;
 
-void MODGLTF::ProcessSkeletons(const uni::Skeleton &skel) {
+void MODGLTF::ProcessSkeletons(std::span<const MODBone> bones,
+                               std::span<const es::Matrix44> tms) {
   gltf::Node rootNode;
   rootNode.name = "reference";
 
-  for (auto b : skel) {
+  for (size_t curBone = 0; auto b : bones) {
     gltf::Node bone;
-    es::Matrix44 value;
-    b->GetTM(value);
     Vector4A16 translation, rotation, scale;
-    value.Decompose(translation, rotation, scale);
+    tms[curBone].Decompose(translation, rotation, scale);
     translation *= SCALE;
     memcpy(bone.translation.data(), &translation, sizeof(bone.translation));
     memcpy(bone.rotation.data(), &rotation, sizeof(bone.rotation));
     memcpy(bone.scale.data(), &scale, sizeof(bone.scale));
-    auto parent = b->Parent();
     auto index = nodes.size();
-    revil::BoneIndex hash = b->Index();
-    bone.name = std::to_string(index) + ':' + std::to_string(hash.motIndex);
+    bone.name = std::to_string(curBone++) + ':' + std::to_string(b.index);
 
-    if (parent) {
-      revil::BoneIndex pid = parent->Index();
-      nodes[pid.id].children.push_back(index);
+    if (b.parentIndex < 0xffff) {
+      nodes[b.parentIndex].children.push_back(index);
     } else {
       rootNode.children.push_back(index);
     }
@@ -114,7 +115,8 @@ void MODGLTF::ProcessSkeletons(const uni::Skeleton &skel) {
   }
 }
 
-size_t MODGLTF::MakeSkin(const uni::Skin &skin) {
+size_t MODGLTF::MakeSkin(const revil::MODSkinJoints joints,
+                         std::span<const es::Matrix44> binds) {
   auto &str = SkinStream();
   size_t retval = skins.size();
   skins.emplace_back();
@@ -123,13 +125,13 @@ size_t MODGLTF::MakeSkin(const uni::Skin &skin) {
   auto &wr = str.wr;
   gskin.inverseBindMatrices = index;
   acc.componentType = gltf::Accessor::ComponentType::Float;
-  acc.count = skin.NumNodes();
+  acc.count = joints.empty() ? binds.size() : joints.size();
   acc.type = gltf::Accessor::Type::Mat4;
 
   for (size_t i = 0; i < acc.count; i++) {
-    gskin.joints.emplace_back(skeleton.at(skin.NodeIndex(i)));
-    es::Matrix44 bindOffset;
-    skin.GetTM(bindOffset, i);
+    const size_t boneIndex = joints.empty() ? i : joints[i];
+    gskin.joints.emplace_back(skeleton.at(boneIndex));
+    es::Matrix44 bindOffset = binds[boneIndex];
     bindOffset.r1() *= SCALE;
     bindOffset.r2() *= SCALE;
     bindOffset.r3() *= SCALE;
@@ -141,256 +143,7 @@ size_t MODGLTF::MakeSkin(const uni::Skin &skin) {
   return retval;
 }
 
-gltf::Attributes MODGLTF::SaveVertices(const uni::VertexArray &vtArray) {
-  size_t vertexCount = vtArray.NumVertices();
-  auto descs = vtArray.Descriptors();
-  gltf::Attributes attrs;
-  std::vector<UCVector4> weights[2];
-  std::vector<UCVector4> bones[2];
-  size_t curWeight = 0;
-  size_t curBone = 0;
-
-  for (auto d : *descs) {
-    static constexpr size_t fmtNumElements[]{
-        0, 4, 3, 4, 2, 3, 1, 2, 4, 3, 4, 2, 3, 2, 1, 3, 4, 1,
-    };
-
-    using u = uni::PrimitiveDescriptor::Usage_e;
-    switch (d->Usage()) {
-    case u::Position: {
-      WritePositions(attrs, *d, vertexCount);
-      break;
-    }
-
-    case u::Normal: {
-      attrs["NORMAL"] = WriteNormals8(*d, vertexCount);
-      break;
-    }
-
-    case u::TextureCoordiante: {
-      WriteTexCoord(attrs, *d, vertexCount);
-      break;
-    }
-
-    case u::VertexColor: {
-      WriteVertexColor(attrs, *d, vertexCount);
-      break;
-    }
-
-    case u::Tangent: {
-      auto &stream = GetVt4();
-      auto [acc, index] = NewAccessor(stream, 1);
-      acc.count = vertexCount;
-      acc.componentType = gltf::Accessor::ComponentType::Byte;
-      acc.normalized = true;
-      acc.type = gltf::Accessor::Type::Vec4;
-      attrs["TANGENT"] = index;
-
-      uni::FormatCodec::fvec sampled;
-      d->Codec().Sample(sampled, d->RawBuffer(), vertexCount, d->Stride());
-
-      for (auto &v : sampled) {
-        auto pure = v * Vector4A16(1.f, 1.f, 1.f, 0.f);
-        pure.Normalize() *= 0x7f;
-        pure = _mm_round_ps(pure._data, _MM_ROUND_NEAREST);
-        CVector4 comp = pure.Convert<int8>();
-        if (!v.w) {
-          comp.w = 0x7f;
-        } else {
-          comp.w = -0x7f;
-        }
-
-        stream.wr.Write(comp);
-      }
-
-      break;
-    }
-
-    case u::BoneIndices: {
-      size_t numElems = fmtNumElements[uint8(d->Type().compType)];
-
-      if (d->Type().outType == uni::FormatType::FLOAT) {
-        uni::FormatCodec::fvec sampled;
-        d->Codec().Sample(sampled, d->RawBuffer(), vertexCount, d->Stride());
-        d->Resample(sampled);
-
-        if (numElems == 4) {
-          curBone += 4;
-          auto &curBones = bones[d->Index()];
-          if (curBones.empty()) {
-            curBones.resize(vertexCount);
-          }
-
-          for (size_t index = 0; auto &v : sampled) {
-            curBones[index++] = v.Convert<uint8>();
-          }
-        } else {
-          for (size_t e = 0; e < numElems; e++, curBone++) {
-            auto &curBones = bones[curBone / 4];
-            if (curBones.empty()) {
-              curBones.resize(vertexCount);
-            }
-
-            for (size_t index = 0; auto &v : sampled) {
-              auto cvted = v.Convert<uint8>();
-              curBones[index++][curBone % 4] = cvted._arr[e];
-            }
-          }
-        }
-      } else {
-        uni::FormatCodec::ivec sampled;
-        d->Codec().Sample(sampled, d->RawBuffer(), vertexCount, d->Stride());
-
-        if (d->UnpackDataType() ==
-            uni::PrimitiveDescriptor::UnpackDataType_e::Add) {
-          IVector4A16 udata(d->UnpackData().min);
-
-          for (auto &v : sampled) {
-            v += udata;
-          }
-        }
-
-        if (numElems == 4) {
-          curBone += 4;
-          auto &curBones = bones[d->Index()];
-          if (curBones.empty()) {
-            curBones.resize(vertexCount);
-          }
-
-          for (size_t index = 0; auto &v : sampled) {
-            curBones[index++] = v.Convert<uint8>();
-          }
-        } else {
-          for (size_t e = 0; e < numElems; e++, curBone++) {
-            auto &curBones = bones[curBone / 4];
-            if (curBones.empty()) {
-              curBones.resize(vertexCount);
-            }
-
-            for (size_t index = 0; auto &v : sampled) {
-              auto cvted = v.Convert<uint8>();
-              curBones[index++][curBone % 4] = cvted._arr[e];
-            }
-          }
-        }
-      }
-
-      break;
-    }
-
-    case u::BoneWeights: {
-      static constexpr size_t fmtNumElements[]{
-          0, 4, 3, 4, 2, 3, 1, 2, 4, 3, 4, 2, 3, 2, 1, 3, 4, 1,
-      };
-      size_t numElems = fmtNumElements[uint8(d->Type().compType)];
-      uni::FormatCodec::fvec sampled;
-      d->Codec().Sample(sampled, d->RawBuffer(), vertexCount, d->Stride());
-
-      for (size_t e = 0; e < numElems; e++, curWeight++) {
-        auto &curWts = weights[curWeight / 4];
-        if (curWts.empty()) {
-          curWts.resize(vertexCount);
-        }
-
-        for (size_t index = 0; auto &v : sampled) {
-          auto weight = std::round(v[e] * 0xff);
-          curWts[index++][curWeight % 4] = weight;
-        }
-      }
-
-      break;
-    }
-
-    default:
-      break;
-    }
-  }
-
-  // Eliminate error where bone has zero weight
-  auto WriteBones = [&](size_t bnIndex) {
-    auto &stream = GetVt4();
-    auto [acc, index] = NewAccessor(stream, 1);
-    acc.count = vertexCount;
-    acc.componentType = gltf::Accessor::ComponentType::UnsignedByte;
-    acc.type = gltf::Accessor::Type::Vec4;
-
-    auto name = "JOINTS_" + std::to_string(bnIndex);
-    attrs[name] = index;
-
-    auto &curWeights = weights[bnIndex];
-    auto &curBones = bones[bnIndex];
-
-    for (size_t v = 0; v < vertexCount; v++) {
-      UCVector4 cw = curWeights[v];
-      UCVector4 cb = curBones[v];
-      cb *= UCVector4(cw[0] > 0, cw[1] > 0, cw[2] > 0, cw[3] > 0);
-      stream.wr.Write(cb);
-    }
-  };
-
-  auto WriteWeights = [&](size_t wtIndex) {
-    auto &stream = GetVt4();
-    auto [acc, index] = NewAccessor(stream, 1);
-    acc.count = vertexCount;
-    acc.componentType = gltf::Accessor::ComponentType::UnsignedByte;
-    acc.normalized = true;
-    acc.type = gltf::Accessor::Type::Vec4;
-
-    auto name = "WEIGHTS_" + std::to_string(wtIndex);
-    attrs[name] = index;
-
-    stream.wr.WriteContainer(weights[wtIndex]);
-  };
-
-  const size_t numWeights = weights[0].size();
-
-  if (!weights[1].empty()) {
-    if (curWeight != curBone && curWeight < 8) {
-      for (size_t i = 0; i < numWeights; i++) {
-        auto &wt0 = weights[0].at(i);
-        auto &wt1 = weights[1].at(i);
-
-        wt1[3] = std::max(0xff - wt0[3] - wt0[2] - wt0[1] - wt0[0] - wt1[2] -
-                              wt1[1] - wt1[0],
-                          0);
-      }
-    }
-    WriteWeights(0);
-    WriteBones(0);
-    WriteWeights(1);
-    WriteBones(1);
-  } else if (!weights[0].empty()) {
-    if (curWeight != curBone) {
-      if (curWeight == 3) {
-        for (size_t i = 0; i < numWeights; i++) {
-          auto &wt0 = weights[0].at(i);
-          wt0[3] = std::max(0xff - wt0[2] - wt0[1] - wt0[0], 0);
-        }
-      } else if (curWeight == 2) {
-        for (size_t i = 0; i < numWeights; i++) {
-          auto &wt0 = weights[0].at(i);
-          wt0[2] = std::max(0xff - wt0[1] - wt0[0], 0);
-        }
-      } else if (curWeight == 1) {
-        for (size_t i = 0; i < numWeights; i++) {
-          auto &wt0 = weights[0].at(i);
-          wt0[1] = std::max(0xff - wt0[0], 0);
-        }
-      }
-    }
-
-    WriteWeights(0);
-    WriteBones(0);
-  } else if (!bones[0].empty()) {
-    weights[0].insert(weights[0].begin(), bones[0].size(), {0xff, 0, 0, 0});
-    WriteWeights(0);
-    WriteBones(0);
-  }
-
-  return attrs;
-}
-
-std::string LODName(revil::LODIndex &lod) {
+std::string LODName(const revil::MODPrimitive &lod) {
   std::string retval("LOD");
 
   if (lod.lod1) {
@@ -406,21 +159,10 @@ std::string LODName(revil::LODIndex &lod) {
   return retval;
 }
 
-void MODGLTF::ProcessModel(const uni::Model &model) {
-  size_t curMaterial = 0;
-  for (auto materials = model.Materials(); auto m : *materials) {
-    gltf::Material gMat;
-    gMat.name = m->Name();
-    if (gMat.name.empty()) {
-      gMat.name = "Material_" + std::to_string(curMaterial);
-    }
-    this->materials.emplace_back(std::move(gMat));
-    curMaterial++;
-  }
-
+void MODGLTF::ProcessModel(const revil::MOD &model) {
   std::map<std::string, size_t> lodNodes;
 
-  auto LODNode = [&](revil::LODIndex &lod, size_t gnode) {
+  auto LODNode = [&](const revil::MODPrimitive &lod, size_t gnode) {
     const std::string lodName = LODName(lod);
 
     if (lodNodes.contains(lodName)) {
@@ -436,82 +178,165 @@ void MODGLTF::ProcessModel(const uni::Model &model) {
     nodes.emplace_back(lodNode);
   };
 
-  auto primitives = model.Primitives();
-  auto skins = model.Skins();
-  std::vector<size_t> indicesIndices;
-  std::vector<gltf::Attributes> verticesIndices;
+  std::map<uint32, size_t> indicesIndices;
+  std::map<uint32, gltf::Attributes> verticesIndices;
   std::vector<size_t> skinIndices;
 
-  for (auto s : *skins) {
-    skinIndices.emplace_back(MakeSkin(*s));
+  if (model.SkinJoints().empty() && model.InverseBinds().size() > 0) {
+    skinIndices.emplace_back(MakeSkin({}, model.InverseBinds()));
   }
 
-  for (auto indices = model.Indices(); auto i : *indices) {
-    indicesIndices.emplace_back(SaveIndices(*i));
+  for (auto &s : model.SkinJoints()) {
+    skinIndices.emplace_back(MakeSkin(s, model.InverseBinds()));
   }
 
-  for (auto vertices = model.Vertices(); auto i : *vertices) {
-    verticesIndices.emplace_back(SaveVertices(*i));
-  }
+  union ShareKey {
+    struct {
+      uint16 groupId;
+      uint8 skinIndex;
+      bool lod1;
+      bool lod2;
+      bool lod3;
+      uint16 reserved = 0;
+    };
+    uint64 key;
+  };
 
-  for (auto p : *primitives) {
-    auto &attrs = verticesIndices.at(p->VertexArrayIndex(0));
-    if (attrs.empty()) {
+  static_assert(sizeof(ShareKey) == sizeof(uint64));
+
+  std::map<uint64, gltf::Mesh> uniqMeshes;
+  std::map<uint32, uint32> usedMaterials;
+
+  for (auto &p : model.Primitives()) {
+    if (!p.lod1 && settings.noLods && (p.lod2 || p.lod3)) {
       continue;
     }
+
+    gltf::Primitive prim;
+
+    if (verticesIndices.count(p.vertexIndex) == 0) {
+      auto &i = model.Vertices()[p.vertexIndex];
+      gltf::Attributes attrs =
+          SaveVertices(i.buffer, i.numVertices, i.attrs, i.stride);
+      verticesIndices.emplace(p.vertexIndex, attrs);
+      prim.attributes = attrs;
+    } else {
+      prim.attributes = verticesIndices.at(p.vertexIndex);
+    }
+
+    if (prim.attributes.empty()) {
+      continue;
+    }
+
+    if (indicesIndices.count(p.indexIndex) == 0) {
+      auto &i = model.Indices()[p.indexIndex];
+      const size_t accIndex = SaveIndices(i.data(), i.size()).accessorIndex;
+      indicesIndices.emplace(p.indexIndex, accIndex);
+      prim.indices = accIndex;
+    } else {
+      prim.indices = indicesIndices.at(p.indexIndex);
+    }
+
+    if (usedMaterials.count(p.materialIndex) == 0) {
+      usedMaterials.emplace(p.materialIndex, materials.size());
+      prim.material = materials.size();
+      auto &m = model.Materials()[p.materialIndex];
+
+      gltf::Material &gMat = materials.emplace_back();
+      gMat.name = m.name;
+      if (gMat.name.empty()) {
+        gMat.name = "Material_" + std::to_string(prim.material);
+      }
+    } else {
+      prim.material = usedMaterials.at(p.materialIndex);
+    }
+
+    prim.mode = p.triStrips ? gltf::Primitive::Mode::TriangleStrip
+                            : gltf::Primitive::Mode::Triangles;
+
+    if (settings.mergeMeshes) {
+      ShareKey key{{
+          .groupId = p.groupId,
+          .skinIndex = uint8(p.skinIndex),
+          .lod1 = p.lod1,
+          .lod2 = p.lod2,
+          .lod3 = p.lod3,
+      }};
+
+      uniqMeshes[key.key].primitives.emplace_back(prim);
+      continue;
+    }
+
     const size_t gnodeIndex = nodes.size();
-    nodes.emplace_back();
-    auto &gnode = nodes.back();
+    gltf::Node &gnode = nodes.emplace_back();
     gnode.mesh = meshes.size();
-    gnode.name = "Mesh[" + p->Name() + "]";
-    revil::LODIndex lod(p->LODIndex());
+    gnode.name = "Mesh[" + std::to_string(p.meshId) + ":" +
+                 std::to_string(p.groupId) + "]";
 
     if (!skinIndices.empty()) {
-      gnode.skin = skinIndices.at(p->SkinIndex());
-      gnode.name = LODName(lod) + "|" + gnode.name;
+      gnode.skin = skinIndices.at(p.skinIndex);
+      if (!settings.noLods) {
+        gnode.name = LODName(p) + "|" + gnode.name;
+      }
       scenes.back().nodes.push_back(gnodeIndex);
     } else {
       gnode.scale.fill(SCALE);
-      LODNode(lod, gnodeIndex);
+      if (!settings.noLods) {
+        LODNode(p, gnodeIndex);
+      } else {
+        scenes.back().nodes.push_back(gnodeIndex);
+      }
     }
 
-    meshes.emplace_back();
-    auto &gmesh = meshes.back();
-    gmesh.primitives.emplace_back();
+    auto &gmesh = meshes.emplace_back();
+    gmesh.primitives.emplace_back(prim);
     gmesh.name = gnode.name;
-    auto &prim = gmesh.primitives.back();
-    prim.indices = indicesIndices.at(p->IndexArrayIndex());
-    prim.attributes = attrs;
-    prim.material = p->MaterialIndex();
-    prim.mode = [&] {
-      switch (p->IndexType()) {
-      case uni::Primitive::IndexType_e::Triangle:
-        return gltf::Primitive::Mode::Triangles;
-      case uni::Primitive::IndexType_e::Strip:
-        return gltf::Primitive::Mode::TriangleStrip;
-      default:
-        throw std::runtime_error("Invalid index type");
-      }
-    }();
   }
 
-  /*lod0Node.extensionsAndExtras["extensions"]["MSFT_lod"]["ids"] = {
-      lodNodesBegin + 1, lodNodesBegin + 2};
-  lod0Node.extensionsAndExtras["extras"]["MSFT_screencoverage"] = {
-      0.5,
-      0.2,
-      0.01,
-  };*/
+  if (settings.mergeMeshes) {
+    for (auto &[key, mesh] : uniqMeshes) {
+      ShareKey skey{
+          .key = key,
+      };
+
+      const size_t gnodeIndex = nodes.size();
+      gltf::Node &gnode = nodes.emplace_back();
+      gnode.mesh = meshes.size();
+      gnode.name = "Group[" + std::to_string(skey.groupId) + "]";
+      mesh.name = gnode.name;
+      meshes.emplace_back(mesh);
+
+      revil::MODPrimitive mp{
+          .lod1 = skey.lod1,
+          .lod2 = skey.lod2,
+          .lod3 = skey.lod3,
+      };
+
+      if (!skinIndices.empty()) {
+        gnode.skin = skinIndices.at(skey.skinIndex);
+        if (!settings.noLods) {
+          gnode.name = LODName(mp) + "|" + gnode.name;
+        }
+        scenes.back().nodes.push_back(gnodeIndex);
+      } else {
+        gnode.scale.fill(SCALE);
+        if (!settings.noLods) {
+          LODNode(mp, gnodeIndex);
+        } else {
+          scenes.back().nodes.push_back(gnodeIndex);
+        }
+      }
+    }
+  }
 }
 
 void MODGLTF::Pipeline(const revil::MOD &model) {
-  extensionsRequired.emplace_back("KHR_mesh_quantization");
-  extensionsUsed.emplace_back("KHR_mesh_quantization");
-  // doc.extensionsUsed.emplace_back("MSFT_lod");
-  auto skel = model.As<uni::Element<const uni::Skeleton>>();
-  ProcessSkeletons(*skel.get());
-  auto mod = model.As<uni::Element<const uni::Model>>();
-  ProcessModel(*mod.get());
+  if (settings.quantizeMesh) {
+    QuantizeMesh(settings.quantizeMeshFake);
+  }
+
+  ProcessSkeletons(model.Bones(), model.Transforms());
+  ProcessModel(model);
 }
 
 void AppProcessFile(AppContext *ctx) {
@@ -519,7 +344,7 @@ void AppProcessFile(AppContext *ctx) {
   mod.Load(ctx->GetStream());
   MODGLTF main;
   main.Pipeline(mod);
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
+  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension2("glb")).str);
 
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
 }

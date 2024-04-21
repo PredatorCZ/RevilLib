@@ -53,8 +53,8 @@ struct MODMeshX99 {
   MODMeshSkinInfo skinInfo;
   uint32 firstEnvelope; // assigned at runtime
 
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshX70 {
@@ -76,8 +76,8 @@ struct MODMeshX70 {
   Vector4A16 bboxMin;
   Vector4A16 bboxMax;
 
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &);
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
 };
 
 struct MODMeshXC5 {
@@ -120,8 +120,8 @@ struct MODMeshXC5 {
   uint16 maxVertex;
   uint32 hash;
 
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshXD2 {
@@ -149,29 +149,29 @@ struct MODMeshXD2 {
   uint16 maxVertex;
   uint32 unk02; // envelopes ptr?
 
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshXD3 : MODMeshXD2 {
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &) { return {}; }
   void NoSwap();
 };
 
 struct MODMeshXD3PS4 : MODMeshXD2 {
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &) { return {}; }
   void NoSwap();
 };
 
 struct MODMeshX06 : MODMeshXD2 {
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &) { return {}; }
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &) { return {}; }
   void NoSwap();
 };
 
 struct MODMeshXE5 : MODMeshXD2 {
-  MODPrimitiveProxy ReflectLE(revil::MODImpl &);
-  MODPrimitiveProxy ReflectBE(revil::MODImpl &);
+  revil::MODPrimitive ReflectLE(revil::MODImpl &);
+  revil::MODPrimitive ReflectBE(revil::MODImpl &);
 };

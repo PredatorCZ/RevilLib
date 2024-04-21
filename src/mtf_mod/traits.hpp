@@ -28,7 +28,7 @@ struct MODTraitsX70 {
   using bone = MODBoneV1_5;
   using material = MODMaterialX70;
   using mesh = MODMeshX70;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsX170 : MODTraitsX70 {
@@ -42,7 +42,7 @@ struct MODTraitsX99LE {
   using bone = MODBoneV1_5;
   using material = MODMaterialX70;
   using mesh = MODMeshX99;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsX99BE : MODTraitsX99LE {
@@ -56,7 +56,7 @@ struct MODTraitsXC5 {
   using bone = MODBoneV1_5;
   using material = MODMaterialXC5;
   using mesh = MODMeshXC5;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsXD3LE {
@@ -66,7 +66,7 @@ struct MODTraitsXD3LE {
   using bone = MODBoneV1_5;
   using material = MODMaterialHash;
   using mesh = MODMeshXD2;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsXD2 {
@@ -104,7 +104,7 @@ struct MODTraitsX06 {
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
   using mesh = MODMeshX06;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsXE5 {
@@ -114,7 +114,7 @@ struct MODTraitsXE5 {
   using bone = MODBoneV1_5;
   using material = MODMaterialName;
   using mesh = MODMeshXE5;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };
 
 struct MODTraitsX21 {
@@ -124,5 +124,5 @@ struct MODTraitsX21 {
   using bone = MODBoneV1_5;
   using material = MODMaterialX21;
   using mesh = MODMeshXC5;
-  using metadata = MODMetaDataV1;
+  using metadata = revil::MODMetaData;
 };

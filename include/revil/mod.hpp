@@ -17,9 +17,15 @@
 
 #pragma once
 #include "revil/platform.hpp"
+#include "spike/gltf_attribute.hpp"
 #include "spike/io/bincore_fwd.hpp"
+#include "spike/type/matrix44.hpp"
 #include <memory>
+#include <span>
 #include <string>
+#include <vector>
+
+class Reflector;
 
 namespace revil {
 
@@ -54,24 +60,64 @@ struct alignas(8) MODMaker {
   bool operator<(const MODMaker &i0) const;
 };
 
-struct alignas(8) BoneIndex {
-  uint32 id;
-  uint32 motIndex;
-
-  BoneIndex() = default;
-  BoneIndex(size_t input) : id(input), motIndex(input >> 32) {}
-  BoneIndex(uint32 id_, uint32 motIndex_) : id(id_), motIndex(motIndex_) {}
-  operator size_t() const { return reinterpret_cast<const size_t &>(*this); }
+struct MODBone {
+  uint16 index;
+  uint16 parentIndex;
 };
 
-struct alignas(8) LODIndex {
-  bool lod1, lod2, lod3;
+struct MODBounds {
+  Vector4A16 boundingSphere;
+  Vector4A16 bboxMin;
+  Vector4A16 bboxMax;
+};
 
-  LODIndex() = default;
-  LODIndex(size_t input)
-      : lod1(input & 0xff), lod2((input >> 8) & 0xff),
-        lod3((input >> 16) & 0xff) {}
-  operator size_t() const { return reinterpret_cast<const size_t &>(*this); }
+struct MODEnvelope {
+  uint32 boneIndex;
+  MODBounds bounds;
+  es::Matrix44 localTransform;
+  Vector4A16 absolutePosition;
+};
+
+struct MODGroup {
+  uint32 index;
+  Vector4A16 boundingSphere;
+};
+
+struct MODMetaData {
+  uint32 middleDistance;
+  uint32 lowDistance;
+  uint32 lightGroup;
+  uint8 boundaryJoint; //??
+};
+
+struct MODPrimitive {
+  bool triStrips;
+  bool lod1;
+  bool lod2;
+  bool lod3;
+  uint16 skinIndex = 0;
+  uint16 materialIndex = 0;
+  uint32 indexIndex;
+  uint32 vertexIndex;
+  uint16 groupId;
+  uint16 meshId;
+};
+
+using MODSkinJoints = std::span<const uint8>;
+
+struct MODVertexSpan {
+  char *buffer;
+  uint32 numVertices;
+  uint32 stride;
+  std::vector<Attribute> attrs;
+  std::vector<std::unique_ptr<AttributeCodec>> codecs;
+};
+
+using MODIndexSpan = std::span<uint16>;
+
+struct MODMaterial {
+  std::string name;
+  Reflector *refl;
 };
 
 class ES_EXPORT MOD {
@@ -82,12 +128,23 @@ public:
   ~MOD();
   /* Castable into:
   uni::Element<const uni::Skeleton>
-  uni::Element<const unk::Model>
   */
   template <class C> C As() const;
   void Load(const std::string &fileName);
   void Load(BinReaderRef_e rd);
   void Save(BinWritterRef wr);
+
+  std::span<const MODVertexSpan> Vertices() const;
+  std::span<const MODIndexSpan> Indices() const;
+  std::span<const MODPrimitive> Primitives() const;
+  std::span<const MODSkinJoints> SkinJoints() const;
+  std::span<const MODMaterial> Materials() const;
+  std::span<const es::Matrix44> InverseBinds() const;
+  std::span<const es::Matrix44> Transforms() const;
+  std::span<const MODBone> Bones() const;
+  std::span<const MODGroup> Groups() const;
+  std::span<const MODEnvelope> Envelopes() const;
+  const MODMetaData &Metadata() const;
 
 private:
   std::unique_ptr<MODImpl> pi;

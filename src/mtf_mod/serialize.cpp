@@ -30,60 +30,44 @@ static constexpr uint32 MODID = CompileFourCC("MOD");
 static constexpr uint32 DOMID = CompileFourCC("\0DOM");
 static constexpr uint32 RMDID = CompileFourCC("\0DMR");
 
+template <class T> using use_name = decltype(std::declval<T>().Name());
+template <class C>
+constexpr static bool use_name_v = es::is_detected_v<use_name, C>;
+
 template <class traits> void MODInner<traits>::Reflect(bool swap) {
-  this->boneData.storage.reserve(bones.size());
   for (size_t i = 0; i < bones.size(); i++) {
-    this->boneData.storage.emplace_back(*this, i, bones[i]);
+    const bool isRoot =
+        sizeof(bones[i].parentIndex) == 1 && bones[i].parentIndex == 0xff;
+    MODBone bne{
+        .index = bones[i].index,
+        .parentIndex = uint16(isRoot ? 0xffff : bones[i].parentIndex),
+    };
+    this->simpleBones.emplace_back(bne);
   }
 
-  this->primitives.storage.reserve(meshes.size());
+  this->primitives.reserve(meshes.size());
   if (swap) {
     for (size_t i = 0; i < meshes.size(); i++) {
-      this->primitives.storage.emplace_back(meshes[i].ReflectBE(*this));
+      this->primitives.emplace_back(meshes[i].ReflectBE(*this));
     }
   } else {
     for (size_t i = 0; i < meshes.size(); i++) {
-      this->primitives.storage.emplace_back(meshes[i].ReflectLE(*this));
+      this->primitives.emplace_back(meshes[i].ReflectLE(*this));
     }
   }
 
-  if (!bones.empty()) {
-    this->skins.storage.reserve(std::min(skinRemaps.size(), size_t(1)));
-
-    if (skinRemaps.empty()) {
-      MODSkinProxy remap;
-      remap.numRemaps = bones.size();
-      remap.poses = transforms.data();
-      this->skins.storage.emplace_back(remap);
-    } else {
-      for (auto &r : skinRemaps) {
-        MODSkinProxy remap;
-        remap.numRemaps = r.count;
-        remap.remaps = r.bones;
-        remap.poses = transforms.data();
-        this->skins.storage.emplace_back(remap);
-      }
-    }
+  for (auto &r : skinRemaps) {
+    this->skins.emplace_back(r.bones, r.count);
   }
-}
 
-template <class traits>
-uni::PrimitivesConst MODInner<traits>::Primitives() const {
-  return {&this->primitives, false};
-}
+  for (auto &m : this->materials) {
+    revil::MODMaterial &ref = this->materialRefs.emplace_back();
+    if constexpr (use_name_v<std::decay_t<decltype(m.main)>>) {
+      ref.name = m.main.Name();
+    }
 
-template <class traits> uni::SkinsConst MODInner<traits>::Skins() const {
-  return {&this->skins, false};
-}
-
-template <class traits>
-uni::ResourcesConst MODInner<traits>::Resources() const {
-  return {&this->paths, false};
-}
-
-template <class traits>
-uni::MaterialsConst MODInner<traits>::Materials() const {
-  return {&materials, false};
+    ref.refl = &m.asMetadata;
+  }
 }
 
 template <class material_type>
@@ -116,34 +100,6 @@ void MODMaterialProxy<material_type>::Read(BinReaderRef_e rd) {
     main.detailTextureIndex--;
     main.AOTextureIndex--;
   }
-}
-
-template <class material_type>
-std::string MODMaterialProxy<material_type>::TypeName() const {
-  return "";
-}
-
-template <class T> using use_name = decltype(std::declval<T>().Name());
-template <class C>
-constexpr static bool use_name_v = es::is_detected_v<use_name, C>;
-
-template <class material_type>
-std::string MODMaterialProxy<material_type>::Name() const {
-  if constexpr (use_name_v<material_type>) {
-    return main.Name();
-  } else {
-    return "";
-  }
-}
-
-template <class material_type>
-size_t MODMaterialProxy<material_type>::Version() const {
-  return material_type::Version();
-}
-
-template <class material_type>
-uni::MetadataConst MODMaterialProxy<material_type>::Metadata() const {
-  return {&asMetadata, false};
 }
 
 #pragma region Endian Swappers
@@ -183,14 +139,14 @@ template <> void FByteswapper(MODGroup &self, bool) {
   FByteswapper(self.index);
 }
 
-template <> void FByteswapper(MODMetaDataV1 &self, bool) {
+template <> void FByteswapper(MODMetaData &self, bool) {
   FByteswapper(self.lightGroup);
   FByteswapper(self.lowDistance);
   FByteswapper(self.middleDistance);
 }
 
 template <> void FByteswapper(MODMetaDataV2 &self, bool) {
-  FByteswapper(static_cast<MODMetaDataV1 &>(self));
+  FByteswapper(static_cast<MODMetaData &>(self));
   FByteswapper(self.numEnvelopes);
 }
 
@@ -504,16 +460,16 @@ void SaveMODX99(const MODInner<MODTraitsX99LE> &main, BinWritterRef wr) {
   }
 
   wr.ApplyPadding();
-  header.numTextures = main.paths.Size();
-  header.numMaterials = main.materials.Size();
+  header.numTextures = main.paths.size();
+  header.numMaterials = main.materials.size();
 
   if (header.numTextures || header.numMaterials) {
     header.textures = wr.Tell();
-    for (auto &p : main.paths.storage) {
-      wr.WriteContainer(p.path);
-      wr.Skip(MODTraitsX99LE::pathSize - p.path.size());
+    for (auto &p : main.paths) {
+      wr.WriteContainer(p);
+      wr.Skip(MODTraitsX99LE::pathSize - p.size());
     }
-    wr.WriteContainer(main.materials.storage);
+    wr.WriteContainer(main.materials);
   }
 
   wr.ApplyPadding();
@@ -522,24 +478,22 @@ void SaveMODX99(const MODInner<MODTraitsX99LE> &main, BinWritterRef wr) {
   wr.WriteContainer(main.meshes);
   wr.WriteContainerWCount(main.envelopes);
   wr.ApplyPadding();
-  header.vertexBufferSize = main.vertexBufferSize;
+  header.vertexBufferSize = main.vertexBuffer.size() - main.unkBufferSize;
   header.unkBufferSize = main.unkBufferSize;
   header.vertexBuffer = wr.Tell();
-  wr.WriteBuffer(main.buffer.data(), header.vertexBufferSize);
+  wr.WriteBuffer(main.vertexBuffer.data(), header.vertexBufferSize);
 
   if (header.unkBufferSize) {
     wr.ApplyPadding();
     header.unkBuffer = wr.Tell();
-    wr.WriteBuffer(main.buffer.data() + header.vertexBufferSize,
+    wr.WriteBuffer(main.vertexBuffer.data() + header.vertexBufferSize,
                    header.unkBufferSize);
   }
 
   wr.ApplyPadding();
   header.indices = wr.Tell();
-  header.numIndices = (main.indexBufferSize / sizeof(uint16)) + 1;
-  wr.WriteBuffer(main.buffer.data() + header.vertexBufferSize +
-                     header.unkBufferSize,
-                 main.indexBufferSize);
+  header.numIndices = main.indexBuffer.size() + 1;
+  wr.WriteContainer(main.indexBuffer);
   const size_t eof = wr.Tell();
   wr.Pop();
   wr.Write(header);
@@ -579,16 +533,16 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
   }
 
   wr.ApplyPadding();
-  header.numTextures = main.paths.Size();
-  header.numMaterials = main.materials.Size();
+  header.numTextures = main.paths.size();
+  header.numMaterials = main.materials.size();
 
   if (header.numTextures || header.numMaterials) {
     header.textures = wr.Tell();
-    for (auto &p : main.paths.storage) {
-      wr.WriteContainer(p.path);
-      wr.Skip(MODTraitsXC5::pathSize - p.path.size());
+    for (auto &p : main.paths) {
+      wr.WriteContainer(p);
+      wr.Skip(MODTraitsXC5::pathSize - p.size());
     }
-    wr.WriteContainer(main.materials.storage);
+    wr.WriteContainer(main.materials);
   }
 
   wr.ApplyPadding();
@@ -597,15 +551,13 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
   wr.WriteContainer(main.meshes);
   wr.WriteContainerWCount(main.envelopes);
   wr.ApplyPadding();
-  header.vertexBufferSize = main.vertexBufferSize;
+  header.vertexBufferSize = main.vertexBuffer.size();
   header.vertexBuffer = wr.Tell();
-  wr.WriteBuffer(main.buffer.data(), header.vertexBufferSize);
-
+  wr.WriteContainer(main.vertexBuffer);
   wr.ApplyPadding();
   header.indices = wr.Tell();
-  header.numIndices = main.indexBufferSize / sizeof(uint16);
-  wr.WriteBuffer(main.buffer.data() + header.vertexBufferSize,
-                 main.indexBufferSize);
+  header.numIndices = main.indexBuffer.size();
+  wr.WriteContainer(main.indexBuffer);
   const size_t eof = wr.Tell();
   wr.Pop();
   wr.Write(header);
@@ -636,43 +588,32 @@ MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
   }
 
   rd.Seek(header.textures);
-  rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef_e rd, MODPathProxy &p) {
+  rd.ReadContainerLambda(main.paths, header.numTextures,
+                         [](BinReaderRef_e rd, std::string &p) {
                            MODPath<Traits::pathSize> path;
                            rd.Read(path);
-                           p.path = path.path;
+                           p = path.path;
                          });
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
   main.unkBufferSize = header.unkBufferSize;
 
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize +
-                     main.unkBufferSize);
+  main.vertexBuffer.resize(header.vertexBufferSize + main.unkBufferSize);
 
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadBuffer(main.vertexBuffer.data(), header.vertexBufferSize);
 
   if (header.unkBufferSize) {
     rd.Seek(header.unkBuffer);
-    rd.ReadBuffer(&main.buffer[header.vertexBufferSize], header.unkBufferSize);
+    rd.ReadBuffer(main.vertexBuffer.data() + header.vertexBufferSize,
+                  header.unkBufferSize);
   }
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize + header.unkBufferSize],
-                main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(
-        main.buffer.data() + header.vertexBufferSize + header.unkBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -699,28 +640,23 @@ MODImpl::ptr LoadMODXC5(BinReaderRef_e rd) {
   }
 
   rd.Seek(header.textures);
-  rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef_e rd, MODPathProxy &p) {
+  rd.ReadContainerLambda(main.paths, header.numTextures,
+                         [](BinReaderRef_e rd, std::string &p) {
                            MODPath<MODTraitsXC5::pathSize> path;
                            rd.Read(path);
-                           p.path = path.path;
+                           p = path.path;
                          });
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -747,13 +683,13 @@ MODImpl::ptr LoadMODXC3(BinReaderRef_e rd) {
   }
 
   rd.Seek(header.textures);
-  rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef_e rd, MODPathProxy &p) {
+  rd.ReadContainerLambda(main.paths, header.numTextures,
+                         [](BinReaderRef_e rd, std::string &p) {
                            MODPath<MODTraitsXC5::pathSize> path;
                            rd.Read(path);
-                           p.path = path.path;
+                           p = path.path;
                          });
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainerLambda(main.meshes, header.numMeshes,
@@ -763,24 +699,11 @@ MODImpl::ptr LoadMODXC3(BinReaderRef_e rd) {
                          });
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -809,44 +732,33 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   }
 
   rd.Seek(header.textures);
-  rd.ReadContainerLambda(main.paths.storage, header.numTextures,
-                         [](BinReaderRef_e rd, MODPathProxy &p) {
+  rd.ReadContainerLambda(main.paths, header.numTextures,
+                         [](BinReaderRef_e rd, std::string &p) {
                            MODPath<Traits::pathSize> path;
                            rd.Read(path);
-                           p.path = path.path;
+                           p = path.path;
                          });
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
   main.unkBufferSize = header.unkBufferSize;
 
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize +
-                     main.unkBufferSize);
+  main.vertexBuffer.resize(header.vertexBufferSize + main.unkBufferSize);
 
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadBuffer(main.vertexBuffer.data(), header.vertexBufferSize);
 
   if (header.unkBufferSize) {
     rd.Seek(header.unkBuffer);
-    rd.ReadBuffer(&main.buffer[header.vertexBufferSize], header.unkBufferSize);
+    rd.ReadBuffer(main.vertexBuffer.data() + header.vertexBufferSize,
+                  header.unkBufferSize);
   }
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize + header.unkBufferSize],
-                main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(
-        main.buffer.data() + header.vertexBufferSize + header.unkBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -877,7 +789,7 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainerLambda(main.meshes, header.numMeshes,
@@ -892,24 +804,11 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
     rd.ReadContainer(main.envelopes);
   }
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -936,7 +835,7 @@ template <class Traits> MODImpl::ptr LoadMODXDxLEx32(BinReaderRef_e rdn) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rdn.ReadContainer(main.materials.storage, header.numMaterials);
+  rdn.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
@@ -947,16 +846,11 @@ template <class Traits> MODImpl::ptr LoadMODXDxLEx32(BinReaderRef_e rdn) {
     rd.ReadContainer(main.envelopes);
   }
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -996,7 +890,7 @@ MODImpl::ptr LoadMODXDxLE(BinReaderRef_e rdn) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rdn.ReadContainer(main.materials.storage, header.numMaterials);
+  rdn.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rdn.ReadContainerLambda(main.meshes, header.numMeshes,
@@ -1006,16 +900,11 @@ MODImpl::ptr LoadMODXDxLE(BinReaderRef_e rdn) {
                           });
   rd.ReadContainer(main.envelopes, main.metadata.numEnvelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -1044,7 +933,7 @@ MODImpl::ptr LoadMODX06(BinReaderRef_e rdn) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rdn.ReadContainer(main.materials.storage, header.numMaterials);
+  rdn.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rdn.ReadContainerLambda(main.meshes, header.numMeshes,
@@ -1054,24 +943,11 @@ MODImpl::ptr LoadMODX06(BinReaderRef_e rdn) {
                           });
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -1099,30 +975,17 @@ MODImpl::ptr LoadMODXE5(BinReaderRef_e rd) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -1149,7 +1012,7 @@ MODImpl::ptr LoadMODXFF2C(BinReaderRef_e rd) {
     rd.ReadContainer(main.groups, header.numGroups);
   }
 
-  rd.ReadContainer(main.materials.storage, header.numMaterials);
+  rd.ReadContainer(main.materials, header.numMaterials);
 
   rd.Seek(header.meshes);
   rd.ReadContainerLambda(main.meshes, header.numMeshes,
@@ -1159,24 +1022,11 @@ MODImpl::ptr LoadMODXFF2C(BinReaderRef_e rd) {
                          });
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
@@ -1226,30 +1076,17 @@ MODImpl::ptr LoadMODX21(BinReaderRef_e rd) {
   rd.Seek(header.materials);
   revil::XFS materials;
   materials.Load(rd, true);
-  main.materials.storage = XFSToMaterials(materials);
+  main.materials = XFSToMaterials(materials);
 
   rd.Seek(header.meshes);
   rd.ReadContainer(main.meshes, header.numMeshes);
   rd.ReadContainer(main.envelopes);
 
-  main.vertexBufferSize = header.vertexBufferSize;
-  main.indexBufferSize = header.numIndices * sizeof(uint16);
-
-  main.buffer.resize(main.vertexBufferSize + main.indexBufferSize);
-
   rd.Seek(header.vertexBuffer);
-  rd.ReadBuffer(&main.buffer[0], header.vertexBufferSize);
+  rd.ReadContainer(main.vertexBuffer, header.vertexBufferSize);
 
   rd.Seek(header.indices);
-  rd.ReadBuffer(&main.buffer[header.vertexBufferSize], main.indexBufferSize);
-
-  if (rd.SwappedEndian()) {
-    uint16 *curIndex = reinterpret_cast<uint16 *>(main.buffer.data() +
-                                                  header.vertexBufferSize);
-    for (uint32 i = 0; i < header.numIndices; i++) {
-      FByteswapper(curIndex[i]);
-    }
-  }
+  rd.ReadContainer(main.indexBuffer, header.numIndices);
 
   return std::make_unique<decltype(main)>(std::move(main));
 }
