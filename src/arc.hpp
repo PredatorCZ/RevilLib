@@ -55,6 +55,15 @@ struct ARCFile {
   }
 };
 
+struct ARCFileV4 : ARCFile {
+  void SwapEndian() {
+    FByteswapper(typeHash);
+    FByteswapper(compressedSize);
+    FByteswapper(reinterpret_cast<uint32 &>(uncompressedSize));
+    FByteswapper(offset);
+  }
+};
+
 struct ARCExtendedFile {
   char fileName[0x80];
   uint32 typeHash;
@@ -88,9 +97,7 @@ struct ARCBase {
 struct ARC : ARCBase {
   int32 LZXTag = 0;
 
-  bool IsLZX() const {
-    return version == 0x11 && LZXTag > 0;
-  }
+  bool IsLZX() const { return version == 0x11 && LZXTag > 0; }
 };
 
 using ARCFiles = std::vector<ARCFile>;
@@ -112,7 +119,13 @@ auto ReadARC(BinReaderRef_e rd) {
   }
 
   ARCFiles files;
-  rd.ReadContainer(files, hdr.numFiles);
+
+  if (hdr.version == 4) {
+    rd.ReadContainer(reinterpret_cast<std::vector<ARCFileV4> &>(files),
+                     hdr.numFiles);
+  } else {
+    rd.ReadContainer(files, hdr.numFiles);
+  }
 
   return std::make_tuple(hdr, files);
 }
