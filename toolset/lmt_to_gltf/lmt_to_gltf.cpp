@@ -22,8 +22,10 @@
 #include "spike/io/binreader_stream.hpp"
 #include "spike/io/binwritter_stream.hpp"
 #include "spike/io/fileinfo.hpp"
-#include "spike/type/matrix44.hpp"
+#include "spike/master_printer.hpp"
 #include <set>
+
+#include "animengine.hpp"
 
 #if 0
 #include "nlohmann/json.hpp"
@@ -67,343 +69,48 @@ struct LMTGLTF : GLTF {
     return Stream(aniStream);
   }
 
+  std::set<uint32> animatedNodes;
+  std::set<uint32> missingBones;
+
 private:
   int32 aniStream = -1;
 };
 
-struct AnimNode {
-  std::vector<SVector4> rotations;
-  std::vector<Vector4A16> positions;
-  std::vector<Vector4A16> scales;
-  std::vector<Vector4A16> globalPositions;
-  std::vector<SVector4> globalRotations;
-  std::vector<uint32> children;
-  int32 glNodeIndex = -1;
-  int32 glScaleNodeIndex = -1;
-  int32 parentAnimNode = -1;
-  float magnitude = 0;
-  uint8 boneType = 0;
-  Vector4A16 refRotation;
-  Vector4A16 refPosition;
-  std::string_view positionCompression;
-  std::string_view rotationCompression;
-  std::string_view scaleCompression;
-};
+void CreateEffectorNodes(AnimEngine &eng, LMTGLTF &main) {
+  for (auto &[id, node] : eng.nodes) {
+    int32 nodeId = id;
 
-struct AnimEngine {
-  std::map<size_t, AnimNode> nodes;
-  uint32 numSamples;
-};
-
-void WalkTree(AnimEngine &eng, GLTF &main, gltf::Node &glNode, int32 parent) {
-  auto found = glNode.name.find(':');
-  AnimNode *aNode = nullptr;
-  int32 animNodeId = -1;
-
-  if (glNode.name.ends_with("_s")) {
-    return;
-  }
-
-  if (found != std::string::npos) {
-    animNodeId = std::atol(glNode.name.data() + found + 1);
-  }
-
-  if (!eng.nodes.contains(animNodeId)) {
-    AnimNode anNode;
-    anNode.glNodeIndex = std::distance(main.nodes.data(), &glNode);
-    aNode = &eng.nodes.emplace(animNodeId, anNode).first->second;
-  }
-
-  aNode = &eng.nodes.at(animNodeId);
-
-  memcpy((void *)&aNode->refPosition, glNode.translation.data(), 12);
-  memcpy((void *)&aNode->refRotation, glNode.rotation.data(), 16);
-  aNode->magnitude = aNode->refPosition.Length();
-  aNode->parentAnimNode = parent;
-
-  if (parent != animNodeId) {
-    eng.nodes.at(parent).children.push_back(animNodeId);
-  }
-
-  parent = animNodeId;
-  std::string sName = glNode.name + "_s";
-
-  for (auto childId : glNode.children) {
-    if (main.nodes.at(childId).name == sName) {
-      aNode->glScaleNodeIndex = childId;
-      break;
+    if (nodeId > -2) {
+      continue;
     }
 
-    WalkTree(eng, main, main.nodes.at(childId), parent);
-  }
-}
+    std::string nodeName = "ik_" + std::to_string(-nodeId);
 
-void LinkNodes(AnimEngine &eng, GLTF &main) {
-  for (auto &node : main.nodes) {
-    if (node.name == "reference") {
-      WalkTree(eng, main, node, -1);
-      return;
-    }
-  }
-}
-
-void InheritScales(AnimEngine &eng, size_t animNode) {
-  auto &aNode = eng.nodes.at(animNode);
-
-  if (aNode.parentAnimNode >= 0) {
-    auto &aParentNode = eng.nodes.at(aNode.parentAnimNode);
-
-    if (!aParentNode.scales.empty()) {
-      const size_t numFrames = aParentNode.scales.size();
-
-      if (aNode.scales.empty()) {
-        aNode.scales = aParentNode.scales;
-      } else {
-        for (size_t f = 0; f < numFrames; f++) {
-          aNode.scales.at(f) *= aParentNode.scales.at(f);
-        }
+    for (size_t curNode = 0; auto &n : main.nodes) {
+      if (n.name == nodeName) {
+        nodeName.clear();
+        node.glNodeIndex = curNode;
+        break;
       }
 
-      if (aNode.positions.empty()) {
-        aNode.positions.insert(aNode.positions.begin(), numFrames,
-                               aNode.refPosition);
-      }
-
-      for (size_t f = 0; f < numFrames; f++) {
-        aNode.positions.at(f) *= aParentNode.scales.at(f);
-      }
+      curNode++;
     }
-  }
 
-  for (auto &child : aNode.children) {
-    InheritScales(eng, child);
-  }
-}
-
-struct IkChain {
-  uint32 base;
-  int32 controlBase = -1;
-};
-
-using Hierarchy = std::set<size_t>;
-
-void MarkHierarchy(AnimEngine &eng, Hierarchy &marks, size_t endNode) {
-  if (auto parentIndex = eng.nodes.at(endNode).parentAnimNode;
-      parentIndex >= 0) {
-    marks.emplace(parentIndex);
-    MarkHierarchy(eng, marks, parentIndex);
-  }
-}
-
-#include "glm/gtx/quaternion.hpp"
-
-Vector4A16 TransformPoint(Vector4A16 q, Vector4A16 point) {
-  glm::quat q_(q.w, q.x, q.y, q.z);
-  glm::vec3 p_(point.x, point.y, point.z);
-  auto res = q_ * p_;
-
-  return Vector4A16(res.x, res.y, res.z, 0);
-}
-
-Vector4A16 Multiply(Vector4A16 parent, Vector4A16 child) {
-  glm::quat p_(parent.w, parent.x, parent.y, parent.z);
-  glm::quat c_(child.w, child.x, child.y, child.z);
-  auto res = c_ * p_;
-
-  return Vector4A16(res.x, res.y, res.z, res.w);
-}
-
-/*
-Vector4A16 TransformPoint(Vector4A16 q, Vector4A16 point) {
-  Vector4A16 qvec = q * Vector4A16(1, 1, 1, 0);
-  Vector4A16 uv = qvec.Cross(point);
-  Vector4A16 uuv = qvec.Cross(uv);
-
-  return point + ((uv * q.x) + uuv) * 2;
-}
-
-Vector4A16 Multiply(Vector4A16 parent, Vector4A16 child) {
-  Vector4A16 tier0 = Vector4A16(child.x, child.y, child.z, child.w) * parent.w;
-  Vector4A16 tier1 = Vector4A16(child.w, child.w, child.w, -child.x) *
-                     Vector4A16(parent.x, parent.y, parent.z, parent.x);
-  Vector4A16 tier2 = Vector4A16(child.z, child.x, child.y, -child.y) *
-                     Vector4A16(parent.y, parent.z, parent.x, parent.y);
-  Vector4A16 tier3 = Vector4A16(child.y, child.z, child.x, child.z) *
-                     Vector4A16(parent.z, parent.x, parent.y, parent.z);
-
-  return tier0 + tier1 + tier2 - tier3;
-}*/
-
-Vector4A16 Unpack(const SVector4 &i) {
-  return Vector4A16(i.Convert<float>()) * (1.f / 0x7fff);
-}
-
-SVector4 Pack(Vector4A16 value) {
-  value *= 0x7fff;
-  value = Vector4A16(_mm_round_ps(value._data, _MM_ROUND_NEAREST));
-  return value.Convert<int16>();
-}
-
-void MakeGlobalFrames(AnimEngine &eng, Hierarchy &marks, size_t nodeId) {
-  auto &aNode = eng.nodes.at(nodeId);
-  auto &parentNode = eng.nodes.at(aNode.parentAnimNode);
-
-  aNode.globalPositions = parentNode.globalPositions;
-  aNode.globalRotations.resize(eng.numSamples);
-
-  if (aNode.positions.empty()) {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) += TransformPoint(
-          Unpack(parentNode.globalRotations.at(s)), aNode.refPosition);
+    if (nodeName.empty()) {
+      continue;
     }
-  } else {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) += TransformPoint(
-          Unpack(parentNode.globalRotations.at(s)), aNode.positions.at(s));
-    }
-  }
 
-  if (aNode.rotations.empty()) {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalRotations.at(s) = Pack(Multiply(
-          Unpack(parentNode.globalRotations.at(s)), aNode.refRotation));
-    }
-  } else {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalRotations.at(s) =
-          Pack(Multiply(Unpack(parentNode.globalRotations.at(s)),
-                        Unpack(aNode.rotations.at(s))));
-    }
-  }
-
-  for (auto child : aNode.children) {
-    if (marks.contains(child)) {
-      MakeGlobalFrames(eng, marks, child);
-    }
-  }
-}
-
-void MakeGlobalFrames(AnimEngine &eng, Hierarchy &marks) {
-  auto &refNode = eng.nodes.at(size_t(-1));
-
-  if (refNode.rotations.empty()) {
-    refNode.rotations.insert(refNode.rotations.begin(), eng.numSamples,
-                             SVector4(0, 0, 0, 0x7fff));
-  }
-
-  if (refNode.positions.empty()) {
-    refNode.positions.resize(eng.numSamples);
-  }
-
-  refNode.globalPositions = refNode.positions;
-  refNode.globalRotations = refNode.rotations;
-
-  for (auto child : refNode.children) {
-    if (marks.contains(child)) {
-      MakeGlobalFrames(eng, marks, child);
-    }
-  }
-}
-
-void MakeGlobalIkControl(AnimEngine &eng, IkChain chain) {
-  auto &aNode = eng.nodes.at(chain.base + 2);
-  auto &parentNode = eng.nodes.at(chain.controlBase);
-
-  aNode.globalPositions = parentNode.globalPositions;
-  aNode.globalRotations.resize(eng.numSamples);
-
-  if (aNode.positions.empty()) {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) += TransformPoint(
-          Unpack(parentNode.globalRotations.at(s)), aNode.refPosition);
-    }
-  } else {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) += TransformPoint(
-          Unpack(parentNode.globalRotations.at(s)), aNode.positions.at(s));
-    }
-  }
-
-  if (aNode.rotations.empty()) {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalRotations.at(s) = Pack(Multiply(
-          Unpack(parentNode.globalRotations.at(s)), aNode.refRotation));
-    }
-  } else {
-    for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalRotations.at(s) =
-          Pack(Multiply(Unpack(parentNode.globalRotations.at(s)),
-                        Unpack(aNode.rotations.at(s))));
-    }
-  }
-}
-
-void RebakeChain(AnimEngine &eng, size_t nodeId) {
-  size_t endNode = nodeId + 2;
-  auto &eNode = eng.nodes.at(endNode);
-  auto &parentNode = eng.nodes.at(eNode.parentAnimNode);
-  eNode.positions = std::move(eNode.globalPositions);
-
-  if (eNode.globalRotations.empty()) {
-    eNode.rotations.insert(eNode.rotations.begin(), eng.numSamples,
-                           SVector4(0, 0, 0, 0x7fff));
-  } else {
-    eNode.rotations = std::move(eNode.globalRotations);
-  }
-
-  for (size_t s = 0; s < eng.numSamples; s++) {
-    eNode.positions.at(s) -= parentNode.globalPositions.at(s);
-    eNode.positions.at(s) =
-        TransformPoint(Unpack(parentNode.globalRotations.at(s)).QConjugate(),
-                       eNode.positions.at(s));
-
-    eNode.rotations.at(s) =
-        Pack(Multiply(Unpack(parentNode.globalRotations.at(s)).QConjugate(),
-                      Unpack(eNode.rotations.at(s))));
-  }
-}
-
-void SetupChains(AnimEngine &eng) {
-  std::vector<IkChain> chains;
-  Hierarchy marks;
-
-  for (auto &[nodeIndex, node] : eng.nodes) {
-    /*if (node.boneType && node.boneType != 2) {
-      IkChain nChain;
-      nChain.base = nodeIndex;
-
-      / *if (node.boneType > 20) {
-        nChain.controlBase = 9;
-        MarkHierarchy(eng, marks, 9);
-        marks.emplace(9);
-      }* /
-
-      chains.emplace_back(nChain);
-
-      node.positions.clear(); // Unknown purpose, not positions
-      MarkHierarchy(eng, marks, nodeIndex + 2);
-    }*/
-
-    /*if (node.boneType && node.boneType != 2) {
-      IkChain nChain;
-      nChain.base = nodeIndex;
-
-      chains.emplace_back(nChain);
-
-      node.positions.clear(); // Unknown purpose, not positions
-      MarkHierarchy(eng, marks, nodeIndex + 2);
-    }*/
-  }
-
-  if (chains.empty()) {
-    return;
-  }
-
-  MakeGlobalFrames(eng, marks);
-
-  for (auto &chain : chains) {
-    MakeGlobalIkControl(eng, chain);
-    RebakeChain(eng, chain.base);
+    node.glNodeIndex = main.nodes.size();
+    gltf::Node &gNode = main.nodes.emplace_back();
+    gNode.name = nodeName;
+    const size_t parentNode = eng.nodes.at(node.parentAnimNode).glNodeIndex;
+    main.nodes.at(parentNode).children.emplace_back(node.glNodeIndex);
+    gNode.children.emplace_back(main.nodes.size());
+    gltf::Node &dNode = main.nodes.emplace_back();
+    dNode.name = nodeName + "_end";
+    memcpy(dNode.translation.data(), &node.refPosition, 12);
+    main.animatedNodes.emplace(node.glNodeIndex);
+    main.animatedNodes.emplace(node.glNodeIndex + 1);
   }
 }
 
@@ -514,7 +221,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
       auto [keyAccess, keyIndex] = main.NewAccessor(stream, 4);
       keyAccess.type = gltf::Accessor::Type::Scalar;
       keyAccess.componentType = gltf::Accessor::ComponentType::Float;
-      keyAccess.min.push_back(0);
+      keyAccess.min.push_back(times[strip.timeIndices.front()]);
       keyAccess.max.push_back(times[strip.timeIndices.back()]);
       keyAccess.count = strip.timeIndices.size();
       main.accessors.at(accId).count = strip.timeIndices.size();
@@ -633,7 +340,9 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
       }
     }
 
-    main.animations.emplace_back(std::move(animation));
+    if (animation.channels.size() > 0) {
+      main.animations.emplace_back(std::move(animation));
+    }
   };
 
   if (loopFrame) {
@@ -645,7 +354,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
       auto [keyAccess, keyIndex] = main.NewAccessor(stream, 4);
       keyAccess.type = gltf::Accessor::Type::Scalar;
       keyAccess.componentType = gltf::Accessor::ComponentType::Float;
-      keyAccess.min.push_back(0);
+      keyAccess.min.push_back(times.front());
       keyAccess.max.push_back(times[loopFrame - 1]);
       keyAccess.count = loopFrame;
       stream.wr.WriteContainer(timesSpan);
@@ -674,7 +383,7 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
       auto [keyAccess, keyIndex] = main.NewAccessor(stream, 4);
       keyAccess.type = gltf::Accessor::Type::Scalar;
       keyAccess.componentType = gltf::Accessor::ComponentType::Float;
-      keyAccess.min.push_back(0);
+      keyAccess.min.push_back(times[loopFrame]);
       keyAccess.max.push_back(times.back());
       keyAccess.count = times.size();
       stream.wr.WriteContainer(times);
@@ -686,39 +395,17 @@ void DumpAnim(AnimEngine &eng, LMTGLTF &main, std::string animName,
   }
 }
 
-#include "spike/master_printer.hpp"
-
-// Ak09, Ak15(Dongo) and Most Vs doesn't have marked LegIKTarget
-enum LPTypes {
-  None,
-  Unk1,
-  LegIKTarget,
-  Ak00RightLegChain, // Vs03, Vs33
-  Ak00LeftLegChain,  // Vs03, Vs33
-  Unk5,
-  Unk6,
-  Ak09RightLegChain,     // Ak11, Ak13, Ak15, Vs06, Hm
-  Ak09LeftLegChain,      // Ak0b front leg, Ak11, Ak13, Ak15, Vs06, Hm
-  Ak0bRightBackLegChain, // Vs01, Vs03, Vs33, Vs34
-  Ak0bLeftBackLegChain,  //  Vs01, Vs03, Vs33, Vs34
-  Vs04RightLegChain,     // Vs05, Vs31, Vs32, Vs40
-  Vs04LeftLegChain,      // Vs05, Vs31, Vs32, Vs40
-  Vs00RightLegChain,     // Vs41
-  Vs00LeftLegChain,      // Vs41
-  Unk15,
-  Unk16,
-  Unk17,
-  Unk18,
-  Unk19,
-  Unk20,
-  Vs00RightArmChain, // Vs07, Vs41, Hm target parent ani_bone 9 neck
-  Vs00LeftArmChain,  // Vs07, Vs41, Hm
-};
-
-void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
-           ReportType &report) {
+void DoLmt(LMTGLTF &main, LMT &lmt, std::string name, ReportType &report) {
   int32 sampleRate = 60;
   const float sampleFrac = 1.f / sampleRate;
+  uni::MotionsConst motion = lmt;
+  IkChainDescripts iks{};
+
+  auto found = IK_VERSION.find(uint16(lmt.Version()));
+
+  if (found != IK_VERSION.end()) {
+    iks = found->second;
+  }
 
   for (size_t motionIndex = 0; auto m : *motion) {
     if (!m) {
@@ -738,7 +425,7 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
       size_t index = t->BoneIndex();
 
       if (!engine.nodes.contains(index)) {
-        printline("Missing bone: " << index);
+        main.missingBones.emplace(index);
         continue;
       }
 
@@ -746,12 +433,19 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
       auto tm = static_cast<const LMTTrack *>(t.get());
       aNode.boneType = tm->BoneType();
 
-      if (aNode.boneType) {
-        printline("Index: " << index << " type: " << int(aNode.boneType));
+      if (aNode.boneType
+          && !(iks.size() > 0 && iks[aNode.boneType])
+      ) {
+        PrintLine("M: ", motionIndex, " Index: ", index,
+                  " type: ", int(aNode.boneType));
       }
 
       switch (t->TrackType()) {
       case uni::MotionTrack::Position:
+        if (aNode.positions.size() > 0) {
+          PrintWarning("Position track already loaded!");
+          break;
+        }
         aNode.positions.reserve(times.size());
         aNode.positionCompression = tm->CompressionType();
 
@@ -763,6 +457,10 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
         }
         break;
       case uni::MotionTrack::Rotation:
+        if (aNode.rotations.size() > 0) {
+          PrintWarning("Rotation track already loaded!");
+          break;
+        }
         aNode.rotations.reserve(times.size());
         aNode.rotationCompression = tm->CompressionType();
 
@@ -773,6 +471,10 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
         }
         break;
       case uni::MotionTrack::Scale:
+        if (aNode.scales.size() > 0) {
+          PrintWarning("Scale track already loaded!");
+          break;
+        }
         aNode.scales.reserve(times.size());
         aNode.scaleCompression = tm->CompressionType();
 
@@ -788,7 +490,10 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
     }
 
     InheritScales(engine, size_t(-1));
-    SetupChains(engine);
+    if (iks.size() > 0) {
+      SetupChains(engine, iks);
+      CreateEffectorNodes(engine, main);
+    }
 
     float loopTime = lm->LoopFrame() * sampleFrac;
     std::string animName = name + "[" + std::to_string(motionIndex) + "]";
@@ -808,11 +513,17 @@ void DoLmt(LMTGLTF &main, uni::MotionsConst motion, std::string name,
     DumpAnim(engine, main, animName, times, loopFrame, report);
 
     motionIndex++;
+
+    for (auto &[id, node] : engine.nodes) {
+      main.animatedNodes.emplace(node.glNodeIndex);
+      main.animatedNodes.emplace(node.glScaleNodeIndex);
+    }
   }
 }
 
 void AppProcessFile(AppContext *ctx) {
   LMTGLTF main(gltf::LoadFromBinary(ctx->GetStream(), ""));
+
   auto &lmts = ctx->SupplementalFiles();
 #ifdef USE_REPORT
   nlohmann::json report(nlohmann::json::object());
@@ -828,6 +539,20 @@ void AppProcessFile(AppContext *ctx) {
           lmts.size() > 1 ? std::string(AFileInfo(lmtFile).GetFilename())
                           : "Motion",
           report);
+  }
+
+  // Create single armature object for easier NLA handle
+  gltf::Skin &sharedSkin = main.skins.emplace_back();
+  sharedSkin.name = "Animation Group";
+  for (uint32 n : main.animatedNodes) {
+    if (n > 0xfffff) {
+      continue;
+    }
+    sharedSkin.joints.emplace_back(n);
+  }
+
+  for (uint32 id : main.missingBones) {
+    PrintLine("Missing bone: ", id);
   }
 
 #ifdef USE_REPORT

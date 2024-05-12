@@ -9,6 +9,7 @@ build_target(
   1
   SOURCES
   lmt_to_gltf.cpp
+  animengine.cpp
   LINKS
   revil-interface
   gltf-interface
