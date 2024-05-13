@@ -14,6 +14,7 @@ BASE.permutators = [
   'LMT57',
   'LMT66',
   'LMT67',
+  'LMT68',
   'LMT92',
   'LMT95',
 ]

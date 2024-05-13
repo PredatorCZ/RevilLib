@@ -11,6 +11,7 @@ enum LMTVersion : uint8 {
   LMT57 = 57, // RE:M 3DS
   LMT66 = 66, // DD, DD:DA
   LMT67 = 67, // Other, generic MTF v2 format
+  LMT68 = 68, // MHS2
   LMT92 = 92, // MH:W
   LMT95 = 95, // Iceborne
 };

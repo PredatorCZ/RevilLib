@@ -50,10 +50,10 @@ enum Members {
 };
 static const std::set<ClassData<_count_>> LAYOUTS {
   {{{{LMT22, LMT51, 8, 0}}, 160}, {0}, {0x0}},
-  {{{{LMT56, LMT67, 8, 0}}, 320}, {0}, {0x0}},
+  {{{{LMT56, LMT68, 8, 0}}, 320}, {0}, {0x0}},
   {{{{LMT92, LMT95, 8, 0}}, 8}, {0}, {0x3}},
   {{{{LMT22, LMT51, 4, 0}}, 144}, {0}, {0x0}},
-  {{{{LMT56, LMT67, 4, 0}}, 288}, {0}, {0x0}},
+  {{{{LMT56, LMT68, 4, 0}}, 288}, {0}, {0x0}},
   {{{{LMT92, LMT95, 4, 0}}, 4}, {0}, {0x2}}
 };
 struct Interface {

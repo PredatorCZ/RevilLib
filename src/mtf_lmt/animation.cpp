@@ -31,7 +31,7 @@ MAKE_ENUM(ENUMSCOPE(class AnimV2Flags
 #include "animation.inl"
 
 static const ::LMTVersion supportedVersions[] = {
-    LMT22, LMT40, LMT49, LMT50, LMT51, LMT56, LMT57, LMT66, LMT67, LMT92, LMT95,
+    LMT22, LMT40, LMT49, LMT50, LMT51, LMT56, LMT57, LMT66, LMT67, LMT68, LMT92, LMT95,
 };
 
 bool LMTAnimation::SupportedVersion(uint16 version) {

@@ -24,7 +24,7 @@ BoneTrack.patches = [
     ClassPatch('LMT51', ClassPatchType.replace,  ClassMember('compression', TrackV1_5BufferTypes)),
     ClassPatch('LMT56', ClassPatchType.replace,  ClassMember('compression', TrackV2BufferTypes),
                         ClassPatchType.append, ClassMember('extremes', Pointer(TrackMinMax))),
-    ClassPatch('LMT92', ClassPatchType.insert_after, 'boneID', ClassMember('boneID2', TYPES.int32)),
+    ClassPatch('LMT68', ClassPatchType.insert_after, 'boneID', ClassMember('boneID2', TYPES.int32)),
 ]
 
 if __name__ == "__main__":
