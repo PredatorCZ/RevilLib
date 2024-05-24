@@ -41,5 +41,25 @@ build_target(
   START_YEAR
   2021)
 
+project(LMTBones)
+
+build_target(
+  NAME
+  lmt_bones
+  TYPE
+  ESMODULE
+  VERSION
+  1
+  SOURCES
+  lmt_bones.cpp
+  LINKS
+  revil-interface
+  AUTHOR
+  "Lukas Cone"
+  DESCR
+  "Collect LMT bone info"
+  START_YEAR
+  2024)
+
 add_spike_subdir(sbk)
 add_spike_subdir(stq)
