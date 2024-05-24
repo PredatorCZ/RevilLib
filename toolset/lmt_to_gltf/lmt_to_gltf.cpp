@@ -72,6 +72,9 @@ struct LMTGLTF : GLTF {
   std::set<uint32> animatedNodes;
   std::set<uint32> missingBones;
 
+  std::vector<std::set<size_t>> usedIkNodesPerMotion;
+  std::set<size_t> usedIkNodesTotal;
+
 private:
   int32 aniStream = -1;
 };
@@ -80,7 +83,7 @@ void CreateEffectorNodes(AnimEngine &eng, LMTGLTF &main) {
   for (auto &[id, node] : eng.nodes) {
     int32 nodeId = id;
 
-    if (nodeId > -2) {
+    if (nodeId > -2 || nodeId < -1000) {
       continue;
     }
 
@@ -108,9 +111,11 @@ void CreateEffectorNodes(AnimEngine &eng, LMTGLTF &main) {
     gNode.children.emplace_back(main.nodes.size());
     gltf::Node &dNode = main.nodes.emplace_back();
     dNode.name = nodeName + "_end";
-    memcpy(dNode.translation.data(), &node.refPosition, 12);
+    AnimNode &endNode = eng.nodes.at(nodeId - 1000);
     main.animatedNodes.emplace(node.glNodeIndex);
     main.animatedNodes.emplace(node.glNodeIndex + 1);
+    endNode.glNodeIndex = node.glNodeIndex + 1;
+    memcpy(dNode.translation.data(), &endNode.refPosition, 12);
   }
 }
 
@@ -433,9 +438,7 @@ void DoLmt(LMTGLTF &main, LMT &lmt, std::string name, ReportType &report) {
       auto tm = static_cast<const LMTTrack *>(t.get());
       aNode.boneType = tm->BoneType();
 
-      if (aNode.boneType
-          && !(iks.size() > 0 && iks[aNode.boneType])
-      ) {
+      if (aNode.boneType && !(iks.size() > 0 && iks[aNode.boneType])) {
         PrintLine("M: ", motionIndex, " Index: ", index,
                   " type: ", int(aNode.boneType));
       }
@@ -510,7 +513,15 @@ void DoLmt(LMTGLTF &main, LMT &lmt, std::string name, ReportType &report) {
       return 0;
     }();
 
+    const size_t animsBefore = main.animations.size();
     DumpAnim(engine, main, animName, times, loopFrame, report);
+    const size_t numAddedAnims = main.animations.size() - animsBefore;
+
+    for (size_t i = 0; i < numAddedAnims; i++) {
+      main.usedIkNodesTotal.insert(engine.usedIkNodes.begin(),
+                                   engine.usedIkNodes.end());
+      main.usedIkNodesPerMotion.emplace_back(engine.usedIkNodes);
+    }
 
     motionIndex++;
 
@@ -539,6 +550,91 @@ void AppProcessFile(AppContext *ctx) {
           lmts.size() > 1 ? std::string(AFileInfo(lmtFile).GetFilename())
                           : "Motion",
           report);
+  }
+
+  gltf::Animation::Sampler activeSampler;
+  gltf::Animation::Sampler innactiveSampler;
+
+  for (size_t id : main.usedIkNodesTotal) {
+    if ([&] {
+          for (auto &n : main.usedIkNodesPerMotion) {
+            if (!n.contains(id)) {
+              return true;
+            }
+          }
+
+          return false;
+        }()) {
+
+      // There are currently no known apps that support animated extras
+      // Use control node instead
+
+      if (activeSampler.input < 0) {
+        auto &str = main.AnimStream();
+        {
+          auto [acc, accId] = main.NewAccessor(str, 4);
+          acc.type = gltf::Accessor::Type::Scalar;
+          acc.componentType = gltf::Accessor::ComponentType::Float;
+          acc.count = 1;
+          acc.min.emplace_back(0);
+          acc.max.emplace_back(0);
+          str.wr.Write(0);
+          activeSampler.input = accId;
+          innactiveSampler.input = accId;
+          activeSampler.interpolation = gltf::Animation::Sampler::Type::Step;
+          innactiveSampler.interpolation = gltf::Animation::Sampler::Type::Step;
+        }
+        {
+          auto [acc, accId] = main.NewAccessor(str, 1);
+          // acc.type = gltf::Accessor::Type::Scalar;
+          // acc.componentType = gltf::Accessor::ComponentType::UnsignedByte;
+          acc.type = gltf::Accessor::Type::Vec3;
+          acc.componentType = gltf::Accessor::ComponentType::Float;
+          acc.count = 1;
+          // str.wr.Write(uint8(1));
+          str.wr.Write(Vector(1));
+          activeSampler.output = accId;
+        }
+        {
+          auto [acc, accId] = main.NewAccessor(str, 1);
+          // acc.type = gltf::Accessor::Type::Scalar;
+          // acc.componentType = gltf::Accessor::ComponentType::UnsignedByte;
+          acc.type = gltf::Accessor::Type::Vec3;
+          acc.componentType = gltf::Accessor::ComponentType::Float;
+          acc.count = 1;
+          // str.wr.Write(uint8(0));
+          str.wr.Write(Vector(0));
+          innactiveSampler.output = accId;
+        }
+
+        for (gltf::Animation &anim : main.animations) {
+          anim.samplers.emplace_back(activeSampler);
+          anim.samplers.emplace_back(innactiveSampler);
+        }
+      }
+
+      for (size_t animIndex = 0; gltf::Animation & anim : main.animations) {
+        auto &channel = anim.channels.emplace_back();
+        channel.sampler = anim.samplers.size();
+        /*channel.target.path = "pointer";
+        channel.target
+            .GetExtensionsAndExtras()["extensions"]["KHR_animation_pointer"]
+                                     ["pointer"] =
+            "/nodes/" + std::to_string(id) + "/extras/ik_active";*/
+        channel.target.path = "translation";
+        channel.target.node = main.nodes.size();
+
+        const bool useIk =
+            main.usedIkNodesPerMotion.at(animIndex++).contains(id);
+        channel.sampler = anim.samplers.size() - 1 - useIk;
+      }
+
+      // main.nodes.at(id).GetExtensionsAndExtras()["extras"]["ik_active"] =
+      // true;
+
+      main.animatedNodes.emplace(main.nodes.size());
+      main.nodes.emplace_back().name = "ik_" + std::to_string(id) + "_active";
+    }
   }
 
   // Create single armature object for easier NLA handle
@@ -589,6 +685,13 @@ void AppProcessFile(AppContext *ctx) {
     wrj.BaseStream() << report;
   }
 #endif
+
+  /*for (auto &n : main.nodes) {
+    if (n.GetExtensionsAndExtras().contains("extras")) {
+      main.extensionsUsed.emplace_back("KHR_animation_pointer");
+      break;
+    }
+  }*/
 
   BinWritterRef wr(
       ctx->NewFile(std::string(ctx->workingFile.GetFullPathNoExt()) +

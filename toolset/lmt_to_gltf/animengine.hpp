@@ -19,7 +19,7 @@ struct AnimNode {
   int32 parentAnimNode = -1;
   float magnitude = 0;
   uint8 boneType = 0;
-  Vector4A16 refRotation;
+  Vector4A16 refRotation{0, 0, 0, 1};
   Vector4A16 refPosition;
   std::string_view positionCompression;
   std::string_view rotationCompression;
@@ -28,6 +28,7 @@ struct AnimNode {
 
 struct AnimEngine {
   std::map<size_t, AnimNode> nodes;
+  std::set<size_t> usedIkNodes;
   uint32 numSamples;
 };
 

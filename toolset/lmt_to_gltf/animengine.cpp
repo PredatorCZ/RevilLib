@@ -251,8 +251,7 @@ void RelativeResample(AnimEngine &eng, int32 bone, int32 parentBone) {
 }
 
 // Apply node's local transform to different parent
-void InverseRelativeResample(AnimEngine &eng, int32 bone, int32 parentBone,
-                             Vector4A16 impulse) {
+void InverseRelativeResample(AnimEngine &eng, int32 bone, int32 parentBone) {
   auto &aNode = eng.nodes.at(bone);
   auto &parentNode = eng.nodes.at(parentBone);
 
@@ -261,15 +260,13 @@ void InverseRelativeResample(AnimEngine &eng, int32 bone, int32 parentBone,
 
   if (aNode.positions.empty()) {
     for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) -=
-          TransformPoint(Unpack(parentNode.globalRotations.at(s)),
-                         aNode.refPosition + impulse);
+      aNode.globalPositions.at(s) -= TransformPoint(
+          Unpack(parentNode.globalRotations.at(s)), aNode.refPosition);
     }
   } else {
     for (size_t s = 0; s < eng.numSamples; s++) {
-      aNode.globalPositions.at(s) -=
-          TransformPoint(Unpack(parentNode.globalRotations.at(s)),
-                         aNode.positions.at(s) + impulse);
+      aNode.globalPositions.at(s) -= TransformPoint(
+          Unpack(parentNode.globalRotations.at(s)), aNode.positions.at(s));
     }
   }
 
@@ -497,48 +494,80 @@ IkConstraint BuildConstraintQuat(Vector4A16 min, Vector4A16 max) {
   return {minThetas, maxThetas};
 }
 
+using PoseRotation = Vector4A16 (*)(int32 boneId);
+Vector4A16 DefaultRotation(int32) { return {0, 0, 0, 1}; }
+
 struct IkChainDescript {
   int16 base = -1;
   int16 controlBase = -1;
   uint8 numLinks = 2;
-  bool useConstraints[3] = {0, 0, 0};
-  IkConstraint constraints[3]{};
-  Vector4A16 impulse{};
+  uint8 type = 0;
   Vector4A16 effectorDirection;
+  PoseRotation chainPoseRotations[3]{DefaultRotation, DefaultRotation,
+                                     DefaultRotation};
 };
 
-IkChainDescript IK_DR_RIGHT_LEG{
+struct IkChainDescript2 {
+  int16 base = -1;
+  int16 controlBase = -1;
+  uint8 numLinks = 2;
+  uint8 type = 1;
+  Vector4A16 effectorDirection;
+  PoseRotation chainPoseRotations[3]{DefaultRotation, DefaultRotation,
+                                     DefaultRotation};
+  bool useConstraints[3] = {0, 0, 0};
+  IkConstraint constraints[3]{};
+};
+
+template <float x, float y, float z> Vector4A16 R(int32) {
+  static Vector4A16 retVal = Vector4A16{x, y, z, 0}.QComputeElement();
+  return retVal;
+}
+
+IkChainDescript2 IK_DR_RIGHT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.370f, 0.099f, -0.239f>,
+        R<0.500f, 0.f, 0.f>,
+    },
     .useConstraints{true, true, true},
     .constraints{
         BuildConstraintQuat({-0.7, -0.4, -0.45, 0}, {0.9, 0.09, 0.05, 0}),
         BuildConstraintQuat({0, -0.15, 0, 0}, {0.95, 0.15, 0, 0}),
         BuildConstraintQuat({-0.25, 0, 0, 0}, {0.35, 0, 0.2, 0}),
     },
-    .impulse{0, 0, -1, 0},
-    .effectorDirection{0, -1, 0, 0},
 };
 
-IkChainDescript IK_DR_LEFT_LEG{
+IkChainDescript2 IK_DR_LEFT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.370f, -0.099f, 0.239f>,
+        R<0.500f, 0.f, 0.f>,
+    },
     .useConstraints{true, true, true},
     .constraints{
         BuildConstraintQuat({-0.7, -0.09, -0.05, 0}, {0.9, 0.4, 0.45, 0}),
         BuildConstraintQuat({0, -0.15, 0, 0}, {0.95, 0.15, 0, 0}),
         BuildConstraintQuat({-0.25, 0, -0.2, 0}, {0.35, 0, 0, 0}),
     },
-    .impulse{0, 0, -1, 0},
-    .effectorDirection{0, -1, 0, 0},
 };
 
 IkChainDescript IK_EFFECTOR{};
 
 IkChainDescript IK_DR_LEFT_ARM{
-    .impulse{0, -1, 0, 0},
     .effectorDirection{1, 0, 0, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, -0.500f>,
+        R<0.f, -0.500f, 0.f>,
+    },
 };
 
 IkChainDescript IK_DR_RIGHT_ARM{
-    .impulse{0, -1, 0, 0},
     .effectorDirection{-1, 0, 0, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, 0.500f>,
+        R<0.f, 0.500f, 0.f>,
+    },
 };
 
 IkChainDescript *IK_DR[]{
@@ -550,8 +579,8 @@ IkChainDescript *IK_DR[]{
     nullptr,
     &IK_DR_RIGHT_ARM, // 5 hand
     &IK_DR_LEFT_ARM,  // 6 hand
-    &IK_DR_RIGHT_LEG,
-    &IK_DR_LEFT_LEG,
+    reinterpret_cast<IkChainDescript *>(&IK_DR_RIGHT_LEG),
+    reinterpret_cast<IkChainDescript *>(&IK_DR_LEFT_LEG),
 };
 
 IkChainDescript IK_LP_LEG{
@@ -561,36 +590,181 @@ IkChainDescript IK_LP_LEG{
 IkChainDescript IK_LP_VS04_LEG{
     .numLinks = 3,
     .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.383f, 0.f, 0.f>,
+        R<0.259f, 0.f, 0.f>,
+        R<0.259f, 0.f, 0.f>,
+    },
 };
 
-IkChainDescript IK_LP_VS04_ARM{
+IkChainDescript IK_LP_VS00_LEFT_LEG{
+    .numLinks = 3,
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.384f, -0.065f, -0.073f>,
+        R<0.383f, 0.f, 0.f>,
+        R<0.259f, 0.f, 0.f>,
+    },
+};
+
+IkChainDescript IK_LP_VS00_RIGHT_LEG{
+    .numLinks = 3,
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.384f, 0.065f, 0.073f>,
+        R<0.383f, 0.f, 0.f>,
+        R<0.259f, 0.f, 0.f>,
+    },
+};
+
+IkChainDescript IK_LP_VS00_RIGHT_ARM{
     .effectorDirection{0, 0, 1, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, 0.f>,
+        R<0.f, 0.707f, 0.f>,
+    },
 };
 
-IkChainDescript IK_LP_RIGHT_ARM{
-    .controlBase = 9,
-    .effectorDirection{-1, 0, 0, 0},
-};
-
-IkChainDescript IK_LP_LEFT_ARM{
-    .controlBase = 9,
-    .effectorDirection{1, 0, 0, 0},
-};
-
-IkChainDescript IK_LP2_RIGHT_ARM{
-    .effectorDirection{-1, 0, 0, 0},
-};
-
-IkChainDescript IK_LP2_LEFT_ARM{
-    .effectorDirection{1, 0, 0, 0},
+IkChainDescript IK_LP_VS00_LEFT_ARM{
+    .effectorDirection{0, 0, 1, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, 0.f>,
+        R<0.f, -0.707f, 0.f>,
+    },
 };
 
 IkChainDescript IK_LP_RIGHT_LEG_AKC0{
     .effectorDirection{-1, 0, 0, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, 0.259f>,
+        R<0.f, 0.f, 0.574f>,
+    },
 };
 
 IkChainDescript IK_LP_LEFT_LEG_AKC0{
     .effectorDirection{1, 0, 0, 0},
+    .chainPoseRotations{
+        R<0.f, 0.f, -0.259f>,
+        R<0.f, 0.f, -0.574f>,
+    },
+};
+
+IkChainDescript IK_LP_AK0B_RIGHT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 12:
+            // vs03 back leg
+            return {0.370, 0.099, 0.233, 0.892};
+          default:
+            // ak0b back leg, case 4 collides
+            // return {0.785, 0.211, -0.366, 0.453};
+            return {0.5, 0, 0, 0.866};
+          }
+        },
+        R<-0.707f, 0.f, 0.f>,
+    },
+};
+
+IkChainDescript IK_LP_AK0B_LEFT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 16:
+            // vs03 back leg
+            return {0.370, -0.099, -0.233, 0.892};
+          case 7:
+            // ak0b back leg
+            return {0.785, -0.211, 0.366, 0.453};
+          default:
+            return {0.5, 0, 0, 0.866};
+          }
+        },
+        R<-0.707f, 0.f, 0.f>,
+    },
+};
+
+IkChainDescript IK_LP_AK09_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 2:
+          case 6:
+          case 10:
+          case 14:
+            // ak13
+            return {0.259, 0, 0, 0.966};
+          default:
+            return {-0.906, 0, 0, 0.423};
+          }
+        },
+        R<0.819f, 0.f, 0.f>,
+    },
+};
+
+IkChainDescript IK_LP_AK00_LEFT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 5:
+            // ak00 back leg
+            return {0, 0, 0.259, 0.966};
+          case 7:
+            // vs03 front leg
+            return {-0.383, 0, 0, 0.924};
+          default:
+            return {-0.933, 0.250, 0.250, 0.067};
+          }
+        },
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 6:
+            // ak00 back leg
+            return {-0.924, 0, 0, -0.383};
+          default:
+            return {0.574, 0, 0, 0.819};
+          }
+        },
+    },
+};
+
+IkChainDescript IK_LP_AK00_RIGHT_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 1:
+            // ak00 back leg
+            return {0, 0, -0.259, 0.966};
+          case 2:
+            // vs03 front leg
+            return {-0.383, 0, 0, 0.924};
+          default:
+            return {-0.933, -0.250, -0.250, 0.067};
+          }
+        },
+        [](int32 bone) -> Vector4A16 {
+          switch (bone) {
+          case 2:
+            // ak00 back leg
+            return {-0.924, 0, 0, -0.383};
+          default:
+            return {0.574, 0, 0, 0.819};
+          }
+        },
+    },
+};
+
+IkChainDescript IK_LP2_HM_LEG{
+    .effectorDirection{0, -1, 0, 0},
+    .chainPoseRotations{
+        R<-0.259f, 0.f, 0.f>,
+        R<0.500f, 0.f, 0.f>,
+    },
 };
 
 // Ak09, Ak15(Dongo) and Most Vs doesn't have marked LegIKTarget
@@ -598,14 +772,14 @@ enum LPTypes {
   None,
   Unk1,
   LegIKTarget,
-  Ak00RightLegChain, // Vs03, Vs33
-  Ak00LeftLegChain,  // Vs03, Vs33
+  Ak00RightLegChain, // Vs03, Vs33, Ak16, Ak0A
+  Ak00LeftLegChain,  // Vs03, Vs33, Ak16, Ak0A
   Unk5,
   Unk6,
-  Ak09RightLegChain,     // Ak11, Ak13, Ak15, Vs06, Hm
-  Ak09LeftLegChain,      // Ak0b front leg, Ak11, Ak13, Ak15, Vs06, Hm
+  Ak09RightLegChain, // Ak15, Ak13, Ak6C, Ak70, Ak11, Vs06, Hm (lp1)
+  Ak09LeftLegChain,  // Ak15, Ak13, Ak6C, Ak70, Ak11, Vs06, Ak0b front, Hm (lp1)
   Ak0bRightBackLegChain, // Vs01, Vs03, Vs33, Vs34
-  Ak0bLeftBackLegChain,  //  Vs01, Vs03, Vs33, Vs34
+  Ak0bLeftBackLegChain,  // Vs01, Vs03, Vs33, Vs34
   Vs04RightLegChain,     // Vs05, Vs31, Vs32, Vs40
   Vs04LeftLegChain,      // Vs05, Vs31, Vs32, Vs40
   Vs00RightLegChain,     // Vs41
@@ -619,7 +793,7 @@ enum LPTypes {
   Vs00RightArmChain, // Vs07, Vs41, Hm target parent ani_bone 9 neck
   Vs00LeftArmChain,  // Vs07, Vs41, Hm
   Unk23,
-  Ak64Leg,
+  Ak64Leg, // Ak67
   Unk25,
   Unk26,
   Unk27,
@@ -650,51 +824,51 @@ IkChainDescript *IK_LP[]{
     nullptr, // 0 none
     nullptr,
     &IK_EFFECTOR, // 2 effector
-    &IK_LP_LEG,
-    &IK_LP_LEG,
+    &IK_LP_AK00_RIGHT_LEG,
+    &IK_LP_AK00_LEFT_LEG,
     nullptr,
     nullptr,
-    &IK_LP_LEG,
-    &IK_LP_LEG,
-    &IK_LP_LEG,
-    &IK_LP_LEG,
+    &IK_LP_AK09_LEG,
+    &IK_LP_AK09_LEG,
+    &IK_LP_AK0B_RIGHT_LEG,
+    &IK_LP_AK0B_LEFT_LEG,
     &IK_LP_VS04_LEG,
     &IK_LP_VS04_LEG,
-    &IK_LP_VS04_LEG,
-    &IK_LP_VS04_LEG,
+    &IK_LP_VS00_LEFT_LEG,
+    &IK_LP_VS00_RIGHT_LEG,
     nullptr,
     nullptr,
     nullptr,
     nullptr,
     nullptr,
     nullptr,
-    &IK_LP_VS04_ARM,
-    &IK_LP_VS04_ARM,
-    nullptr,
-    &IK_LP_LEG,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
+    &IK_LP_VS00_RIGHT_ARM,
+    &IK_LP_VS00_LEFT_ARM,
     nullptr,
     &IK_LP_LEG,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    &IK_LP2_HM_LEG,
     &IK_LP_LEFT_LEG_AKC0,
     &IK_LP_RIGHT_LEG_AKC0,
     nullptr,
     nullptr,
-    &IK_LP2_RIGHT_ARM,
-    &IK_LP2_LEFT_ARM,
+    &IK_DR_RIGHT_ARM,
+    &IK_DR_LEFT_ARM,
 };
 
 using LV = revil::LMTVersion;
@@ -824,7 +998,7 @@ void LookatRotation(AnimEngine &eng, int32 bone, int32 lookAtBone) {
 
 void Fabrik(AnimEngine &eng, IkChainDescript &chain) {
   RelativeResample(eng, chain.base + 2, chain.controlBase);
-  InverseRelativeResample(eng, chain.base + 1, chain.base + 2, chain.impulse);
+  InverseRelativeResample(eng, chain.base + 1, chain.base + 2);
 
   for (size_t i = 0; i < 32; i++) {
     FabrikBackward(eng, chain.base + 2);
@@ -889,9 +1063,25 @@ void MakeEffector(AnimEngine &eng, IkChainDescript &chain) {
   newEffector.positions = std::move(aNode.positions);
   newEffector.rotations = std::move(aNode.rotations);
   newEffector.parentAnimNode = chain.controlBase;
-  newEffector.refPosition = chain.effectorDirection;
+
+  AnimNode &newEffectorDir = eng.nodes[nodeId - 1000];
+  newEffectorDir.positions = std::move(eng.nodes.at(chain.base).positions);
+  newEffectorDir.refPosition = chain.effectorDirection;
   RelativeResample(eng, nodeId, chain.controlBase);
   RebakeNode(eng, nodeId);
+}
+
+void MakeDefaultPose(AnimEngine &eng, IkChainDescript &chain) {
+  for (uint8 i = 0; i < chain.numLinks; i++) {
+    AnimNode &node = eng.nodes.at(chain.base + i);
+    PoseRotation rotFc = chain.chainPoseRotations[i];
+    if (rotFc == DefaultRotation) {
+      continue;
+    }
+    node.rotations.clear();
+    node.rotations.insert(node.rotations.end(), eng.numSamples,
+                          Pack(rotFc(chain.base + i)));
+  }
 }
 
 void SetupChains(AnimEngine &eng, IkChainDescripts iks) {
@@ -906,8 +1096,9 @@ void SetupChains(AnimEngine &eng, IkChainDescripts iks) {
       IkChainDescript nChain{*tChain};
       nChain.base = nodeIndex;
       chains.emplace_back(nChain);
+      eng.usedIkNodes.emplace(
+          eng.nodes.at(nodeIndex + nChain.numLinks).glNodeIndex);
 
-      node.positions.clear(); // Unknown purpose, not positions
       MarkHierarchy(eng, marks, nodeIndex + nChain.numLinks);
 
       if (nChain.controlBase > -1) {
@@ -924,6 +1115,7 @@ void SetupChains(AnimEngine &eng, IkChainDescripts iks) {
 
   for (auto &chain : chains) {
     MakeEffector(eng, chain);
+    MakeDefaultPose(eng, chain);
     // Fabrik(eng, chain);
     // RebakeChain(eng, chain.base);
   }
