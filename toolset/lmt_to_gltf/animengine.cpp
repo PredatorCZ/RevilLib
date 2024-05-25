@@ -296,8 +296,8 @@ Vector4A16 DeltaRotation(Vector4A16 u, Vector4A16 v) {
     /* If u and v are exactly opposite, rotate 180 degrees
      * around an arbitrary orthogonal axis. Axis normalisation
      * can happen later, when we normalise the quaternion. */
-    w = abs(u.x) > abs(u.z) ? Vector4A16(-u.y, u.x, 0.f, 0)
-                            : Vector4A16(0.f, -u.z, u.y, 0);
+    w = abs(u.x) > abs(u.z) ? Vector4A16(-u.y, u.x, 0, 0)
+                            : Vector4A16(0, -u.z, u.y, 0);
   } else {
     /* Otherwise, build quaternion the standard way. */
     w = u.Cross(v);
@@ -519,16 +519,16 @@ struct IkChainDescript2 {
   IkConstraint constraints[3]{};
 };
 
-template <float x, float y, float z> Vector4A16 R(int32) {
-  static Vector4A16 retVal = Vector4A16{x, y, z, 0}.QComputeElement();
+template <int x, int y, int z> Vector4A16 R(int32) {
+  static Vector4A16 retVal = (Vector4A16{x, y, z, 0} / 1000).QComputeElement();
   return retVal;
 }
 
 IkChainDescript2 IK_DR_RIGHT_LEG{
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.370f, 0.099f, -0.239f>,
-        R<0.500f, 0.f, 0.f>,
+        R<-370, 99, -239>,
+        R<500, 0, 0>,
     },
     .useConstraints{true, true, true},
     .constraints{
@@ -541,8 +541,8 @@ IkChainDescript2 IK_DR_RIGHT_LEG{
 IkChainDescript2 IK_DR_LEFT_LEG{
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.370f, -0.099f, 0.239f>,
-        R<0.500f, 0.f, 0.f>,
+        R<-370, -99, 239>,
+        R<500, 0, 0>,
     },
     .useConstraints{true, true, true},
     .constraints{
@@ -557,16 +557,16 @@ IkChainDescript IK_EFFECTOR{};
 IkChainDescript IK_DR_LEFT_ARM{
     .effectorDirection{1, 0, 0, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, -0.500f>,
-        R<0.f, -0.500f, 0.f>,
+        R<0, 0, -500>,
+        R<0, -500, 0>,
     },
 };
 
 IkChainDescript IK_DR_RIGHT_ARM{
     .effectorDirection{-1, 0, 0, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, 0.500f>,
-        R<0.f, 0.500f, 0.f>,
+        R<0, 0, 500>,
+        R<0, 500, 0>,
     },
 };
 
@@ -591,9 +591,9 @@ IkChainDescript IK_LP_VS04_LEG{
     .numLinks = 3,
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.383f, 0.f, 0.f>,
-        R<0.259f, 0.f, 0.f>,
-        R<0.259f, 0.f, 0.f>,
+        R<-383, 0, 0>,
+        R<259, 0, 0>,
+        R<259, 0, 0>,
     },
 };
 
@@ -601,9 +601,9 @@ IkChainDescript IK_LP_VS00_LEFT_LEG{
     .numLinks = 3,
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.384f, -0.065f, -0.073f>,
-        R<0.383f, 0.f, 0.f>,
-        R<0.259f, 0.f, 0.f>,
+        R<-384, -65, -73>,
+        R<383, 0, 0>,
+        R<259, 0, 0>,
     },
 };
 
@@ -611,41 +611,41 @@ IkChainDescript IK_LP_VS00_RIGHT_LEG{
     .numLinks = 3,
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.384f, 0.065f, 0.073f>,
-        R<0.383f, 0.f, 0.f>,
-        R<0.259f, 0.f, 0.f>,
+        R<-384, 65, 73>,
+        R<383, 0, 0>,
+        R<259, 0, 0>,
     },
 };
 
 IkChainDescript IK_LP_VS00_RIGHT_ARM{
     .effectorDirection{0, 0, 1, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, 0.f>,
-        R<0.f, 0.707f, 0.f>,
+        R<0, 0, 0>,
+        R<0, 707, 0>,
     },
 };
 
 IkChainDescript IK_LP_VS00_LEFT_ARM{
     .effectorDirection{0, 0, 1, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, 0.f>,
-        R<0.f, -0.707f, 0.f>,
+        R<0, 0, 0>,
+        R<0, -707, 0>,
     },
 };
 
 IkChainDescript IK_LP_RIGHT_LEG_AKC0{
     .effectorDirection{-1, 0, 0, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, 0.259f>,
-        R<0.f, 0.f, 0.574f>,
+        R<0, 0, 259>,
+        R<0, 0, 574>,
     },
 };
 
 IkChainDescript IK_LP_LEFT_LEG_AKC0{
     .effectorDirection{1, 0, 0, 0},
     .chainPoseRotations{
-        R<0.f, 0.f, -0.259f>,
-        R<0.f, 0.f, -0.574f>,
+        R<0, 0, -259>,
+        R<0, 0, -574>,
     },
 };
 
@@ -663,7 +663,7 @@ IkChainDescript IK_LP_AK0B_RIGHT_LEG{
             return {0.5, 0, 0, 0.866};
           }
         },
-        R<-0.707f, 0.f, 0.f>,
+        R<-707, 0, 0>,
     },
 };
 
@@ -682,7 +682,7 @@ IkChainDescript IK_LP_AK0B_LEFT_LEG{
             return {0.5, 0, 0, 0.866};
           }
         },
-        R<-0.707f, 0.f, 0.f>,
+        R<-707, 0, 0>,
     },
 };
 
@@ -701,7 +701,7 @@ IkChainDescript IK_LP_AK09_LEG{
             return {-0.906, 0, 0, 0.423};
           }
         },
-        R<0.819f, 0.f, 0.f>,
+        R<819, 0, 0>,
     },
 };
 
@@ -762,8 +762,8 @@ IkChainDescript IK_LP_AK00_RIGHT_LEG{
 IkChainDescript IK_LP2_HM_LEG{
     .effectorDirection{0, -1, 0, 0},
     .chainPoseRotations{
-        R<-0.259f, 0.f, 0.f>,
-        R<0.500f, 0.f, 0.f>,
+        R<-259, 0, 0>,
+        R<500, 0, 0>,
     },
 };
 
