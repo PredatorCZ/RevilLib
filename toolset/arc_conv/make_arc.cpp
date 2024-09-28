@@ -106,9 +106,22 @@ struct ArcMakeContext : AppPackContext {
       return;
     }
 
+    uint32 hash = 0;
+
     if (hashes.size() > 1) {
-      printwarning("Skipped (multiple classes from extension): " << path);
-      return;
+      for (auto &h : hashes) {
+        if (revil::GetExtension(h, settings.title, settings.platform) ==
+            extension) {
+          if (hash) {
+            printwarning("Skipped (multiple classes from extension): " << path);
+            return;
+          }
+
+          hash = h;
+        }
+      }
+    } else {
+      hash = hashes.front();
     }
 
     auto noExt = path.substr(0, extPos);
@@ -168,7 +181,7 @@ struct ArcMakeContext : AppPackContext {
     auto &streamStore = tStream->streamStore;
     AFile curFile;
     curFile.offset = streamStore.Tell();
-    curFile.hash = hashes.front();
+    curFile.hash = hash;
     curFile.uSize = streamSize;
     curFile.path = noExt;
 
