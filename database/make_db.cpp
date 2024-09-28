@@ -47,9 +47,9 @@ struct TitleDB {
   ArcSupport arcSuport[NUM_PLATFORMS]{
       {0},
       ARC_WINPC_GENERIC,
+      ARC_N3DS_GENERIC,
       ARC_PS3_GENERIC,
       {},
-      ARC_N3DS_GENERIC,
       {},
       {},
       {},

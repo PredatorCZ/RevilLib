@@ -9,7 +9,7 @@ extern "C" const revil::Header REDB;
 using namespace revil;
 
 REFLECT(ENUMERATION(Platform), ENUM_MEMBER(Auto), ENUM_MEMBER(Win32),
-        ENUM_MEMBER(PS3), ENUM_MEMBER(X360), ENUM_MEMBER(N3DS),
+        ENUM_MEMBER(N3DS), ENUM_MEMBER(PS3), ENUM_MEMBER(X360),
         ENUM_MEMBER(CAFE), ENUM_MEMBER(NSW), ENUM_MEMBER(PS4),
         ENUM_MEMBER(Android), ENUM_MEMBER(IOS), ENUM_MEMBER(Win64));
 
@@ -121,7 +121,7 @@ Platforms GetPlatformSupport(std::string_view title) {
   Platforms flags;
 
   for (uint32 i = 1; i < NUM_PLATFORMS; i++) {
-    if (auto plat = found->data->support.operator->()[i].operator->(); plat) {
+    if (auto plat = found->data->support.operator->()[i - 1].operator->(); plat) {
       flags.emplace_back(Platform(refl->values[i]));
     }
   }
@@ -156,11 +156,12 @@ const TitleSupport *GetTitleSupport(std::string_view title, Platform platform) {
     for (uint32 i = 1; i < refl->numMembers; i++) {
       if (IsPlatformBigEndian(Platform(refl->values[i])) == inputPlatformBE &&
           platforms[i - 1].varPtr) {
-            if (foundSec) {
-              throw std::runtime_error("Ambiguous title support found from fallback.");
-            }
+        if (foundSec) {
+          throw std::runtime_error(
+              "Ambiguous title support found from fallback.");
+        }
 
-            foundSec = platforms[i - 1].operator->();
+        foundSec = platforms[i - 1].operator->();
       }
     }
   }
