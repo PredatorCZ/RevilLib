@@ -35,6 +35,7 @@ add_spike_subdir(obb_extract)
 add_spike_subdir(lmt_to_gltf)
 add_spike_subdir(sdl_conv)
 add_spike_subdir(dlc_extract)
+add_spike_subdir(fpk_extract)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
     add_spike_subdir(dev)
