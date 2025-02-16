@@ -498,6 +498,83 @@ std::map<uint32, MODAttributes> fallbackFormats{
             VertexColor,
         },
     },
+    {
+        // xd3 be, sb4
+        0xb6681034, // P3f_N4c_T4c_U2h_U2h_VC4c_U2h_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+            TexCoord,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
+    {
+        // xd3 be, sb4
+        0x49b4f029, // P3f_N4c_T4c_U2h_VC4c_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            VertexColor,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
+    {
+        // xd3 be, sb4
+        0x926fd02e, // P3f_N4c_T4c_U2h_U2h_VC4c_VC4c_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
+    {
+        // xd3 be, sb4
+        0x9399c033, // P3f_N4c_T4c_U2h_U2h_VC4c_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
+    {
+        // xd3 be, sb4
+        0x5e7f202c, // P3f_N4c_T4c_U2h_U2h_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
+    {
+        // xd3 be, sb4
+        0x747d1031, // P3f_N4c_T4c_U2h_U2h_U2h_unk
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            TexCoord,
+            V{D::R32, F::UINT, U::Undefined},
+        },
+    },
 };
 
 std::map<uint32, MODAttributes> formats{
