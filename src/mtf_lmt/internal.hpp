@@ -29,10 +29,6 @@ using namespace revil;
 
 struct LMTFixupStorage;
 
-static const char *idents[] = {
-    "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
-};
-
 struct TrackMinMax {
   Vector4A16 min;
   Vector4A16 max;

@@ -43,6 +43,7 @@ void REAsset::Load(BinReaderRef rd) {
 void REAssetImpl::Load(BinReaderRef rd) {
   const size_t fleSize = rd.GetSize();
   rd.ReadContainer(internalBuffer, fleSize);
+  buffer = internalBuffer.data();
   std::vector<void *> ptrStore;
   Fixup(ptrStore);
 }

@@ -56,6 +56,7 @@ struct RETrackController {
   virtual KnotSpan GetSpan(int32 frame) const = 0;
   virtual void Evaluate(uint32 id, Vector4A16 &out) const = 0;
   virtual ~RETrackController() = default;
+  virtual const char *CodecName() const = 0;
 };
 
 struct RETrackCurve43 {

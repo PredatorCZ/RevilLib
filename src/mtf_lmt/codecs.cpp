@@ -106,7 +106,7 @@ std::string_view RetreiveFromRawString(C *clPtr, std::string_view buffer) {
   size_t cBuff = 0;
 
   while (!buffer.empty() && cBuff < buffSize) {
-    const auto cRef = buffer.at(0);
+    const int cRef = buffer.at(0);
 
     if (cRef < '0' || cRef > 'F' || (cRef > '9' && cRef < 'A')) {
       buffer.remove_prefix(1);
@@ -904,6 +904,9 @@ void Buf_BiLinearRotationQuat4_9bit::Interpolate(
 template <class C>
 void Buff_EvalShared<C>::ToString(std::string &strBuff,
                                   size_t numIdents) const {
+  static const char *idents[] = {
+      "", "\t", "\t\t", "\t\t\t", "\t\t\t\t", "\t\t\t\t\t",
+  };
   std::stringstream str;
   str << std::endl << idents[numIdents];
 

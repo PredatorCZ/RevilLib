@@ -94,6 +94,9 @@ static Vector4A16 slerp(const Vector4A16 &v0, const Vector4A16 &_v1, float t) {
 }
 
 void REMotionTrackWorker::GetValue(Vector4A16 &output, float time) const {
+  // bugfix, some codecs will partialy apply elements, ensure we have identity
+  output = Vector4A16{};
+
   if (!controller) {
     return;
   }
