@@ -5,15 +5,15 @@
 #include "spike/io/binreader_stream.hpp"
 #include "spike/io/binwritter_stream.hpp"
 #include "spike/io/fileinfo.hpp"
+#include "spike/master_printer.hpp"
 #include "spike/uni/motion.hpp"
 #include "spike/uni/rts.hpp"
 #include "spike/uni/skeleton.hpp"
 #include <nlohmann/json.hpp>
 
 std::string_view filters[]{
-    ".mot.43$",     ".mot.65$",      ".mot.78$",
-    ".mot.458$",    ".motlist.60$",  ".motlist.85$",
-    ".motlist.99$", ".motlist.486$", {},
+    ".mot.43$",     ".mot.65$",     ".mot.78$",     ".mot.458$",
+    ".motlist.60$", ".motlist.85$", ".motlist.99$", ".motlist.486$",
 };
 
 static AppInfo_s appInfo{
@@ -32,7 +32,7 @@ public:
   void MakeKeyBuffers(const uni::MotionsConst &anims);
   void ProcessAnimation(const uni::Motion *anim);
   void ProcessSkeletons(const uni::SkeletonsConst &skels);
-  void Pipeline(const revil::REAsset &asset);
+  bool Pipeline(const revil::REAsset &asset);
 
 private:
   GLTFStream &CommonStream() {
@@ -127,6 +127,7 @@ void MOTGLTF::MakeKeyBuffers(const uni::MotionsConst &anims) {
 void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
   gltf::Animation animation;
   animation.name = anim->Name();
+  // PrintInfo(animation.name);
   auto &timeData = timesByFramerate.at(anim->FrameRate());
   auto &times = timeData.first;
   uint32 keyAccessor = timeData.second;
@@ -159,6 +160,9 @@ void MOTGLTF::ProcessAnimation(const uni::Motion *anim) {
     auto &curChannel = animation.channels.back();
     curChannel.sampler = animation.samplers.size();
     curChannel.target.node = boneRemaps.at(a->BoneIndex());
+
+    // PrintInfo(nodes.at(curChannel.target.node).name, ": ", static_cast<const
+    // REMotionTrackWorker*>(a.get())->controller->CodecName());
 
     animation.samplers.emplace_back();
     auto &sampler = animation.samplers.back();
@@ -245,8 +249,13 @@ void MOTGLTF::ProcessSkeletons(const uni::SkeletonsConst &skels) {
   gltfutils::VisualizeSkeleton(*this, infos);
 }
 
-void MOTGLTF::Pipeline(const revil::REAsset &asset) {
+bool MOTGLTF::Pipeline(const revil::REAsset &asset) {
   auto skels = asset.As<uni::SkeletonsConst>();
+  if (skels->Size() == 0) {
+    PrintWarning("File doesn't contain skeleton, skipping.");
+    return false;
+  }
+
   ProcessSkeletons(skels);
   auto anims = asset.As<uni::MotionsConst>();
   MakeKeyBuffers(anims);
@@ -254,14 +263,18 @@ void MOTGLTF::Pipeline(const revil::REAsset &asset) {
   for (auto a : *anims) {
     ProcessAnimation(a.get());
   }
+
+  return true;
 }
 
 void AppProcessFile(AppContext *ctx) {
   revil::REAsset asset;
   asset.Load(ctx->GetStream());
   MOTGLTF main;
-  main.Pipeline(asset);
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
+  if (main.Pipeline(asset)) {
+    BinWritterRef wr(
+        ctx->NewFile(ctx->workingFile.ChangeExtension(".glb")).str);
 
-  main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
+    main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
+  }
 }

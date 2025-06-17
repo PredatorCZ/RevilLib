@@ -94,6 +94,10 @@ struct LinearVector3Controller : RETrackController_internal {
   void Evaluate(uint32 id, Vector4A16 &out) const override {
     out = dataStorage[id];
   }
+
+  const char *CodecName() const override {
+    return "LinearVector3Controller";
+  }
 };
 
 struct BiLinearVector3_5bitController : RETrackController_internal {
@@ -119,6 +123,9 @@ struct BiLinearVector3_5bitController : RETrackController_internal {
 
     out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
+  }
+  const char *CodecName() const override {
+    return "BiLinearVector3_5bitController";
   }
 };
 
@@ -146,6 +153,9 @@ struct BiLinearVector3_10bitController : RETrackController_internal {
     out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
   }
+  const char *CodecName() const override {
+    return "BiLinearVector3_10bitController";
+  }
 };
 
 struct BiLinearVector3_21bitController : RETrackController_internal {
@@ -171,6 +181,9 @@ struct BiLinearVector3_21bitController : RETrackController_internal {
 
     out = data & componentMask;
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
+  }
+  const char *CodecName() const override {
+    return "BiLinearVector3_21bitController";
   }
 };
 
@@ -203,6 +216,9 @@ struct BiLinearQuat3_13bitController : RETrackController_internal {
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
   }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_13bitController";
+  }
 };
 
 struct BiLinearQuat3_16bitController : RETrackController_internal {
@@ -223,6 +239,9 @@ struct BiLinearQuat3_16bitController : RETrackController_internal {
     out = ((out * componentMultiplier) * minMaxBounds.min) + minMaxBounds.max;
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_16bitController";
   }
 };
 
@@ -259,6 +278,9 @@ struct BiLinearQuat3_18bitController : RETrackController_internal {
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
   }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_18bitController";
+  }
 };
 
 struct BiLinearQuat3_8bitController : RETrackController_internal {
@@ -280,16 +302,22 @@ struct BiLinearQuat3_8bitController : RETrackController_internal {
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
   }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_8bitController";
+  }
 };
 
 struct LinearQuat3Controller : LinearVector3Controller {
   static constexpr uint32 ID1 = 0xB0112;
   static constexpr uint32 ID2 = 0xC0112;
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override {
     LinearVector3Controller::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "LinearQuat3Controller";
   }
 };
 
@@ -305,6 +333,9 @@ struct BiLinearQuat3_5bitController : BiLinearVector3_5bitController {
     BiLinearVector3_5bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_5bitController";
   }
 };
 
@@ -322,6 +353,9 @@ struct BiLinearQuat3_10bitController : BiLinearVector3_10bitController {
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
   }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_10bitController";
+  }
 };
 
 struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
@@ -337,6 +371,9 @@ struct BiLinearQuat3_21bitController : BiLinearVector3_21bitController {
     BiLinearVector3_21bitController::Evaluate(id, out);
     out *= Vector4A16(1.f, 1.f, 1.f, 0.0f);
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearQuat3_21bitController";
   }
 };
 
@@ -365,6 +402,9 @@ struct LinearSCVector3Controller : RETrackController_internal {
       out = minMaxBounds.min;
       out[componentID] = retreived;
     }
+  }
+  const char *CodecName() const override {
+    return "LinearSCVector3Controller";
   }
 };
 
@@ -399,6 +439,9 @@ struct BiLinearSCVector3_16bitController : RETrackController_internal {
       out[componentID] = decompVal;
     }
   }
+  const char *CodecName() const override {
+    return "BiLinearSCVector3_16bitController";
+  }
 };
 
 struct BiLinearSCQuat3Controller : LinearSCVector3Controller {
@@ -409,9 +452,12 @@ struct BiLinearSCQuat3Controller : LinearSCVector3Controller {
   static constexpr uint32 ID5 = 0x42112;
   static constexpr uint32 ID6 = 0x43112;
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override {
     out[componentID] = dataStorage[id];
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearSCQuat3Controller";
   }
 };
 
@@ -420,12 +466,15 @@ struct BiLinearSCQuat3_16bitController : BiLinearSCVector3_16bitController {
   static constexpr uint32 ID2 = 0x22112;
   static constexpr uint32 ID3 = 0x23112;
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override {
     const uint16 &retreived = dataStorage[id];
     out[componentID] = minMaxBounds.min[1] +
                        (minMaxBounds.min[0] *
                         (static_cast<float>(retreived) * componentMultiplier));
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearSCQuat3_16bitController";
   }
 };
 
@@ -434,12 +483,15 @@ struct BiLinearSCQuat3_16bitController_old : BiLinearSCQuat3_16bitController {
   static constexpr uint32 ID2 = 0x22112;
   static constexpr uint32 ID3 = 0x23112;
 
-  void Evaluate(uint32 id, Vector4A16 &out) const {
+  void Evaluate(uint32 id, Vector4A16 &out) const override {
     const uint16 &retreived = dataStorage[id];
     out[componentID] = minMaxBounds.max[componentID] +
                        (minMaxBounds.min[componentID] *
                         (static_cast<float>(retreived) * componentMultiplier));
     out.QComputeElement();
+  }
+  const char *CodecName() const override {
+    return "BiLinearSCQuat3_16bitController_old";
   }
 };
 
