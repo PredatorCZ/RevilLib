@@ -18,6 +18,7 @@
 #include "arc_conv.hpp"
 #include "project.h"
 #include "revil/arc.hpp"
+#include "spike/format/WAVE.hpp"
 #include "spike/io/binreader.hpp"
 #include "spike/io/binwritter.hpp"
 #include "spike/io/stat.hpp"
@@ -45,6 +46,7 @@ static AppInfo_s appInfo{
     .header = ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
                               "Lukas Cone",
     .settings = reinterpret_cast<ReflectorFriend *>(&settings),
+
 };
 
 AppInfo_s *AppInitModule() { return &appInfo; }
@@ -110,15 +112,40 @@ struct ArcMakeContext : AppPackContext {
     uint32 hash = 0;
 
     if (hashes.size() > 1) {
-      for (auto &h : hashes) {
-        if (revil::GetExtension(h, settings.title, settings.platform) ==
-            extension) {
-          if (hash) {
-            printwarning("Skipped (multiple classes from extension): " << path);
-            return;
+      // Crude hack for RE5 PS4, where at9 is used for se and bgm
+      if (extension == "at9") {
+        char fwdata[256];
+        stream.read(fwdata, sizeof(fwdata));
+        RIFFHeader *riffHdr = reinterpret_cast<RIFFHeader *>(fwdata);
+        if (riffHdr->id == RIFFHeader::ID) {
+          WAVEGenericHeader *nextHdr = riffHdr + 1;
+
+          if (nextHdr->id == WAVE_fact::ID) {
+            nextHdr = nextHdr->Next();
           }
 
-          hash = h;
+          if (nextHdr->id == WAVE_smpl::ID) {
+            hash = revil::MTHashV2("rSoundSourceStreamAT9");
+          } else {
+            hash = revil::MTHashV2("rSoundSourceSeAT9");
+          }
+
+          hashes.clear();
+        }
+      }
+
+      if (hashes.size() > 1) {
+        for (auto &h : hashes) {
+          if (revil::GetExtension(h, settings.title, settings.platform) ==
+              extension) {
+            if (hash) {
+              printwarning(
+                  "Skipped (multiple classes from extension): " << path);
+              return;
+            }
+
+            hash = h;
+          }
         }
       }
     } else {
@@ -148,7 +175,7 @@ struct ArcMakeContext : AppPackContext {
     std::string outBuffer;
 
     auto CompressData = [&](auto &&buffer, int cType) {
-      outBuffer.resize(std::max(buffer.size() + 0x10, size_t(0x8000)));
+      outBuffer.resize(std::max(buffer.size() + 0x100, size_t(0x8000)));
       return revil::CompressZlib(buffer, outBuffer, ts->arc.windowSize, cType);
     };
 

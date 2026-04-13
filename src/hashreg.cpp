@@ -80,14 +80,39 @@ void GetTitles(TitleCallback cb) {
   extCommon map
   if platform not auto lookup class from ext<platform> map
 */
-std::span<const uint32> GetHash(std::string_view extension,
-                                std::string_view title, Platform platform) {
-  auto supp = GetTitleSupport(title, platform);
+std::vector<uint32> GetHash(std::string_view extension, std::string_view title,
+                            Platform platform_) {
+  auto supp = GetTitleSupport(title, platform_);
+  const uint8 platform = uint8(platform_) & PLATFORM_MASK;
 
-  auto hashes =
-      ClassesFromExtension(REDB, extension, supp->arc.flags & DbArc_Version1);
+  std::vector<uint32> hashes;
 
-  if (hashes.size() > 0) {
+  if (!title.empty()) {
+    auto oKey = LowerBound(title, REDB.titles);
+
+    if (oKey != REDB.titles.end() && std::string_view(oKey->name) == title) {
+      for (auto &fx : oKey->data->fixups) {
+        if (fx.platform == platform || fx.platform == 0) {
+          const ResourceClass *fClasses = fx.classes.operator->();
+
+          for (size_t i = 0; i < fx.numItems; i++) {
+            if (std::string_view fExt(fClasses[i].extension); 
+            fExt == extension) {
+              hashes.emplace_back(fClasses[i].hash);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (hashes.empty()) {
+    auto spn =
+        ClassesFromExtension(REDB, extension, supp->arc.flags & DbArc_Version1);
+    if (spn.size() > 0) {
+      return {spn.begin(), spn.end()};
+    }
+  } else {
     return hashes;
   }
 
@@ -100,13 +125,13 @@ std::span<const uint32> GetHash(std::string_view extension,
     return {};
   }
 
-  auto extTranslated = GetExtension(cvted, title, platform);
+  auto extTranslated = GetExtension(cvted, title, platform_);
 
   if (extTranslated.empty()) {
     return {};
   }
 
-  return GetHash(extTranslated, title, platform);
+  return GetHash(extTranslated, title, platform_);
 }
 
 Platforms GetPlatformSupport(std::string_view title) {

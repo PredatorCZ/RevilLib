@@ -401,9 +401,7 @@ static const uint32 crc32bBoxes[][0x100] = {
     },
 };
 
-// Basically CRC32B with small adjustments
-uint32 revil::MTHashV2(std::string_view data) {
-  uint32 retval = 0xFFFFFFFF;
+uint32 revil::MTHashV2(std::string_view data, uint32 prev) {
   const size_t numChunks = data.size() / 8;
   const size_t numRest = data.size() % 8;
   union Chunk {
@@ -415,11 +413,11 @@ uint32 revil::MTHashV2(std::string_view data) {
   for (size_t i = 0; i < numChunks; i++) {
     Chunk main;
     memcpy(&main, data.data() + i * 8, 8);
-    main.lowerPart ^= retval;
-    retval = 0;
+    main.lowerPart ^= prev;
+    prev = 0;
 
     for (size_t n = 0; n < 8; n++) {
-      retval ^= crc32bBoxes[7 - n][main.nibbles[n]];
+      prev ^= crc32bBoxes[7 - n][main.nibbles[n]];
     }
   }
 
@@ -428,10 +426,14 @@ uint32 revil::MTHashV2(std::string_view data) {
     memcpy(&main, data.data() + numChunks * 8, numRest);
 
     for (size_t n = 0; n < numRest; n++) {
-      retval =
-          (retval >> 8) ^ crc32bBoxes[0][(retval & 0xFF) ^ main.nibbles[n]];
+      prev = (prev >> 8) ^ crc32bBoxes[0][(prev & 0xFF) ^ main.nibbles[n]];
     }
   }
 
-  return retval & 0x7FFFFFFF;
+  return prev;
+}
+
+// Basically CRC32B with small adjustments
+uint32 revil::MTHashV2(std::string_view data) {
+  return MTHashV2(data, 0xFFFFFFFF) & 0x7FFFFFFF;
 }

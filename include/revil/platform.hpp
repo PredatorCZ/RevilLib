@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -87,6 +87,7 @@ struct TitleSupport {
   uint16 lmtVersion;
   uint16 texVersion;
   uint16 xfsVersion;
+  uint16 sdlVersion;
 };
 
 } // namespace revil

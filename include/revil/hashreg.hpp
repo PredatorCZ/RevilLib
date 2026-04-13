@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2023 Lukas Cone
+    Copyright(C) 2020-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -33,12 +33,13 @@ std::string_view RE_EXTERN GetExtension(uint32 hash,
                                         Platform platform = Platform::Win32);
 std::string_view RE_EXTERN GetClassName(uint32 hash);
 
-std::span<const uint32> RE_EXTERN GetHash(std::string_view extension,
-                                          std::string_view title,
-                                          Platform platform = Platform::Win32);
+std::vector<uint32> RE_EXTERN GetHash(std::string_view extension,
+                                      std::string_view title,
+                                      Platform platform = Platform::Win32);
 using TitleCallback = std::function<void(std::string_view)>;
 void RE_EXTERN GetTitles(TitleCallback cb);
 
 uint32 RE_EXTERN MTHashV1(std::string_view text);
 uint32 RE_EXTERN MTHashV2(std::string_view text);
+uint32 RE_EXTERN MTHashV2(std::string_view text, uint32 prev);
 }; // namespace revil

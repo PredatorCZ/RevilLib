@@ -11,7 +11,7 @@
 
 MAKE_ENUM(ENUMSCOPE(class revil__Family, revil__Family), EMEMBER(NONE),
           EMEMBER(Classes), EMEMBER(ARC), EMEMBER(MOD), EMEMBER(LMT),
-          EMEMBER(TEX), EMEMBER(XFS));
+          EMEMBER(TEX), EMEMBER(XFS), EMEMBER(SDL));
 
 MAKE_ENUM(ENUMSCOPE(class revil__Platform, revil__Platform), EMEMBER(Auto),
           EMEMBER(Win32), EMEMBER(N3DS), EMEMBER(PS3), EMEMBER(X360),
@@ -61,6 +61,7 @@ struct TitleDB {
   uint16 lmtVersions[NUM_PLATFORMS]{};
   uint16 texVersions[NUM_PLATFORMS]{};
   uint16 xfsVersions[NUM_PLATFORMS]{};
+  uint16 sdlVersions[NUM_PLATFORMS]{};
   bool usedPlatforms[NUM_PLATFORMS]{};
 };
 
@@ -139,6 +140,12 @@ static const Executor executors[]{
       auto &xfs = GLOBAL_DB.back().xfsVersions[uint32(plt)];
       if (key == "Version") {
         xfs = GetNumber(value);
+      }
+    },
+    [](revil__Platform plt, std::string_view key, std::string_view value) {
+      auto &sdl = GLOBAL_DB.back().sdlVersions[uint32(plt)];
+      if (key == "Version") {
+        sdl = GetNumber(value);
       }
     },
 };
@@ -755,6 +762,7 @@ size_t DoSupport(BinWritterRef wr,
           .lmtVersion = t.lmtVersions[p] ? t.lmtVersions[p] : t.lmtVersions[0],
           .texVersion = t.texVersions[p] ? t.texVersions[p] : t.texVersions[0],
           .xfsVersion = t.xfsVersions[p] ? t.xfsVersions[p] : t.xfsVersions[0],
+          .sdlVersion = t.sdlVersions[p] ? t.sdlVersions[p] : t.sdlVersions[0],
       };
 
       if (auto found = supportPalette.find(supp);
@@ -840,6 +848,24 @@ DoTitleFixups(BinWritterRef wr, size_t indicesBegin, const Header *hdr,
         }
 
         if (std::string_view(found->extension) != c.extension) {
+          fixups[p].emplace_back(ResourceClass{
+              Class{
+                  .hash = hash,
+                  .name = {{
+                      .size = uint32(c.name.size()),
+                      .offset = int32(sliderOffsets.at(c.name)),
+                  }},
+              },
+              {{
+                  .size = uint32(c.extension.size()),
+                  .offset = int32(sliderOffsets.at(c.extension)),
+              }},
+          });
+        }
+
+        if (auto classExtensions =
+                ClassesFromExtension(*hdr, c.extension, d.version1);
+            classExtensions.size() > 1) {
           fixups[p].emplace_back(ResourceClass{
               Class{
                   .hash = hash,
@@ -975,6 +1001,11 @@ void ValidateDb(const Header *shdr) {
 
         if (support.xfsVersion !=
             (d.xfsVersions[p] ? d.xfsVersions[p] : d.xfsVersions[0])) {
+          throw es::RuntimeError("Validation failed");
+        }
+
+        if (support.sdlVersion !=
+            (d.sdlVersions[p] ? d.sdlVersions[p] : d.sdlVersions[0])) {
           throw es::RuntimeError("Validation failed");
         }
       }
