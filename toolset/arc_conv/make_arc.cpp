@@ -320,6 +320,7 @@ struct ArcMakeContext : AppPackContext {
         wr.WriteBuffer(buffer, restBytes);
       }
 
+      es::Dispose(rd);
       es::RemoveFile(stream.streamPath);
     }
   }
