@@ -284,10 +284,8 @@ struct ArcMakeContext : AppPackContext {
       cFile.uncompressedSize = f.uSize;
       cFile.compressedSize = f.cSize;
 
-      if (settings.platform == Platform::Win32) {
-        std::replace(std::begin(cFile.fileName), std::end(cFile.fileName), '/',
-                     '\\');
-      }
+      std::replace(std::begin(cFile.fileName), std::end(cFile.fileName), '/',
+                   '\\');
 
       wr.Write(cFile);
     };
