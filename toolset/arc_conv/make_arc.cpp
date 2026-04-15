@@ -31,16 +31,12 @@
 static struct ARCMake : ReflectorBase<ARCMake> {
   std::string title;
   Platform platform = Platform::Auto;
-  bool forceZLIBHeader = false;
 } settings;
 
 REFLECT(CLASS(ARCMake),
         MEMBER(title, "t", ReflDesc{"Set title for correct archive handling."}),
         MEMBER(platform, "p",
-               ReflDesc{"Set platform for correct archive handling."}),
-        MEMBERNAME(forceZLIBHeader, "force-zlib-header", "z",
-                   ReflDesc{"Force ZLIB header for files that won't be "
-                            "compressed. (Some platforms only)"}));
+               ReflDesc{"Set platform for correct archive handling."}));
 
 static AppInfo_s appInfo{
     .header = ARCConvert_DESC " v" ARCConvert_VERSION ", " ARCConvert_COPYRIGHT
@@ -203,7 +199,7 @@ struct ArcMakeContext : AppPackContext {
         appInfo.internalSettings->compressSettings.ratioThreshold;
     const size_t verbosityLevel = appInfo.internalSettings->verbosity;
 
-    if (streamSize > minFileSize || settings.forceZLIBHeader) {
+    if (streamSize > minFileSize || settings.platform != revil::Platform::PS3) {
       buffer.resize(streamSize);
       stream.read(&buffer[0], streamSize);
     } else {
@@ -230,7 +226,7 @@ struct ArcMakeContext : AppPackContext {
                     << "%% for " << path);
         }
 
-        if (settings.forceZLIBHeader) {
+        if (settings.platform != revil::Platform::PS3) {
           compressedSize = CompressData(buffer, 0);
         } else { // compressed with failed ratio
           compressedSize = streamSize;
