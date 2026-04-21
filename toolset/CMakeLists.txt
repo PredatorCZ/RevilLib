@@ -33,7 +33,7 @@ add_spike_subdir(xfs_conv)
 add_spike_subdir(udas_extract)
 add_spike_subdir(obb_extract)
 add_spike_subdir(lmt_to_gltf)
-add_spike_subdir(sdl_conv)
+add_spike_subdir(binary)
 add_spike_subdir(dlc_extract)
 add_spike_subdir(fpk_extract)
 

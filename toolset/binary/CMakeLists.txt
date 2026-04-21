@@ -1,39 +1,39 @@
-project(SDLConvert)
+project(MTFBinaryConvert)
 
 build_target(
   NAME
-  sdl_to_xml
+  bin_to_xml
   TYPE
   ESMODULE
   VERSION
   1
   SOURCES
-  sdl_to_xml.cpp
+  bin_to_xml.cpp
   LINKS
   revil-interface
   pugixml-interface
   AUTHOR
   "Lukas Cone"
   DESCR
-  "MTF SDL to XML converter"
+  "MTF binary to XML converter"
   START_YEAR
   2023)
 
 build_target(
   NAME
-  xml_to_sdl
+  xml_to_bin
   TYPE
   ESMODULE
   VERSION
   1
   SOURCES
-  xml_to_sdl.cpp
+  xml_to_bin.cpp
   LINKS
   revil-interface
   pugixml-interface
   AUTHOR
   "Lukas Cone"
   DESCR
-  "MTF XML to SDL converter"
+  "MTF XML to binary converter"
   START_YEAR
   2023)

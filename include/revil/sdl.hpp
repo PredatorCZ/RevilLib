@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,13 +16,20 @@
 */
 
 #pragma once
+#include "settings.hpp"
 #include "spike/io/bincore_fwd.hpp"
 #include "spike/util/pugi_fwd.hpp"
-#include "settings.hpp"
 #include <memory>
 
 namespace revil {
 class SDLImpl;
+
+enum class SDLVersion : uint16 {
+  V_9 = 9,
+  V_16 = 16,
+  V_17 = 17,
+  V_20 = 20,
+};
 
 class RE_EXTERN SDL {
 public:
@@ -36,5 +43,6 @@ private:
   std::unique_ptr<SDLImpl> pi;
 };
 
-void RE_EXTERN SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode);
+void RE_EXTERN SDLFromXML(BinWritterRef wr, pugi::xml_node rootNode,
+                          SDLVersion version);
 } // namespace revil
