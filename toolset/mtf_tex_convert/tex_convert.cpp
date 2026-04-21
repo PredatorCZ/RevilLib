@@ -17,11 +17,15 @@
 
 #include "project.h"
 #include "re_common.hpp"
+#include "revil/arc.hpp"
+#include "revil/hashreg.hpp"
 #include "revil/tex.hpp"
 #include "spike/io/binreader_stream.hpp"
+#include <spanstream>
 
 std::string_view filters[]{
     ".tex$",
+    ".arc$",
 };
 
 struct TEXConvert : ReflectorBase<TEXConvert> {
@@ -42,11 +46,15 @@ static AppInfo_s appInfo{
 
 AppInfo_s *AppInitModule() { return &appInfo; }
 
-void AppProcessFile(AppContext *ctx) {
+void Convert(std::istream &str, const std::string &path, AppContext *ctx) {
   TEX tex;
-  tex.Load(ctx->GetStream(), settings.platformOverride);
+  tex.Load(str, settings.platformOverride);
 
-  auto tctx = ctx->NewImage(tex.ctx);
+  std::string fullPath(ctx->workingFile.GetFolder());
+  fullPath.append(path);
+  fullPath.append(".glb");
+
+  auto tctx = ctx->NewImage(tex.ctx, &fullPath);
 
   if (tex.ctx.numFaces > 0) {
     for (uint16 f = 0; f < tex.ctx.numFaces; f++) {
@@ -68,4 +76,37 @@ void AppProcessFile(AppContext *ctx) {
       tctx->SendRasterData(tex.buffer.data() + tex.offsets.at(m), layout);
     }
   }
+}
+
+struct ExtractContext : ArcExtractContext {
+  AppContext *parentCtx;
+  std::string curFile;
+
+  void NewFile(const std::string &path) override {
+    curFile = AFileInfo(path).GetFullPathNoExt();
+  }
+  void SendData(std::string_view data) override {
+    std::ispanstream spstr(std::span<const char>(data.data(), data.size()));
+    Convert(spstr, curFile, parentCtx);
+  }
+};
+
+void AppProcessFile(AppContext *ctx) {
+  if (ctx->workingFile.GetExtension() == ".arc") {
+    static const std::set<uint32> filter{
+        MTHashV1("rTexture"),
+        MTHashV2("rTexture"),
+    };
+
+    ExtractContext ectx;
+    ectx.parentCtx = ctx;
+
+    EnumerateArchive(
+        ctx->GetStream(), settings.platformOverride, "lp",
+        [&] { return &ectx; }, filter);
+    return;
+  }
+
+  Convert(ctx->GetStream(), std::string(ctx->workingFile.GetFilenameExt()),
+          ctx);
 }
