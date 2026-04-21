@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2023 Lukas Cone
+    Copyright(C) 2020-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "spike/crypto/blowfish.h"
 #include "spike/io/fileinfo.hpp"
 #include "spike/master_printer.hpp"
+#include <algorithm>
 #include <set>
 
 #include "lzx.h"
@@ -146,7 +147,8 @@ auto ReadARCC(BinReaderRef_e rd, BlowfishEncoder &enc) {
 void revil::EnumerateArchive(BinReaderRef_e rd, Platform platform,
                              std::string_view title,
                              std::function<AppExtractContext *()> demandContext,
-                             const std::set<uint32> &classFilter) {
+                             const std::set<uint32> &classFilter,
+                             bool filterIsBlackList) {
   uint32 id;
   rd.Push();
   rd.Read(id);
@@ -180,12 +182,15 @@ void revil::EnumerateArchive(BinReaderRef_e rd, Platform platform,
     auto ectx = demandContext();
     if (ectx->RequiresFolders()) {
       for (auto &f : files) {
-        if (classFilter.size() > 0 && !classFilter.contains(f.typeHash)) {
+        if (classFilter.size() > 0 &&
+            classFilter.contains(f.typeHash) == filterIsBlackList) {
           continue;
         }
 
         AFileInfo inf(f.fileName);
-        const std::string cFolder(inf.GetFolder());
+        std::string cFolder(inf.GetFolder());
+        std::transform(cFolder.begin(), cFolder.end(), cFolder.begin(),
+                       [](char c) { return tolower(c); });
         ectx->AddFolderPath(cFolder);
       }
 
@@ -221,7 +226,8 @@ void revil::EnumerateArchive(BinReaderRef_e rd, Platform platform,
         continue;
       }
 
-      if (classFilter.size() > 0 && !classFilter.contains(f.typeHash)) {
+      if (classFilter.size() > 0 &&
+          classFilter.contains(f.typeHash) == filterIsBlackList) {
         continue;
       }
 
@@ -264,6 +270,8 @@ void revil::EnumerateArchive(BinReaderRef_e rd, Platform platform,
 
       auto ext = revil::GetExtension(f.typeHash, title, platform);
       std::string filePath = f.fileName;
+      std::transform(filePath.begin(), filePath.end(), filePath.begin(),
+                     [](char c) { return tolower(c); });
       filePath.push_back('.');
 
       if (ext.empty()) {

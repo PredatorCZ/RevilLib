@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2023 Lukas Cone
+    Copyright(C) 2020-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -99,12 +99,13 @@ struct ARC : ARCBase {
   int32 LZXTag = 0;
 
   bool IsLZX() const { return version == 0x11 && LZXTag > 0; }
+  bool IsUncompressed() const { return version >= 0x10 && LZXTag == 1; }
 };
 
 using ARCFiles = std::vector<ARCFile>;
 using ARCExtendedFiles = std::vector<ARCExtendedFile>;
 
-auto ReadARC(BinReaderRef_e rd) {
+inline auto ReadARC(BinReaderRef_e rd) {
   ARC hdr;
   rd.Read(hdr);
 
@@ -131,7 +132,7 @@ auto ReadARC(BinReaderRef_e rd) {
   return std::make_tuple(hdr, files);
 }
 
-auto ReadExtendedARC(BinReaderRef_e rd) {
+inline auto ReadExtendedARC(BinReaderRef_e rd) {
   ARC hdr;
   rd.Read(hdr);
 

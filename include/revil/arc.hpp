@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2020-2023 Lukas Cone
+    Copyright(C) 2020-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -42,6 +42,6 @@ struct ArcExtractContext : AppExtractContext {
 void RE_EXTERN
 EnumerateArchive(BinReaderRef_e rd, Platform platform, std::string_view title,
                  std::function<AppExtractContext *()> demandContext,
-                 const std::set<uint32> &classFilter);
+                 const std::set<uint32> &classFilter, bool filterIsBlackList = false);
 size_t RE_EXTERN CompressZlib(std::string_view inBuffer, std::string &outBuffer, int windowSize, int level);
 } // namespace revil
