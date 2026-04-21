@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include "pugixml.hpp"
 #include "revil/mod.hpp"
 #include "spike/reflect/reflector.hpp"
 #include "spike/type/matrix44.hpp"
@@ -48,14 +49,15 @@ public:
   std::vector<es::Matrix44> transforms;
   std::vector<MODEnvelope> envelopes;
   std::vector<MODGroup> groups;
-  MODBounds bounds;
+  Vector4A16 boundingSphere;
+  MtAABB boundingBox;
   MODMetaData simpleMetadata;
   std::vector<MODPrimitive> primitives;
   std::vector<MODSkinJoints> skins;
   std::vector<std::string> paths;
   std::vector<MODVertexSpan> vertices;
   std::vector<MODIndexSpan> indices;
-  std::vector<MODMaterial> materialRefs;
+  std::vector<MODMaterial *> materialRefs;
   std::vector<MODBone> simpleBones;
 
   virtual ~MODImpl() = default;
@@ -67,11 +69,23 @@ public:
   virtual const MODMetaData &Metadata() const = 0;
 };
 
-template <class material_type> class MODMaterialProxy {
+template <class T> using use_name = decltype(std::declval<T>().Name());
+template <class C>
+constexpr static bool use_name_v = es::is_detected_v<use_name, C>;
+
+template <class material_type>
+class MODMaterialProxy : public revil::MODMaterial {
 public:
   material_type main;
-  ReflectorWrap<material_type> asMetadata{main};
 
+  std::string GetName() const override {
+    if constexpr (use_name_v<std::decay_t<decltype(main)>>) {
+      return main.Name();
+    }
+
+    return {};
+  }
+  void ToXML(pugi::xml_node node) const override { main.ToXML(node); }
   void Write(BinWritterRef) const;
   void Read(BinReaderRef_e);
 };

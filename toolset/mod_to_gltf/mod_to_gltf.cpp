@@ -1,5 +1,5 @@
 /*  MOD2GLTF
-    Copyright(C) 2021-2022 Lukas Cone
+    Copyright(C) 2021-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,15 +16,20 @@
 */
 
 #include "project.h"
+#include "pugixml.hpp"
 #include "re_common.hpp"
+#include "revil/arc.hpp"
+#include "revil/hashreg.hpp"
 #include "revil/mod.hpp"
 #include "spike/gltf.hpp"
 #include "spike/io/binreader_stream.hpp"
 #include "spike/io/binwritter_stream.hpp"
+#include <spanstream>
 
 std::string_view filters[]{
     ".mod$",
     ".dom$",
+    ".arc$",
 };
 
 struct MOD2GLTF : ReflectorBase<MOD2GLTF> {
@@ -32,6 +37,7 @@ struct MOD2GLTF : ReflectorBase<MOD2GLTF> {
   bool quantizeMeshFake = false;
   bool noLods = true;
   bool mergeMeshes = true;
+  bool generateModelInfo = false;
 } settings;
 
 REFLECT(
@@ -43,7 +49,9 @@ REFLECT(
         ReflDesc{"KHR_mesh_quantization is not marked as required extension."}),
     MEMBERNAME(noLods, "no-lods", "l", ReflDesc{"Do not export LOD meshes."}),
     MEMBERNAME(mergeMeshes, "merge-meshes", "m",
-               ReflDesc{"Merge meshes as groups"}), );
+               ReflDesc{"Merge meshes as groups"}),
+    MEMBERNAME(generateModelInfo, "generate-model-info", "i",
+               ReflDesc{"Generate model info xml alongside gltf."}), );
 
 static AppInfo_s appInfo{
     .filteredLoad = true,
@@ -145,14 +153,15 @@ size_t MODGLTF::MakeSkin(const revil::MODSkinJoints joints,
 
 std::string LODName(const revil::MODPrimitive &lod) {
   std::string retval("LOD");
+  using F = revil::MODPrimitive::Flags;
 
-  if (lod.lod1) {
+  if (lod.flags == F::Lod1) {
     retval.push_back('1');
   }
-  if (lod.lod2) {
+  if (lod.flags == F::Lod2) {
     retval.push_back('2');
   }
-  if (lod.lod3) {
+  if (lod.flags == F::Lod3) {
     retval.push_back('3');
   }
 
@@ -206,9 +215,11 @@ void MODGLTF::ProcessModel(const revil::MOD &model) {
 
   std::map<uint64, gltf::Mesh> uniqMeshes;
   std::map<uint32, uint32> usedMaterials;
+  using F = revil::MODPrimitive::Flags;
 
   for (auto &p : model.Primitives()) {
-    if (!p.lod1 && settings.noLods && (p.lod2 || p.lod3)) {
+    if (p.flags != F::Lod1 && settings.noLods &&
+        (p.flags == F::Lod2 || p.flags == F::Lod3)) {
       continue;
     }
 
@@ -243,7 +254,7 @@ void MODGLTF::ProcessModel(const revil::MOD &model) {
       auto &m = model.Materials()[p.materialIndex];
 
       gltf::Material &gMat = materials.emplace_back();
-      gMat.name = m.name;
+      gMat.name = m->GetName();
       if (gMat.name.empty()) {
         gMat.name = "Material_" + std::to_string(prim.material);
       }
@@ -251,16 +262,16 @@ void MODGLTF::ProcessModel(const revil::MOD &model) {
       prim.material = usedMaterials.at(p.materialIndex);
     }
 
-    prim.mode = p.triStrips ? gltf::Primitive::Mode::TriangleStrip
-                            : gltf::Primitive::Mode::Triangles;
+    prim.mode = p.flags == F::TriStrips ? gltf::Primitive::Mode::TriangleStrip
+                                        : gltf::Primitive::Mode::Triangles;
 
     if (settings.mergeMeshes) {
       ShareKey key{{
           .groupId = p.groupId,
           .skinIndex = uint8(p.skinIndex),
-          .lod1 = p.lod1,
-          .lod2 = p.lod2,
-          .lod3 = p.lod3,
+          .lod1 = p.flags == F::Lod1,
+          .lod2 = p.flags == F::Lod2,
+          .lod3 = p.flags == F::Lod3,
       }};
 
       uniqMeshes[key.key].primitives.emplace_back(prim);
@@ -272,6 +283,7 @@ void MODGLTF::ProcessModel(const revil::MOD &model) {
     gnode.mesh = meshes.size();
     gnode.name = "Mesh[" + std::to_string(p.meshId) + ":" +
                  std::to_string(p.groupId) + "]";
+    //+ "](" + std::to_string(p.layout) + ")";
 
     if (!skinIndices.empty()) {
       gnode.skin = skinIndices.at(p.skinIndex);
@@ -306,11 +318,10 @@ void MODGLTF::ProcessModel(const revil::MOD &model) {
       mesh.name = gnode.name;
       meshes.emplace_back(mesh);
 
-      revil::MODPrimitive mp{
-          .lod1 = skey.lod1,
-          .lod2 = skey.lod2,
-          .lod3 = skey.lod3,
-      };
+      revil::MODPrimitive mp;
+      mp.flags.Set(F::Lod1, skey.lod1);
+      mp.flags.Set(F::Lod2, skey.lod2);
+      mp.flags.Set(F::Lod3, skey.lod3);
 
       if (!skinIndices.empty()) {
         gnode.skin = skinIndices.at(skey.skinIndex);
@@ -339,12 +350,63 @@ void MODGLTF::Pipeline(const revil::MOD &model) {
   ProcessModel(model);
 }
 
-void AppProcessFile(AppContext *ctx) {
+void Convert(std::istream &str, const std::string &path, AppContext *ctx) {
   revil::MOD mod;
-  mod.Load(ctx->GetStream());
+  mod.Load(str);
   MODGLTF main;
   main.Pipeline(mod);
-  BinWritterRef wr(ctx->NewFile(ctx->workingFile.ChangeExtension2("glb")).str);
+
+  std::string fullPath(ctx->workingFile.GetFolder());
+  fullPath.append(path);
+  fullPath.append(".glb");
+
+  BinWritterRef wr(ctx->NewFile(fullPath).str);
 
   main.FinishAndSave(wr, std::string(ctx->workingFile.GetFolder()));
+
+  if (!settings.generateModelInfo) {
+    return;
+  }
+
+  fullPath = ctx->workingFile.GetFolder();
+  fullPath.append(path);
+  fullPath.append(".mdi.xml");
+
+  auto &outStr = ctx->NewFile(fullPath).str;
+
+  pugi::xml_document doc;
+  mod.ToXML(doc);
+  doc.save(outStr);
+}
+
+struct ExtractContext : ArcExtractContext {
+  AppContext *parentCtx;
+  std::string curFile;
+
+  void NewFile(const std::string &path) override {
+    curFile = AFileInfo(path).GetFullPathNoExt();
+  }
+  void SendData(std::string_view data) override {
+    std::ispanstream spstr(std::span<const char>(data.data(), data.size()));
+    Convert(spstr, curFile, parentCtx);
+  }
+};
+
+void AppProcessFile(AppContext *ctx) {
+  if (ctx->workingFile.GetExtension() == ".arc") {
+    static const std::set<uint32> filter{
+        MTHashV1("rModel"),
+        MTHashV2("rModel"),
+    };
+
+    ExtractContext ectx;
+    ectx.parentCtx = ctx;
+
+    EnumerateArchive(
+        ctx->GetStream(), Platform::Auto, "lp", [&] { return &ectx; }, filter);
+    return;
+  }
+
+  Convert(ctx->GetStream(), std::string(ctx->workingFile.GetFilenameExt()),
+          ctx);
 }

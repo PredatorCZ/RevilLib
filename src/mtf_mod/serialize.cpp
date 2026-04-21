@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -30,10 +30,6 @@ static constexpr uint32 MODID = CompileFourCC("MOD");
 static constexpr uint32 DOMID = CompileFourCC("\0DOM");
 static constexpr uint32 RMDID = CompileFourCC("\0DMR");
 
-template <class T> using use_name = decltype(std::declval<T>().Name());
-template <class C>
-constexpr static bool use_name_v = es::is_detected_v<use_name, C>;
-
 template <class traits> void MODInner<traits>::Reflect(bool swap) {
   for (size_t i = 0; i < bones.size(); i++) {
     const bool isRoot =
@@ -61,12 +57,7 @@ template <class traits> void MODInner<traits>::Reflect(bool swap) {
   }
 
   for (auto &m : this->materials) {
-    revil::MODMaterial &ref = this->materialRefs.emplace_back();
-    if constexpr (use_name_v<std::decay_t<decltype(m.main)>>) {
-      ref.name = m.main.Name();
-    }
-
-    ref.refl = &m.asMetadata;
+    this->materialRefs.emplace_back(&m);
   }
 }
 
@@ -80,8 +71,8 @@ void MODMaterialProxy<material_type>::Write(BinWritterRef wr) const {
   main_.shadowTextureIndex++;
   main_.additionalTextureIndex++;
   main_.cubeMapTextureIndex++;
-  main_.detailTextureIndex++;
-  main_.AOTextureIndex++;
+  main_.heightTextureIndex++;
+  main_.glossTextureIndex++;
   wr.Write(main_);
 }
 
@@ -97,8 +88,8 @@ void MODMaterialProxy<material_type>::Read(BinReaderRef_e rd) {
     main.shadowTextureIndex--;
     main.additionalTextureIndex--;
     main.cubeMapTextureIndex--;
-    main.detailTextureIndex--;
-    main.AOTextureIndex--;
+    main.heightTextureIndex--;
+    main.glossTextureIndex--;
   }
 }
 
@@ -122,16 +113,21 @@ template <> void FByteswapper(MODBoneV2 &self, bool) {
   FByteswapper(self.index);
 }
 
-template <> void FByteswapper(MODBounds &self, bool) {
-  FByteswapper(self.bboxMax);
-  FByteswapper(self.bboxMin);
-  FByteswapper(self.boundingSphere);
+template <> void FByteswapper(MtAABB &self, bool) {
+  FByteswapper(self.min);
+  FByteswapper(self.max);
+}
+
+template <> void FByteswapper(MtOBB &self, bool) {
+  FByteswapper(self.transform);
+  FByteswapper(self.extents);
 }
 
 template <> void FByteswapper(MODEnvelope &self, bool) {
-  FByteswapper(self.absolutePosition);
+  FByteswapper(self.boundingSphere);
   FByteswapper(self.boneIndex);
-  FByteswapper(self.bounds);
+  FByteswapper(self.aabb);
+  FByteswapper(self.obb);
 }
 
 template <> void FByteswapper(MODGroup &self, bool) {
@@ -281,21 +277,15 @@ template <> void FByteswapper(MODMaterialX70 &self, bool way) {
   FByteswapper(self.shadowTextureIndex);
   FByteswapper(self.additionalTextureIndex);
   FByteswapper(self.cubeMapTextureIndex);
-  FByteswapper(self.detailTextureIndex);
-  FByteswapper(self.AOTextureIndex);
+  FByteswapper(self.heightTextureIndex);
+  FByteswapper(self.glossTextureIndex);
   FByteswapper(self.transparency);
   FByteswapper(self.fresnelFactor);
-  FByteswapper(self.fresnelBias);
-  FByteswapper(self.specularPower);
-  FByteswapper(self.envMapPower);
   FByteswapper(self.lightMapScale);
   FByteswapper(self.detailFactor);
-  FByteswapper(self.detailWrap);
-  FByteswapper(self.envMapBias);
-  FByteswapper(self.normalBias);
   FByteswapper(self.transmit);
   FByteswapper(self.paralax);
-  FByteswapper(self.hash);
+  FByteswapper(self.blendState);
 }
 
 template <> void FByteswapper(MODMaterialX170 &self, bool) {
@@ -308,22 +298,15 @@ template <> void FByteswapper(MODMaterialX170 &self, bool) {
   FByteswapper(self.shadowTextureIndex);
   FByteswapper(self.additionalTextureIndex);
   FByteswapper(self.cubeMapTextureIndex);
-  FByteswapper(self.detailTextureIndex);
-  FByteswapper(self.AOTextureIndex);
+  FByteswapper(self.heightTextureIndex);
+  FByteswapper(self.glossTextureIndex);
   FByteswapper(self.transparency);
-  FByteswapper(self.unk00);
   FByteswapper(self.fresnelFactor);
-  FByteswapper(self.fresnelBias);
-  FByteswapper(self.specularPower);
-  FByteswapper(self.envMapPower);
   FByteswapper(self.lightMapScale);
   FByteswapper(self.detailFactor);
-  FByteswapper(self.detailWrap);
-  FByteswapper(self.envMapBias);
-  FByteswapper(self.normalBias);
   FByteswapper(self.transmit);
   FByteswapper(self.paralax);
-  FByteswapper(self.hash);
+  FByteswapper(self.blendState);
 }
 
 template <> void FByteswapper(MODMaterialXC5 &self, bool way) {
@@ -336,23 +319,15 @@ template <> void FByteswapper(MODMaterialXC5 &self, bool way) {
   FByteswapper(self.shadowTextureIndex);
   FByteswapper(self.additionalTextureIndex);
   FByteswapper(self.cubeMapTextureIndex);
-  FByteswapper(self.detailTextureIndex);
-  FByteswapper(self.AOTextureIndex);
+  FByteswapper(self.heightTextureIndex);
+  FByteswapper(self.glossTextureIndex);
   FByteswapper(self.transparency);
-  FByteswapper(self.unk01);
-  FByteswapper(self.specularPower);
-  FByteswapper(self.envMapPower);
+  FByteswapper(self.fresnelFactor);
   FByteswapper(self.lightMapScale);
   FByteswapper(self.detailFactor);
-  FByteswapper(self.detailWrap);
-  FByteswapper(self.envMapBias);
-  FByteswapper(self.normalBias);
-  FByteswapper(self.unk02);
-  FByteswapper(self.unk03);
-  FByteswapper(self.unk04);
-  FByteswapper(self.unk05);
-  FByteswapper(self.unk06);
-  FByteswapper(self.unk07);
+  FByteswapper(self.transmit);
+  FByteswapper(self.paralax);
+  FByteswapper(self.blendState);
 }
 
 template <> void FByteswapper(MODMaterialHash &self, bool) {
@@ -360,7 +335,7 @@ template <> void FByteswapper(MODMaterialHash &self, bool) {
 }
 
 template <> void FByteswapper(MODMeshX99 &self, bool) {
-  FByteswapper(self.unk);
+  FByteswapper(self.groupIndex);
   FByteswapper(self.materialIndex);
   FByteswapper(self.numVertices);
   FByteswapper(self.endIndex);
@@ -375,7 +350,7 @@ template <> void FByteswapper(MODMeshX99 &self, bool) {
 }
 
 template <> void FByteswapper(MODMeshX70 &self, bool) {
-  FByteswapper(self.unk);
+  FByteswapper(self.groupIndex);
   FByteswapper(self.materialIndex);
   FByteswapper(self.numVertices);
   FByteswapper(self.vertexStart);
@@ -389,7 +364,7 @@ template <> void FByteswapper(MODMeshX70 &self, bool) {
 }
 
 template <> void FByteswapper(MODMeshXC5 &self, bool way) {
-  FByteswapper(self.unk);
+  FByteswapper(self.drawMode);
   FByteswapper(self.numVertices);
   FByteswapper(self.data0, way);
   FByteswapper(self.data1, way);
@@ -403,11 +378,11 @@ template <> void FByteswapper(MODMeshXC5 &self, bool way) {
   FByteswapper(self.meshIndex);
   FByteswapper(self.minVertex);
   FByteswapper(self.maxVertex);
-  FByteswapper(self.hash);
+  FByteswapper(self.boundaryInfo);
 }
 
 template <> void FByteswapper(MODMeshXD2 &self, bool way) {
-  FByteswapper(self.unk);
+  FByteswapper(self.drawMode);
   FByteswapper(self.numVertices);
   FByteswapper(self.data0, way);
   FByteswapper(self.data1, way);
@@ -420,7 +395,6 @@ template <> void FByteswapper(MODMeshXD2 &self, bool way) {
   FByteswapper(self.meshIndex);
   FByteswapper(self.minVertex);
   FByteswapper(self.maxVertex);
-  FByteswapper(self.unk);
 }
 
 template <> void FByteswapper(MODMeshXE5 &self, bool way) {
@@ -436,7 +410,8 @@ void SaveMODX99(const MODInner<MODTraitsX99LE> &main, BinWritterRef wr) {
   wr.Push();
   wr.Skip(sizeof(header));
   wr.ApplyPadding();
-  wr.Skip(sizeof(main.bounds) + sizeof(main.metadata));
+  wr.Skip(sizeof(main.boundingSphere) + sizeof(main.boundingBox) +
+          sizeof(main.metadata));
   wr.ApplyPadding();
 
   header.numBones = main.bones.size();
@@ -498,7 +473,8 @@ void SaveMODX99(const MODInner<MODTraitsX99LE> &main, BinWritterRef wr) {
   wr.Pop();
   wr.Write(header);
   wr.ApplyPadding();
-  wr.Write(main.bounds);
+  wr.Write(main.boundingSphere);
+  wr.Write(main.boundingBox);
   wr.Write(main.metadata);
   wr.Seek(eof);
   wr.ApplyPadding();
@@ -511,7 +487,8 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
   wr.Push();
   wr.Skip(sizeof(header));
   wr.ApplyPadding();
-  wr.Skip(sizeof(main.bounds) + sizeof(main.metadata));
+  wr.Skip(sizeof(main.boundingSphere) + sizeof(main.boundingBox) +
+          sizeof(main.metadata));
   wr.ApplyPadding();
 
   header.numBones = main.bones.size();
@@ -562,7 +539,8 @@ void SaveMODXC5(const MODInner<MODTraitsXC5> &main, BinWritterRef wr) {
   wr.Pop();
   wr.Write(header);
   wr.ApplyPadding();
-  wr.Write(main.bounds);
+  wr.Write(main.boundingSphere);
+  wr.Write(main.boundingBox);
   wr.Write(main.metadata);
   wr.Seek(eof);
   wr.ApplyPadding();
@@ -576,7 +554,8 @@ MODImpl::ptr LoadMODX70(BinReaderRef_e rd) {
   MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
   header.numIndices--;
 
@@ -623,7 +602,8 @@ MODImpl::ptr LoadMODXC5(BinReaderRef_e rd) {
   MODInner<MODTraitsXC5> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -666,7 +646,8 @@ MODImpl::ptr LoadMODXC3(BinReaderRef_e rd) {
   MODInner<MODTraitsXC5> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -713,7 +694,8 @@ template <class Traits> MODImpl::ptr LoadMODX99(BinReaderRef_e rd) {
   MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
   header.numIndices--;
 
@@ -768,7 +750,8 @@ template <class Traits> MODImpl::ptr LoadMODXD2x32(BinReaderRef_e rd) {
   MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.bones > 0 && header.bones <= 0x80) {
@@ -819,7 +802,8 @@ template <class Traits> MODImpl::ptr LoadMODXDxLEx32(BinReaderRef_e rdn) {
   MODInner<Traits> main;
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -863,7 +847,8 @@ MODImpl::ptr LoadMODXDxLE(BinReaderRef_e rdn) {
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
   {
     uint64 maxPtr = header.bones | header.groups | header.materialNames |
@@ -916,7 +901,8 @@ MODImpl::ptr LoadMODX06(BinReaderRef_e rdn) {
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -958,7 +944,8 @@ MODImpl::ptr LoadMODXE5(BinReaderRef_e rd) {
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -996,7 +983,8 @@ MODImpl::ptr LoadMODXFF2C(BinReaderRef_e rd) {
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {
@@ -1056,7 +1044,8 @@ MODImpl::ptr LoadMODX21(BinReaderRef_e rd) {
   rd.Push();
   rd.Read(header);
   rd.ApplyPadding();
-  rd.Read(main.bounds);
+  rd.Read(main.boundingSphere);
+  rd.Read(main.boundingBox);
   rd.Read(main.metadata);
 
   if (header.numBones) {

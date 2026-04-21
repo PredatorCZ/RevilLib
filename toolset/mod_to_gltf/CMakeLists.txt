@@ -12,6 +12,7 @@ build_target(
   LINKS
   revil-interface
   gltf-interface
+  pugixml-interface
   AUTHOR
   "Lukas Cone"
   DESCR

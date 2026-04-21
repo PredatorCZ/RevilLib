@@ -1,78 +1,80 @@
+/*  Revil Format Library
+    Copyright(C) 2017-2026 Lukas Cone
+
+    This program is free software : you can redistribute it and / or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "material.hpp"
-#include "spike/reflect/reflector.hpp"
+#include "../property.hpp"
 #include <charconv>
 
-REFLECT(CLASS(MODMaterialX70::VSHData),
-        BITMEMBERNAME(MODMaterialX70::Unk00, "unknown00"),
-        BITMEMBERNAME(MODMaterialX70::LightningType, "lightningType"),
-        BITMEMBERNAME(MODMaterialX70::NormalMapType, "normalMapType"),
-        BITMEMBERNAME(MODMaterialX70::SpecularType, "specularType"),
-        BITMEMBERNAME(MODMaterialX70::LightMapType, "lightMapType"),
-        BITMEMBERNAME(MODMaterialX70::MultiTextureType, "multiTextureType"),
-        BITMEMBERNAME(MODMaterialX70::Unk01, "unknown01"),
-        BITMEMBERNAME(MODMaterialX70::Unk02, "unknown02"));
+// clang-format off
+namespace {
+void ToXML(const MODMaterialX70::VSHData &item, pugi::xml_node node) {
+  NewPrimitive(node, "lightningType", item.Get<MODMaterialX70::LightningType>());
+  NewPrimitive(node, "normalMapType", item.Get<MODMaterialX70::NormalMapType>());
+  NewPrimitive(node, "specularType", item.Get<MODMaterialX70::SpecularType>());
+  NewPrimitive(node, "lightMapType", item.Get<MODMaterialX70::LightMapType>());
+  NewPrimitive(node, "multiTextureType", item.Get<MODMaterialX70::MultiTextureType>());
+}
 
-REFLECT(CLASS(MODMaterialX70), MEMBER(pshData), MEMBER(vshData),
-        MEMBER(baseTextureIndex), MEMBER(normalTextureIndex),
-        MEMBER(maskTextureIndex), MEMBER(lightTextureIndex),
-        MEMBER(shadowTextureIndex), MEMBER(additionalTextureIndex),
-        MEMBER(cubeMapTextureIndex), MEMBER(detailTextureIndex),
-        MEMBER(AOTextureIndex), MEMBER(transparency), MEMBER(fresnelFactor),
-        MEMBER(fresnelBias), MEMBER(specularPower), MEMBER(envMapPower),
-        MEMBER(lightMapScale), MEMBER(detailFactor), MEMBER(detailWrap),
-        MEMBER(envMapBias), MEMBER(normalBias), MEMBER(transmit),
-        MEMBER(paralax), MEMBER(hash), MEMBER(unk));
+void ToXML(const MODMaterialX70::PSHData &item, pugi::xml_node node) {
+  NewPrimitive(node, "enableFOG", bool(item.Get<MODMaterialX70::EnableFOG>()));
+  NewPrimitive(node, "ZWrite", bool(item.Get<MODMaterialX70::ZWrite>()));
+  NewPrimitive(node, "attr", item.Get<MODMaterialX70::Attr>());
+  NewPrimitive(node, "no", item.Get<MODMaterialX70::No>());
+  NewPrimitive(node, "envmapBias", item.Get<MODMaterialX70::EnvmapBias>());
+  NewPrimitive(node, "VType", item.Get<MODMaterialX70::VType>());
+  NewPrimitive(node, "enableUVScroll", bool(item.Get<MODMaterialX70::EnableUVScroll>()));
+  NewPrimitive(node, "ZTest", bool(item.Get<MODMaterialX70::ZTest>()));
+}
 
-REFLECT(CLASS(MODMaterialX170), MEMBER(pshData), MEMBER(vshData),
-        MEMBER(baseTextureIndex), MEMBER(normalTextureIndex),
-        MEMBER(maskTextureIndex), MEMBER(lightTextureIndex),
-        MEMBER(shadowTextureIndex), MEMBER(additionalTextureIndex),
-        MEMBER(cubeMapTextureIndex), MEMBER(detailTextureIndex),
-        MEMBER(AOTextureIndex), MEMBER(transparency), MEMBER(unk00),
-        MEMBER(fresnelFactor), MEMBER(fresnelBias), MEMBER(specularPower),
-        MEMBER(envMapPower), MEMBER(lightMapScale), MEMBER(detailFactor),
-        MEMBER(detailWrap), MEMBER(envMapBias), MEMBER(normalBias),
-        MEMBER(transmit), MEMBER(paralax), MEMBER(hash), MEMBER(unk01));
+template<class Mat>
+void ToXML(const Mat &item, pugi::xml_node node) {
+  ToXML(item.vshData, node);
+  ToXML(item.pshData, node);
+  NewPrimitive(node, "technique", item.technique);
+  NewPrimitive(node, "baseTextureIndex", item.baseTextureIndex);
+  NewPrimitive(node, "normalTextureIndex", item.normalTextureIndex);
+  NewPrimitive(node, "maskTextureIndex", item.maskTextureIndex);
+  NewPrimitive(node, "lightTextureIndex", item.lightTextureIndex);
+  NewPrimitive(node, "shadowTextureIndex", item.shadowTextureIndex);
+  NewPrimitive(node, "additionalTextureIndex", item.additionalTextureIndex);
+  NewPrimitive(node, "cubeMapTextureIndex", item.cubeMapTextureIndex);
+  NewPrimitive(node, "heightTextureIndex", item.heightTextureIndex);
+  NewPrimitive(node, "glossTextureIndex", item.glossTextureIndex);
+  NewPrimitive(node, "transparency", item.transparency);
+  NewPrimitive(node, "fresnelFactor", item.fresnelFactor);
+  NewPrimitive(node, "lightMapScale", item.lightMapScale);
+  NewPrimitive(node, "detailFactor", item.detailFactor);
+  NewPrimitive(node, "transmit", item.transmit);
+  NewPrimitive(node, "paralax", item.paralax);
+  NewPrimitive(node, "blendState", item.blendState);
+  NewPrimitive(node, "alphaRef", item.alphaRef);
+}
+}
+// clang-format on
 
-REFLECT(CLASS(MODMaterialXC5::VSHData),
-        BITMEMBERNAME(MODMaterialXC5::LightningType, "lightningType"),
-        BITMEMBERNAME(MODMaterialXC5::NormalMapType, "normalMapType"),
-        BITMEMBERNAME(MODMaterialXC5::SpecularType, "specularType"),
-        BITMEMBERNAME(MODMaterialXC5::LightMapType, "lightMapType"),
-        BITMEMBERNAME(MODMaterialXC5::MultiTextureType, "multiTextureType"));
+void MODMaterialX70::ToXML(pugi::xml_node node) const { ::ToXML(*this, node); }
 
-REFLECT(CLASS(MODMaterialXC5::PSHData),
-        BITMEMBERNAME(MODMaterialXC5::Unk02, "unknown00"),
-        BITMEMBERNAME(MODMaterialXC5::Unk03, "unknown01"),
-        BITMEMBERNAME(MODMaterialXC5::Unk04, "unknown02"),
-        BITMEMBERNAME(MODMaterialXC5::Unk05, "unknown03"),
-        BITMEMBERNAME(MODMaterialXC5::Unk06, "unknown04"),
-        BITMEMBERNAME(MODMaterialXC5::Unk07, "unknown05"),
-        BITMEMBERNAME(MODMaterialXC5::Unk08, "unknown06"),
-        BITMEMBERNAME(MODMaterialXC5::Unk09, "unknown07"),
-        BITMEMBERNAME(MODMaterialXC5::Unk10, "unknown08"),
-        BITMEMBERNAME(MODMaterialXC5::Unk11, "unknown09"));
+void MODMaterialX170::ToXML(pugi::xml_node node) const { ::ToXML(*this, node); }
 
-REFLECT(CLASS(MODMaterialXC5), MEMBER(pshData), MEMBER(vshData),
-        MEMBER(baseTextureIndex), MEMBER(normalTextureIndex),
-        MEMBER(maskTextureIndex), MEMBER(lightTextureIndex),
-        MEMBER(shadowTextureIndex), MEMBER(additionalTextureIndex),
-        MEMBER(cubeMapTextureIndex), MEMBER(detailTextureIndex),
-        MEMBER(AOTextureIndex), MEMBER(transparency), MEMBER(unk01),
-        MEMBER(specularPower), MEMBER(envMapPower), MEMBER(lightMapScale),
-        MEMBER(detailFactor), MEMBER(detailWrap), MEMBER(envMapBias),
-        MEMBER(normalBias), MEMBER(unk02), MEMBER(unk03), MEMBER(unk04),
-        MEMBER(unk05), MEMBER(unk06), MEMBER(unk07), MEMBER(unk08));
-
-REFLECT(CLASS(MODMaterialHash), MEMBER(hash));
-
-REFLECT(CLASS(MODMaterialName), MEMBER(name));
-
-REFLECT(CLASS(MODMaterialX21), MEMBER(name));
+void MODMaterialXC5::ToXML(pugi::xml_node node) const { ::ToXML(*this, node); }
 
 std::string MODMaterialX70::Name() const {
   char buffer[0x10]{};
-  std::to_chars(std::begin(buffer), std::end(buffer), hash, 0x10);
+  std::to_chars(std::begin(buffer), std::end(buffer), blendState, 0x10);
   return std::string("Material_") + buffer;
 }
 
@@ -82,4 +84,20 @@ std::string MODMaterialHash::Name() const {
   return std::string("Material_") + buffer;
 }
 
+void MODMaterialHash::ToXML(pugi::xml_node node) const {
+  NewPrimitive(node, "hash", hash);
+}
+
 std::string MODMaterialName::Name() const { return name; }
+
+void MODMaterialName::ToXML(pugi::xml_node node) const {
+  pugi::xml_node matNode = NewProperty(MtPropertyType::string_, node);
+  matNode.append_attribute("name").set_value("name");
+  matNode.append_attribute("value").set_value(name);
+}
+
+void MODMaterialX21::ToXML(pugi::xml_node node) const {
+  pugi::xml_node matNode = NewProperty(MtPropertyType::string_, node);
+  matNode.append_attribute("name").set_value("name");
+  matNode.append_attribute("value").set_value(name.c_str());
+}

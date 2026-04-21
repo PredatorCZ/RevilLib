@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2021 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
     along with this program.If not, see <https://www.gnu.org/licenses/>.
 */
 
+// #include "spike/master_printer.hpp"
 #include "traits.hpp"
 #include <set>
 
@@ -169,8 +170,8 @@ static const auto makeVertices0X70 = [](uint8 useSkin, bool v1stride4,
 
   if (useSkin) {
     auto mcdx = std::make_unique<AttributeMad>();
-    mcdx->mul = main.bounds.bboxMax - main.bounds.bboxMin;
-    mcdx->add = main.bounds.bboxMin;
+    mcdx->mul = main.boundingBox.max - main.boundingBox.min;
+    mcdx->add = main.boundingBox.min;
     attrs.emplace_back(
         Attribute{D::R16G16B16A16, F::UNORM, U::Position, -1, mcdx.get()});
     codecs.emplace_back(std::move(mcdx));
@@ -239,8 +240,8 @@ static const auto makeVertices0X99 = [](uint8 useSkin, bool v1stride4,
 
   if (useSkin) {
     auto mcdx = std::make_unique<AttributeMad>();
-    mcdx->mul = main.bounds.bboxMax - main.bounds.bboxMin;
-    mcdx->add = main.bounds.bboxMin;
+    mcdx->mul = main.boundingBox.max - main.boundingBox.min;
+    mcdx->add = main.boundingBox.min;
     attrs.emplace_back(
         Attribute{D::R16G16B16A16, F::NORM, U::Position, -1, mcdx.get()});
     codecs.emplace_back(std::move(mcdx));
@@ -309,8 +310,8 @@ static const auto makeVertices0X170 = [](uint8 useSkin, bool, auto &main) {
 
   if (useSkin) {
     auto mcdx = std::make_unique<AttributeMad>();
-    mcdx->mul = main.bounds.bboxMax - main.bounds.bboxMin;
-    mcdx->add = main.bounds.bboxMin;
+    mcdx->mul = main.boundingBox.max - main.boundingBox.min;
+    mcdx->add = main.boundingBox.min;
     attrs.emplace_back(
         Attribute{D::R16G16B16A16, F::NORM, U::Position, -1, mcdx.get()});
     codecs.emplace_back(std::move(mcdx));
@@ -367,14 +368,19 @@ static const auto makeV1 = [](auto &self, auto &main, auto v0Maker,
   auto skinType = mat.vshData.template Get<typename material_type::SkinType>();
 
   revil::MODPrimitive retval;
-  retval.lod1 = self.visibleLOD[0];
-  retval.lod2 = self.visibleLOD[1];
-  retval.lod3 = self.visibleLOD[2];
+  using F = revil::MODPrimitive::Flags;
+  retval.flags.Set(F::Lod1, self.visibleLOD[0]);
+  retval.flags.Set(F::Lod2, self.visibleLOD[1]);
+  retval.flags.Set(F::Lod3, self.visibleLOD[2]);
+  retval.flags.Set(F::Visible, self.visible);
+  retval.flags.Set(F::Shape, self.shape);
+  retval.flags.Set(F::Connective, self.connective);
+  retval.flags = F::TriStrips;
   retval.materialIndex = self.materialIndex;
-  retval.triStrips = true;
-  retval.groupId = self.unk;
+  retval.groupId = self.groupIndex;
   retval.meshId = 0;
   retval.vertexIndex = main.vertices.size();
+  retval.alphaType = self.alphaType;
 
   MODVertexSpan vtx;
   std::tie(vtx.attrs, vtx.codecs) =
@@ -891,6 +897,16 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0x5e7f2025, // P3f_N4c_T4c_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
         0x5e7f202c, // P3f_N4c_T4c_U2h_U2h
         {
             VertexPosition,
@@ -916,6 +932,17 @@ std::map<uint32, MODAttributes> formats{
             VertexPosition,
             VertexNormal,
             VertexTangent,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
+        0x747d102a, // P3f_N4c_T4c_U2h_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
             TexCoord,
             TexCoord,
         },
@@ -947,6 +974,17 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0x926fd027, // P3f_N4c_T4c_U2h_U2h_VC4c
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+        },
+    },
+    {
         0x926fd02d, // P3f_N4c_T4c_U2h_U2h_VC4c
         {
             VertexPosition,
@@ -966,6 +1004,16 @@ std::map<uint32, MODAttributes> formats{
             TexCoord,
             TexCoord,
             VertexColor,
+        },
+    },
+    {
+        0xb86de023, // P3f_N4c_T4c_U2h_U2h_VC4c
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
         },
     },
     {
@@ -1377,6 +1425,18 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0x37a4e02e, // P3s_N4c_T4c_U2h_U2h_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
         0x37a4e035, // P3s_N4c_T4c_U2h_U2h_U2h_U2h
         {
             VertexPosition,
@@ -1390,6 +1450,17 @@ std::map<uint32, MODAttributes> formats{
     },
     {
         0x12553032, // P3s_N4c_T4c_U2h_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
+        0x1255302b, // P3s_N4c_T4c_U2h_U2h_U2h
         {
             VertexPosition,
             VertexNormal,
@@ -1465,6 +1536,16 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0x2082f034, // P3f_N4c_U2h_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            TexCoord,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
         0x2082f03b, // P3f_N4c_U2h_U2h_U2h
         {
             VertexPosition,
@@ -1485,6 +1566,15 @@ std::map<uint32, MODAttributes> formats{
     },
     {
         0xc66fa03e, // P3f_N4c_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
+        0xd1a47031, // P3f_N4c_U2h_U2h
         {
             VertexPosition,
             VertexNormal,
@@ -1551,6 +1641,16 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0xa14e0035, // P3f_N4c_U2h_U2h_VC4c
+        {
+            VertexPosition,
+            VertexNormal,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+        },
+    },
+    {
         0xa14e003c, // P3f_N4c_U2h_U2h_VC4c
         {
             VertexPosition,
@@ -1565,6 +1665,17 @@ std::map<uint32, MODAttributes> formats{
         {
             VertexPosition,
             VertexNormal,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+        },
+    },
+    {
+        0x9399c02c, // P3f_N4c_T4c_U2h_U2h_VC4c
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
             TexCoord,
             TexCoord,
             VertexColor,
@@ -1606,6 +1717,18 @@ std::map<uint32, MODAttributes> formats{
         },
     },
     {
+        0xb668102d, // P3f_N4c_T4c_U2h_U2h_VC4c_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+            VertexColor,
+            TexCoord,
+        },
+    },
+    {
         0xb6681034, // P3f_N4c_T4c_U2h_U2h_VC4c_U2h
         {
             VertexPosition,
@@ -1626,6 +1749,17 @@ std::map<uint32, MODAttributes> formats{
             TexCoord,
             TexCoord,
             VertexColor,
+            TexCoord,
+        },
+    },
+    {
+        0x63b6c028, // P3f_N4c_T4c_U2h_U2h_U2h
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
             TexCoord,
         },
     },
@@ -2007,6 +2141,48 @@ std::map<uint32, MODAttributes> formats{
             TexCoord,
         },
     },
+    {
+        0xD4504024,
+        {
+            VertexPosition,
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
+        0x8A618032,
+        {
+            VertexPosition,
+            VertexNormal,
+            TexCoord,
+            TexCoord,
+        },
+    },
+    {
+        0x64421013,
+        {
+            VertexQPosition,
+            V{D::R16, F::UINT, U::BoneIndices},
+            VertexNormal,
+            VertexTangent,
+            TexCoord,
+            VertexColor,
+        },
+    },
+    {
+        0x0FA78018,
+        {
+            VertexQPosition,
+            V{D::R16, F::NORM, U::BoneWeights},
+            VertexNormal,
+            VertexColor,
+            TexCoord,
+            V{D::R16G16, F::FLOAT, U::BoneIndices},
+            VertexColor,
+        },
+    },
 };
 
 static const std::set<uint32> edgeModels{
@@ -2032,15 +2208,24 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, auto &&fd) {
   revil::MODPrimitive retval;
   uint8 visibleLOD_ = self.data0.template Get<MODMeshXC5::VisibleLOD>();
   const auto visibleLOD = reinterpret_cast<es::Flags<uint8> &>(visibleLOD_);
-  retval.lod1 = visibleLOD[0];
-  retval.lod2 = visibleLOD[1];
-  retval.lod3 = visibleLOD[2];
+  using F = revil::MODPrimitive::Flags;
+  retval.flags.Set(F::Lod1, visibleLOD[0]);
+  retval.flags.Set(F::Lod2, visibleLOD[1]);
+  retval.flags.Set(F::Lod3, visibleLOD[2]);
+  retval.flags.Set(F::Visible, self.data1.template Get<MODMeshXC5::Visible>());
+  retval.flags.Set(F::Shape, self.data1.template Get<MODMeshXC5::Shape>());
+  retval.flags.Set(F::Bridge, self.data1.template Get<MODMeshXC5::Bridge>());
+  retval.flags.Set(F::Sort, self.data1.template Get<MODMeshXC5::Sort>());
+  retval.flags.Set(F::BinormalFlip,
+                   self.data1.template Get<MODMeshXC5::BinormalFlip>());
   retval.materialIndex = self.data0.template Get<MODMeshXC5::MaterialIndex>();
+  retval.layout = self.vertexFormat;
   const MODMeshXC5::PrimitiveType_e primitiveType = MODMeshXC5::PrimitiveType_e(
-      self.data1.template Get<
-          typename std::decay_t<decltype(self)>::PrimitiveType>());
-
-  retval.triStrips = primitiveType == MODMeshXC5::PrimitiveType_e::Strips;
+      self.data1.template Get<MODMeshXC5::PrimitiveType>());
+  retval.alphaType = self.data1.template Get<MODMeshXC5::AlphaType>();
+  retval.flags.Set(F::TriStrips,
+                   primitiveType == MODMeshXC5::PrimitiveType_e::Strips);
+  retval.drawMode = self.drawMode;
   retval.indexIndex = main.indices.size();
   retval.vertexIndex = main.vertices.size();
   retval.meshId = self.meshIndex;
@@ -2080,6 +2265,8 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, auto &&fd) {
     if (!edgeModels.contains(self.vertexFormat)) {
       throw std::runtime_error("Unregistered vertex format: " +
                                std::to_string(self.vertexFormat));
+      // PrintError("Unregistered vertex format: ", std::hex,
+      // self.vertexFormat);
     }
   }
 
@@ -2244,7 +2431,10 @@ std::span<const revil::MODPrimitive> MOD::Primitives() const {
   return pi->primitives;
 }
 std::span<const MODSkinJoints> MOD::SkinJoints() const { return pi->skins; }
-std::span<const MODMaterial> MOD::Materials() const { return pi->materialRefs; }
+std::span<const MODMaterial *> MOD::Materials() const {
+  return std::span(const_cast<const MODMaterial **>(pi->materialRefs.data()),
+                   pi->materialRefs.size());
+}
 std::span<const es::Matrix44> MOD::InverseBinds() const {
   return pi->transforms;
 }
@@ -2254,4 +2444,5 @@ std::span<const MODBone> MOD::Bones() const { return pi->simpleBones; }
 std::span<const MODGroup> MOD::Groups() const { return pi->groups; }
 std::span<const MODEnvelope> MOD::Envelopes() const { return pi->envelopes; }
 const MODMetaData &MOD::Metadata() const { return pi->Metadata(); }
+const std::vector<std::string> &MOD::Textures() const { return pi->paths; }
 } // namespace revil

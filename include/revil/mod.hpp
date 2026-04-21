@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,9 @@
 #include "revil/platform.hpp"
 #include "spike/gltf_attribute.hpp"
 #include "spike/io/bincore_fwd.hpp"
-#include "spike/type/matrix44.hpp"
+#include "spike/type/flags.hpp"
+#include "spike/util/pugi_fwd.hpp"
+#include "types.hpp"
 #include <memory>
 #include <span>
 #include <string>
@@ -65,17 +67,11 @@ struct MODBone {
   uint16 parentIndex;
 };
 
-struct MODBounds {
-  Vector4A16 boundingSphere;
-  Vector4A16 bboxMin;
-  Vector4A16 bboxMax;
-};
-
 struct MODEnvelope {
   uint32 boneIndex;
-  MODBounds bounds;
-  es::Matrix44 localTransform;
-  Vector4A16 absolutePosition;
+  Vector4A16 boundingSphere;
+  MtAABB aabb;
+  MtOBB obb;
 };
 
 struct MODGroup {
@@ -87,20 +83,33 @@ struct MODMetaData {
   uint32 middleDistance;
   uint32 lowDistance;
   uint32 lightGroup;
-  uint8 boundaryJoint; //??
+  uint8 boundaryJoint;
 };
 
 struct MODPrimitive {
-  bool triStrips;
-  bool lod1;
-  bool lod2;
-  bool lod3;
+  enum class Flags : uint16 {
+    Lod1,
+    Lod2,
+    Lod3,
+    Visible,
+    Shape,
+    Bridge,
+    Connective,
+    Sort,
+    BinormalFlip,
+    TriStrips,
+  };
+
+  es::Flags<Flags> flags;
+  uint8 alphaType;
+  uint16 drawMode = 0;
   uint16 skinIndex = 0;
   uint16 materialIndex = 0;
   uint32 indexIndex;
   uint32 vertexIndex;
   uint16 groupId;
   uint16 meshId;
+  uint32 layout = 0;
 };
 
 using MODSkinJoints = std::span<const uint8>;
@@ -116,8 +125,8 @@ struct MODVertexSpan {
 using MODIndexSpan = std::span<uint16>;
 
 struct MODMaterial {
-  std::string name;
-  Reflector *refl;
+  virtual std::string GetName() const = 0;
+  virtual void ToXML(pugi::xml_node node) const = 0;
 };
 
 class ES_EXPORT MOD {
@@ -133,18 +142,20 @@ public:
   void Load(const std::string &fileName);
   void Load(BinReaderRef_e rd);
   void Save(BinWritterRef wr);
+  void ToXML(pugi::xml_node node) const;
 
   std::span<const MODVertexSpan> Vertices() const;
   std::span<const MODIndexSpan> Indices() const;
   std::span<const MODPrimitive> Primitives() const;
   std::span<const MODSkinJoints> SkinJoints() const;
-  std::span<const MODMaterial> Materials() const;
+  std::span<const MODMaterial *> Materials() const;
   std::span<const es::Matrix44> InverseBinds() const;
   std::span<const es::Matrix44> Transforms() const;
   std::span<const MODBone> Bones() const;
   std::span<const MODGroup> Groups() const;
   std::span<const MODEnvelope> Envelopes() const;
   const MODMetaData &Metadata() const;
+  const std::vector<std::string> &Textures() const;
 
 private:
   std::unique_ptr<MODImpl> pi;

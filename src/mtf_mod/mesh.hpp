@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2017-2023 Lukas Cone
+    Copyright(C) 2017-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include "revil/mod.hpp"
 #include "spike/type/bitfield.hpp"
 #include "spike/type/flags.hpp"
 #include "spike/type/vectors_simd.hpp"
@@ -32,14 +33,16 @@ struct MODMeshSkinInfo {
 };
 
 struct MODMeshX99 {
-  uint16 unk;
+  uint16 groupIndex;
   uint16 materialIndex;
   bool visible;
   es::Flags<uint8> visibleLOD; // only 3 LODs
-  uint8 unk02[2];              // 0: opacity flags?
+  uint8 alphaType;
+  uint8 numWeights;
   uint8 buffer0Stride;
   uint8 buffer1Stride;
-  uint8 unk01;
+  uint8 connective;
+  uint8 shape;
   uint16 numVertices;
   uint16 endIndex;
   uint32 vertexStart;
@@ -58,14 +61,16 @@ struct MODMeshX99 {
 };
 
 struct MODMeshX70 {
-  uint16 unk;
+  uint16 groupIndex;
   uint16 materialIndex;
-  uint8 visible;
+  bool visible;
   es::Flags<uint8> visibleLOD; // only 3 LODs
-  uint8 unk02[2];
+  uint8 alphaType;
+  uint8 numWeights;
   uint8 buffer0Stride;
   uint8 buffer1Stride;
-  uint8 unk01;
+  uint8 connective;
+  uint8 shape;
   uint32 numVertices;
   uint32 vertexStart;
   uint32 vertexStreamOffset;
@@ -87,14 +92,16 @@ struct MODMeshXC5 {
   using BitField00 = BitFieldType<uint32, GroupID, MaterialIndex, VisibleLOD>;
 
   using Visible = BitMemberDecl<0, 1>;
-  using Flag0 = BitMemberDecl<1, 1>;
-  using Flag1 = BitMemberDecl<2, 1>;
-  using Unk00 = BitMemberDecl<3, 5>;
-  using Unk01 = BitMemberDecl<4, 8>;
+  using Shape = BitMemberDecl<1, 1>;
+  using Sort = BitMemberDecl<2, 1>;
+  using NumWeights = BitMemberDecl<3, 5>;
+  using AlphaType = BitMemberDecl<4, 8>;
   using VertexBufferStride = BitMemberDecl<5, 8>;
-  using PrimitiveType = BitMemberDecl<6, 8>;
-  using BitField01 = BitFieldType<uint32, Visible, Flag0, Flag1, Unk00, Unk01,
-                                  VertexBufferStride, PrimitiveType>;
+  using PrimitiveType = BitMemberDecl<6, 6>;
+  using BinormalFlip = BitMemberDecl<7, 1>;
+  using Bridge = BitMemberDecl<8, 1>;
+  using BitField01 = BitFieldType<uint32, Visible, Shape, Sort, NumWeights, AlphaType,
+                                  VertexBufferStride, PrimitiveType, BinormalFlip, Bridge>;
 
   enum class PrimitiveType_e : uint8 {
     Points,
@@ -104,7 +111,7 @@ struct MODMeshXC5 {
     Strips,
   };
 
-  int16 unk; // somehow essential, must be an odd number
+  uint16 drawMode;
   uint16 numVertices;
   BitField00 data0;
   BitField01 data1;
@@ -118,24 +125,17 @@ struct MODMeshXC5 {
   uint16 meshIndex;
   uint16 minVertex;
   uint16 maxVertex;
-  uint32 hash;
+  uint32 boundaryInfo; // rt ptr
 
   revil::MODPrimitive ReflectLE(revil::MODImpl &);
   revil::MODPrimitive ReflectBE(revil::MODImpl &);
 };
 
 struct MODMeshXD2 {
-  using PrimitiveType = BitMemberDecl<6, 6>;
-  using Unk02 = BitMemberDecl<7, 2>;
-  using BitField01 =
-      BitFieldType<uint32, MODMeshXC5::Visible, MODMeshXC5::Flag0,
-                   MODMeshXC5::Flag1, MODMeshXC5::Unk00, MODMeshXC5::Unk01,
-                   MODMeshXC5::VertexBufferStride, PrimitiveType, Unk02>;
-
-  int16 unk; // somehow essential, must be an odd number
+  uint16 drawMode;
   uint16 numVertices;
   MODMeshXC5::BitField00 data0;
-  BitField01 data1;
+  MODMeshXC5::BitField01 data1;
   uint32 vertexStart;
   uint32 vertexStreamOffset;
   uint32 vertexFormat;
@@ -147,7 +147,7 @@ struct MODMeshXD2 {
   uint16 meshIndex;
   uint16 minVertex;
   uint16 maxVertex;
-  uint32 unk02; // envelopes ptr?
+  uint32 boundaryInfo; // rt ptr
 
   revil::MODPrimitive ReflectLE(revil::MODImpl &);
   revil::MODPrimitive ReflectBE(revil::MODImpl &);
