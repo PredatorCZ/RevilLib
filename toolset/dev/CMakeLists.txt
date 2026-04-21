@@ -84,4 +84,3 @@ build_target(
   2025)
 
 add_spike_subdir(sbk)
-add_spike_subdir(stq)

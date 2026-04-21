@@ -1,5 +1,5 @@
 /*  Revil Format Library
-    Copyright(C) 2021-2023 Lukas Cone
+    Copyright(C) 2021-2026 Lukas Cone
 
     This program is free software : you can redistribute it and / or modify
     it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 */
 
 #include "revil/xfs.hpp"
+#include "property.hpp"
 #include "pugixml.hpp"
 #include "revil/hashreg.hpp"
 #include "spike/io/binreader.hpp"
@@ -43,38 +44,10 @@ using namespace revil;
 
 struct XFSClassMember;
 
-MAKE_ENUM(ENUMSCOPE(class XFSType : uint8, XFSType), //
-          EMEMBER(invalid_),                         //
-          EMEMBER(class_),                           //
-          EMEMBER(classref_),                        //
-          EMEMBER(bool_),                            //
-          EMEMBER(u8_),                              //
-          EMEMBER(u16_),                             //
-          EMEMBER(u32_),                             //
-          EMEMBER(u64_),                             //
-          EMEMBER(s8_),                              //
-          EMEMBER(s16_),                             //
-          EMEMBER(s32_),                             //
-          EMEMBER(s64_),                             //
-          EMEMBER(f32_),                             //
-          EMEMBERVAL(string_, 14),                   //
-          EMEMBER(color_),                           //
-          EMEMBER(point_),                           //
-          EMEMBER(size_),                            //
-          EMEMBER(rect_),                            // 8+ rectangle?
-          EMEMBER(_matrix_),                         //
-          EMEMBER(vector4_),                         //
-          EMEMBER(_vector4_),                        // colour
-          EMEMBERVAL(string2_, 32),                  //
-          EMEMBERVAL(vector2_, 34),                  //
-          EMEMBER(vector3_),                         //
-          EMEMBERVAL(_resource_, 0x80)               // 8+, custom?
-);
-
 struct XFSSizeAndFlag {
   using Size = BitMemberDecl<0, 15>;
-  using Unk = BitMemberDecl<1, 1>;
-  using type = BitFieldType<uint16, Size, Unk>;
+  using Disable = BitMemberDecl<1, 1>;
+  using type = BitFieldType<uint16, Size, Disable>;
   type data;
 
   const type *operator->() const { return &data; }
@@ -82,8 +55,9 @@ struct XFSSizeAndFlag {
 
 struct XFSClassInfo {
   using NumMembers = BitMemberDecl<0, 15>;
-  using Unk = BitMemberDecl<1, 17>;
-  using type = BitFieldType<uint32, NumMembers, Unk>;
+  using Init = BitMemberDecl<1, 1>;
+  using Reserved = BitMemberDecl<2, 16>;
+  using type = BitFieldType<uint32, NumMembers, Init, Reserved>;
   type data;
 
   const type *operator->() const { return &data; }
@@ -91,9 +65,9 @@ struct XFSClassInfo {
 
 struct XFSMeta {
   using Active = BitMemberDecl<0, 1>;
-  using LayoutIndex = BitMemberDecl<1, 15>;
-  using MetaIndex = BitMemberDecl<2, 16>;
-  using type = BitFieldType<uint32, Active, LayoutIndex, MetaIndex>;
+  using TypeIndex = BitMemberDecl<1, 15>;
+  using Id = BitMemberDecl<2, 16>;
+  using type = BitFieldType<uint32, Active, TypeIndex, Id>;
   type data;
 
   const type *operator->() const { return &data; }
@@ -101,13 +75,13 @@ struct XFSMeta {
 
 struct XFSHeaderBase {
   uint32 id;
-  uint16 version;
-  uint16 unk; // class version?
+  uint16 versionMajor;
+  uint16 versionMinor;
 
   void SwapEndian() {
     FByteswapper(id);
-    FByteswapper(version);
-    FByteswapper(unk);
+    FByteswapper(versionMajor);
+    FByteswapper(versionMinor);
   }
 };
 
@@ -129,7 +103,7 @@ struct XFSHeaderV2 : XFSHeaderBase {
 
 template <class PadType> struct XFSClassMemberRaw {
   std::string memberName;
-  XFSType type;
+  MtPropertyType type;
   uint8 flags; // alignment flags??
   XFSSizeAndFlag memberSize;
   PadType null[4];
@@ -151,7 +125,7 @@ template <class PadType> struct XFSClassMemberRaw {
 
 template <class PtrType, bool PSN> struct XFSClassMemberV2 {
   std::string memberName;
-  XFSType type;
+  MtPropertyType type;
   uint8 flags; // alignment flags??
   uint16 memberSize;
   PtrType null[4 * (PSN + 1)];
@@ -205,7 +179,7 @@ template <class PtrType, bool PSN> struct XFSClassV2 {
 
 struct XFSClassMember {
   std::string name;
-  XFSType type;
+  MtPropertyType type;
   uint8 flags;
   uint16 size;
 
@@ -214,7 +188,7 @@ struct XFSClassMember {
   XFSClassMember(XFSClassMemberRaw<pad_type> &&raw)
       : name(std::move(raw.memberName)), type(raw.type), flags(raw.flags),
         size(raw.memberSize->template Get<XFSSizeAndFlag::Size>()) {
-    if (raw.memberSize->template Get<XFSSizeAndFlag::Unk>()) {
+    if (raw.memberSize->template Get<XFSSizeAndFlag::Disable>()) {
       throw es::RuntimeError("Some bullshit");
     }
   }
@@ -367,10 +341,10 @@ struct XFSData {
       break;
     case Free_DeleteSingle: {
       switch (rtti->type) {
-      case XFSType::_resource_:
+      case MtPropertyType::custom:
         delete static_cast<XFSDataResource *>(data.asPointer);
         break;
-      case XFSType::_matrix_:
+      case MtPropertyType::matrix44:
         delete static_cast<es::Matrix44 *>(data.asPointer);
         break;
 
@@ -381,10 +355,10 @@ struct XFSData {
     }
     case Free_DeleteArray: {
       switch (rtti->type) {
-      case XFSType::_resource_:
+      case MtPropertyType::custom:
         delete[] static_cast<XFSDataResource *>(data.asPointer);
         break;
-      case XFSType::_matrix_:
+      case MtPropertyType::matrix44:
         delete[] static_cast<es::Matrix44 *>(data.asPointer);
         break;
 
@@ -458,7 +432,7 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
   const size_t strBegin = rd.Tell();
   rd.Read(chunkSize);
 
-  auto &&desc = rtti.at(meta->Get<XFSMeta::LayoutIndex>());
+  auto &&desc = rtti.at(meta->Get<XFSMeta::TypeIndex>());
   XFSClassData classData;
   classData.rtti = &desc;
 
@@ -469,58 +443,59 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
 
     if (cType.numItems == 1) {
       switch (d.type) {
-      case XFSType::bool_:
-      case XFSType::s8_:
-      case XFSType::u8_:
+      case MtPropertyType::bool_:
+      case MtPropertyType::s8_:
+      case MtPropertyType::u8_:
         rd.Read(cType.data.asUInt8);
         break;
-      case XFSType::s16_:
-      case XFSType::u16_:
+      case MtPropertyType::s16_:
+      case MtPropertyType::u16_:
         rd.Read(cType.data.asUInt16);
         break;
-      case XFSType::f32_:
-      case XFSType::s32_:
-      case XFSType::u32_:
+      case MtPropertyType::f32_:
+      case MtPropertyType::s32_:
+      case MtPropertyType::u32_:
         rd.Read(cType.data.asUInt32);
         break;
-      case XFSType::s64_:
-      case XFSType::u64_:
+      case MtPropertyType::s64_:
+      case MtPropertyType::u64_:
         rd.Read(cType.data.asUInt64);
         break;
-      case XFSType::point_:
-      case XFSType::size_:
-      case XFSType::vector2_:
+      case MtPropertyType::point:
+      case MtPropertyType::size:
+      case MtPropertyType::float2:
         rd.Read(cType.data.asVector2);
         break;
-      case XFSType::vector3_:
+      case MtPropertyType::float3:
         rd.Read(cType.data.asVector3);
         break;
-      case XFSType::vector4_:
-      case XFSType::_vector4_:
+      case MtPropertyType::vector4:
+      case MtPropertyType::float4:
+      case MtPropertyType::vector3:
         rd.Read(cType.data.asVector4);
         break;
-      case XFSType::rect_:
+      case MtPropertyType::rect:
         rd.Read(cType.data.asIVector4);
         break;
-      case XFSType::color_:
+      case MtPropertyType::color:
         rd.Read(cType.data.asColor);
         break;
-      case XFSType::string_:
-      case XFSType::string2_: {
+      case MtPropertyType::string_:
+      case MtPropertyType::cstring: {
         std::string temp;
         rd.ReadString(temp);
         cType.SetString(temp);
         break;
       }
-      case XFSType::_matrix_:
+      case MtPropertyType::matrix44:
         rd.Read(*cType.AllocClass<es::Matrix44>());
         break;
-      case XFSType::class_:
-      case XFSType::classref_:
+      case MtPropertyType::class_:
+      case MtPropertyType::classref:
         ReadData<PtrType>(
             rd, reinterpret_cast<XFSClassData **>(&cType.data.asPointer));
         break;
-      case XFSType::_resource_:
+      case MtPropertyType::custom:
         rd.Read(*cType.AllocClass<XFSDataResource>());
         break;
       default:
@@ -529,79 +504,79 @@ void XFSImpl::ReadData(BinReaderRef_e rd, XFSClassData **root) {
       }
     } else {
       switch (d.type) {
-      case XFSType::bool_:
-      case XFSType::s8_:
-      case XFSType::u8_: {
+      case MtPropertyType::bool_:
+      case MtPropertyType::s8_:
+      case MtPropertyType::u8_: {
         char *adata = cType.AllocArray<char>(cType.numItems);
         rd.ReadBuffer(adata, cType.numItems);
         break;
       }
-      case XFSType::s16_:
-      case XFSType::u16_: {
+      case MtPropertyType::s16_:
+      case MtPropertyType::u16_: {
         uint16 *adata = cType.AllocArray<uint16>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::f32_:
-      case XFSType::s32_:
-      case XFSType::u32_: {
+      case MtPropertyType::f32_:
+      case MtPropertyType::s32_:
+      case MtPropertyType::u32_: {
         uint32 *adata = cType.AllocArray<uint32>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::s64_:
-      case XFSType::u64_: {
+      case MtPropertyType::s64_:
+      case MtPropertyType::u64_: {
         uint64 *adata = cType.AllocArray<uint64>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::point_:
-      case XFSType::size_: {
+      case MtPropertyType::point:
+      case MtPropertyType::size: {
         Vector2 *adata = cType.AllocArray<Vector2>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::vector3_: {
+      case MtPropertyType::vector3: {
         Vector2 *adata = cType.AllocArray<Vector2>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::vector4_:
-      case XFSType::_vector4_: {
+      case MtPropertyType::vector4:
+      case MtPropertyType::float4: {
         Vector4A16 *adata = cType.AllocArray<Vector4A16>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::color_: {
+      case MtPropertyType::color: {
         const size_t alocSize = cType.numItems * sizeof(UCVector4);
         char *adata = cType.AllocArray<char>(alocSize);
         rd.ReadBuffer(adata, alocSize);
         break;
       }
-      case XFSType::string_: {
+      case MtPropertyType::string_: {
         throw es::RuntimeError("Array string!");
       }
-      case XFSType::_matrix_: {
+      case MtPropertyType::matrix44: {
         es::Matrix44 *adata = cType.AllocClasses<es::Matrix44>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           rd.Read(*adata++);
         }
         break;
       }
-      case XFSType::class_:
-      case XFSType::classref_: {
+      case MtPropertyType::class_:
+      case MtPropertyType::classref: {
         auto adata = cType.AllocArray<XFSClassData *>(cType.numItems);
         for (size_t i = 0; i < cType.numItems; i++) {
           ReadData<PtrType>(rd, adata++);
@@ -633,7 +608,7 @@ void XMLSetType(const XFSClassData &item, pugi::xml_node node) {
 
   if (item.rtti->className.empty()) {
     char buffer[0x10];
-    snprintf(buffer, sizeof(buffer), "h:%X", item.rtti->hash);
+    snprintf(buffer, sizeof(buffer), "0x%X", item.rtti->hash);
     attr.set_value(buffer);
     return;
   }
@@ -649,20 +624,8 @@ void XFSImpl::RTTIToXML(pugi::xml_node node) {
 }
 
 void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
-  static const auto refEnum = GetReflectedEnum<XFSType>();
-
   for (auto &m : item.members) {
-    auto name = [&] {
-      const size_t numEns = refEnum->numMembers;
-
-      for (size_t i = 0; i < numEns; i++) {
-        if (refEnum->values[i] == static_cast<uint64>(m.rtti->type)) {
-          return refEnum->names[i];
-        }
-      }
-
-      return "__UNREGISTERED__";
-    }();
+    auto name = PropType(m.rtti->type);
 
     if (m.numItems > 1) {
       auto cNode = node.append_child("array");
@@ -671,8 +634,8 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
       cNode.append_attribute("count").set_value(m.numItems);
 
       switch (m.rtti->type) {
-      case XFSType::class_:
-      case XFSType::classref_: {
+      case MtPropertyType::class_:
+      case MtPropertyType::classref: {
         auto adata =
             reinterpret_cast<const XFSClassData *const *>(m.data.asPointer);
         for (size_t i = 0; i < m.numItems; i++) {
@@ -688,7 +651,16 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::u8_: {
+      case MtPropertyType::bool_: {
+        auto adata = reinterpret_cast<const bool *>(m.data.asPointer);
+
+        for (size_t i = 0; i < m.numItems; i++) {
+          auto aNode = cNode.append_child(name);
+          aNode.append_attribute("value").set_value(adata[i]);
+        }
+        break;
+      }
+      case MtPropertyType::u8_: {
         auto adata = reinterpret_cast<const uint8 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -697,7 +669,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::s8_: {
+      case MtPropertyType::s8_: {
         auto adata = reinterpret_cast<const int8 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -706,7 +678,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::s32_: {
+      case MtPropertyType::s32_: {
         auto adata = reinterpret_cast<const int32 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -715,7 +687,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::u32_: {
+      case MtPropertyType::u32_: {
         auto adata = reinterpret_cast<const uint32 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -724,7 +696,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::f32_: {
+      case MtPropertyType::f32_: {
         auto adata = reinterpret_cast<const float *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -734,7 +706,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         break;
       }
 
-      case XFSType::color_: {
+      case MtPropertyType::color: {
         auto adata = reinterpret_cast<const UCVector4 *>(m.data.asPointer);
 
         for (size_t i = 0; i < m.numItems; i++) {
@@ -755,85 +727,85 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
       auto value = cNode.append_attribute("value");
 
       switch (m.rtti->type) {
-      case XFSType::bool_:
+      case MtPropertyType::bool_:
         value.set_value(m.data.asBool);
         break;
-      case XFSType::s8_:
+      case MtPropertyType::s8_:
         value.set_value(m.data.asInt8);
         break;
-      case XFSType::s16_:
+      case MtPropertyType::s16_:
         value.set_value(m.data.asInt16);
         break;
-      case XFSType::s32_:
+      case MtPropertyType::s32_:
         value.set_value(m.data.asInt32);
         break;
-      case XFSType::s64_:
+      case MtPropertyType::s64_:
         value.set_value(m.data.asInt64);
         break;
-      case XFSType::u8_:
+      case MtPropertyType::u8_:
         value.set_value(m.data.asUInt8);
         break;
-      case XFSType::u16_:
+      case MtPropertyType::u16_:
         value.set_value(m.data.asUInt16);
         break;
-      case XFSType::u32_:
+      case MtPropertyType::u32_:
         value.set_value(m.data.asUInt32);
         break;
-      case XFSType::u64_:
+      case MtPropertyType::u64_:
         value.set_value(m.data.asUInt64);
         break;
-      case XFSType::string_:
-      case XFSType::string2_:
+      case MtPropertyType::string_:
+      case MtPropertyType::cstring:
         value.set_value(m.AsString());
         break;
-      case XFSType::color_:
+      case MtPropertyType::color:
         value.set_name("r");
         value.set_value(m.data.asColor.X);
         cNode.append_attribute("g").set_value(m.data.asColor.Y);
         cNode.append_attribute("b").set_value(m.data.asColor.Z);
         cNode.append_attribute("a").set_value(m.data.asColor.W);
         break;
-      case XFSType::f32_:
+      case MtPropertyType::f32_:
         value.set_value(m.data.asFloat);
         break;
-      case XFSType::point_:
+      case MtPropertyType::point:
         value.set_name("x");
         value.set_value(m.data.asIVector2.X);
         cNode.append_attribute("y").set_value(m.data.asIVector2.Y);
         break;
-      case XFSType::size_:
+      case MtPropertyType::size:
         value.set_name("w");
         value.set_value(m.data.asUIVector2.X);
         cNode.append_attribute("h").set_value(m.data.asUIVector2.Y);
         break;
-      case XFSType::vector2_:
+      case MtPropertyType::vector2:
         value.set_name("x");
         value.set_value(m.data.asVector2.X);
         cNode.append_attribute("y").set_value(m.data.asVector2.Y);
         break;
-      case XFSType::vector3_:
+      case MtPropertyType::vector3:
         value.set_name("x");
         value.set_value(m.data.asVector3.X);
         cNode.append_attribute("y").set_value(m.data.asVector3.Y);
         cNode.append_attribute("z").set_value(m.data.asVector3.Z);
         break;
-      case XFSType::vector4_:
-      case XFSType::_vector4_:
+      case MtPropertyType::vector4:
+      case MtPropertyType::float4:
         value.set_name("x");
         value.set_value(m.data.asVector4.X);
         cNode.append_attribute("y").set_value(m.data.asVector4.Y);
         cNode.append_attribute("z").set_value(m.data.asVector4.Z);
         cNode.append_attribute("w").set_value(m.data.asVector4.W);
         break;
-      case XFSType::rect_:
+      case MtPropertyType::rect:
         value.set_name("x0");
         value.set_value(m.data.asIVector4.X);
         cNode.append_attribute("y0").set_value(m.data.asIVector4.Y);
         cNode.append_attribute("x1").set_value(m.data.asIVector4.Z);
         cNode.append_attribute("y1").set_value(m.data.asIVector4.W);
         break;
-      case XFSType::class_:
-      case XFSType::classref_: {
+      case MtPropertyType::class_:
+      case MtPropertyType::classref: {
         auto found =
             std::find_if(dataStore.begin(), dataStore.end(), [&m](auto &value) {
               return &value == m.data.asPointer;
@@ -846,7 +818,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         }
         break;
       }
-      case XFSType::_resource_: {
+      case MtPropertyType::custom: {
         auto adata = static_cast<const XFSDataResource *>(m.data.asPointer);
         value.set_name("type");
         value.set_value(adata->type.data());
@@ -854,7 +826,7 @@ void XFSImpl::ToXML(const XFSClassData &item, pugi::xml_node node) {
         break;
       }
 
-      case XFSType::_matrix_: {
+      case MtPropertyType::matrix44: {
         auto adata = static_cast<const es::Matrix44 *>(m.data.asPointer);
         value.set_name("m00");
         value.set_value(adata->r1().x);
@@ -912,7 +884,7 @@ template <class PtrType> void Load(XFSImpl &main, BinReaderRef_e rd) {
   std::transform(std::make_move_iterator(layouts.begin()),
                  std::make_move_iterator(layouts.end()),
                  std::back_inserter(main.rtti), [](auto &&item) {
-                   if (item.info->template Get<XFSClassInfo::Unk>()) {
+                   if (item.info->template Get<XFSClassInfo::Init>()) {
                      throw es::RuntimeError("Some bullshit");
                    }
 
@@ -1000,7 +972,7 @@ void XFSImpl::Load(BinReaderRef_e rd, bool openEnded) {
   pt platform = rd.SwappedEndian() ? pt::PS3 : pt::Win32;
   bool isX64 = false;
 
-  if (hdr.version == 0xf || hdr.version == 0x10) {
+  if (hdr.versionMajor == 0xf || hdr.versionMajor == 0x10) {
     isX64 = ::LoadV2(*this, rd);
   } else {
     if (platform == pt::Win32) {
