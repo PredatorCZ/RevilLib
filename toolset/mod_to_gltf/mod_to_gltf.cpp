@@ -407,6 +407,6 @@ void AppProcessFile(AppContext *ctx) {
     return;
   }
 
-  Convert(ctx->GetStream(), std::string(ctx->workingFile.GetFilenameExt()),
+  Convert(ctx->GetStream(), std::string(ctx->workingFile.GetFilename()),
           ctx);
 }
