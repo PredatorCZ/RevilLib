@@ -32,8 +32,11 @@ gpg --verify <asset_name>.sig
 
 <h2>Module list</h2>
 <ul>
+<li><a href="#Binary-to-XML">Binary to XML</a></li>
 <li><a href="#Encrypt-or-Decrypt-DDON-SNGW">Encrypt or Decrypt DDON SNGW</a></li>
+<li><a href="#DLC-Extract">DLC Extract</a></li>
 <li><a href="#ARC-Extract">ARC Extract</a></li>
+<li><a href="#FPK-Extract">FPK Extract</a></li>
 <li><a href="#LMT-to-GLTF">LMT to GLTF</a></li>
 <li><a href="#ARC-Create">ARC Create</a></li>
 <li><a href="#MOD-to-GLTF">MOD to GLTF</a></li>
@@ -41,13 +44,52 @@ gpg --verify <asset_name>.sig
 <li><a href="#OBB-Extract">OBB Extract</a></li>
 <li><a href="#RE-TEX-to-DDS">RE TEX to DDS</a></li>
 <li><a href="#REAsset-to-GLTF">REAsset to GLTF</a></li>
-<li><a href="#SDL-to-XML">SDL to XML</a></li>
 <li><a href="#SPAC-Extract">SPAC Extract</a></li>
 <li><a href="#UDAS-Extract">UDAS Extract</a></li>
 <li><a href="#ValidateVFS">ValidateVFS</a></li>
 <li><a href="#XFS-to-XML">XFS to XML</a></li>
-<li><a href="#XML-to-SDL">XML to SDL</a></li>
+<li><a href="#XML-to-Binary">XML to Binary</a></li>
 </ul>
+
+## Binary to XML
+
+### Module command: bin_to_xml
+
+Converts MT Framework various binary formats into XML.
+
+### Supported formats
+
+- rScheduler, sdl
+- rObjSet, osf
+- rHit, hit
+- rObjAdj, oba
+- rSoundRequest, srq
+- rSoundStreamRequest, stq
+- rSoundRandom, srd
+- rCloth, cdf
+- rSoundCurveSet, scs
+- rSoundDirectionalCurveSet, sds
+- XFS format, can have any extension
+
+### Settings
+
+- **title**
+
+  **CLI Long:** ***--title***\
+  **CLI Short:** ***-t***
+
+  Set title for correct archive handling.
+
+- **platform**
+
+  **CLI Long:** ***--platform***\
+  **CLI Short:** ***-p***
+
+  **Default value:** Auto
+
+  **Valid values:** Auto, Win32, PS3, X360, N3DS, CAFE, NSW, PS4, Android, IOS, Win64
+
+  Set platform for correct archive handling.
 
 ## Encrypt or Decrypt DDON SNGW
 
@@ -67,6 +109,14 @@ Encrypts or decrypts `.sngw` sounds/music files from Dragons Dogma Online.
   **Default value:** false
 
   Switch between encrypt or decrypt only.
+
+## DLC Extract
+
+### Module command: dlc_extract
+
+Extract DLC .dat archives.
+
+### Input file patterns: `.dat$`
 
 ## ARC Extract
 
@@ -100,6 +150,14 @@ Extract MT Framework ARC archives.
 
   **CLI Long:** ***--class-whitelist***\
   Extract only specified (comma separated) classes. Extract all if empty.
+
+## FPK Extract
+
+### Module command: fpk_extract
+
+Extract IOS .fpk archives from MHXR.
+
+### Input file patterns: `.fpk$`
 
 ## LMT to GLTF
 
@@ -140,22 +198,13 @@ Create MT Framework ARC archives.
 
   Set platform for correct archive handling.
 
-- **force-zlib-header**
-
-  **CLI Long:** ***--force-zlib-header***\
-  **CLI Short:** ***-z***
-
-  **Default value:** false
-
-  Force ZLIB header for files that won't be compressed. (Some platforms only)
-
 ## MOD to GLTF
 
 ### Module command: mod_to_gltf
 
 Converts MT Framework `.mod` model into GLTF format.
 
-### Input file patterns: `.mod$`, `.dom$`
+### Input file patterns: `.mod$`, `.dom$`, `.arc$`
 
 ### Settings
 
@@ -195,13 +244,22 @@ Converts MT Framework `.mod` model into GLTF format.
 
   Merge meshes as groups
 
+- **generate-model-info**
+
+  **CLI Long:** ***--generate-model-info***\
+  **CLI Short:** ***-i***
+
+  **Default value:** false
+
+  Generate model info xml alongside gltf.
+
 ## MTF TEX to DDS
 
 ### Module command: mtf_tex_to_dds
 
 Converts MT Framework `.tex` texture into DDS format.
 
-### Input file patterns: `.tex$`
+### Input file patterns: `.tex$`, `.arc$`
 
 ### Settings
 
@@ -270,14 +328,6 @@ Currently only supports animations.
 
 ### Input file patterns: `.mot.43$`, `.mot.65$`, `.mot.78$`, `.mot.458$`, `.motlist.60$`, `.motlist.85$`, `.motlist.99$`, `.motlist.486$`
 
-## SDL to XML
-
-### Module command: sdl_to_xml
-
-Converts MT Framework `.sdl` scheduler into XML format.
-
-### Input file patterns: `.sdl$`
-
 ## SPAC Extract
 
 ### Module command: spac_conv
@@ -326,13 +376,37 @@ Converts MT Framework generic binary data table format into XML.
 
   Save data.
 
-## XML to SDL
+## XML to Binary
 
-### Module command: xml_to_sdl
+### Module command: xml_to_bin
 
-Converts XML format back to MT Framework `.sdl` scheduler.
+Converts XML format back to MT Framework binary format.
+
+### Supported formats
+
+- rScheduler, sdl
 
 ### Input file patterns: `.xml$`
+
+### Settings
+
+- **title**
+
+  **CLI Long:** ***--title***\
+  **CLI Short:** ***-t***
+
+  Set title for correct archive handling.
+
+- **platform**
+
+  **CLI Long:** ***--platform***\
+  **CLI Short:** ***-p***
+
+  **Default value:** Auto
+
+  **Valid values:** Auto, Win32, PS3, X360, N3DS, CAFE, NSW, PS4, Android, IOS, Win64
+
+  Set platform for correct archive handling.
 
 ## License
 

@@ -165,13 +165,13 @@ void Detect(std::istream &str, const std::string &curFile,
     return;
 
   case CompileFourCC("ARCS"):
-  case CompileFourCC("ESL"):
+  /*case CompileFourCC("ESL"):
   case CompileFourCC("EFA"):
   case CompileFourCC("RRD "):
   case CompileFourCC("WED "):
   case CompileFourCC("EFS"):
   case CompileFourCC("FCA"):
-  case CompileFourCC("FCP"):
+  case CompileFourCC("FCP"):*/
     return;
   }
 

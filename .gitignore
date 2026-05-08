@@ -8,3 +8,4 @@ __pycache__/
 .cache/
 *.ods
 *.csv
+*.mdi.xml
