@@ -97,11 +97,9 @@ struct MODMeshXC5 {
   using NumWeights = BitMemberDecl<3, 5>;
   using AlphaType = BitMemberDecl<4, 8>;
   using VertexBufferStride = BitMemberDecl<5, 8>;
-  using PrimitiveType = BitMemberDecl<6, 6>;
-  using BinormalFlip = BitMemberDecl<7, 1>;
-  using Bridge = BitMemberDecl<8, 1>;
-  using BitField01 = BitFieldType<uint32, Visible, Shape, Sort, NumWeights, AlphaType,
-                                  VertexBufferStride, PrimitiveType, BinormalFlip, Bridge>;
+  using PrimitiveType = BitMemberDecl<6, 8>;
+  using BitField01 = BitFieldType<uint32, Visible, Shape, Sort, NumWeights,
+                                  AlphaType, VertexBufferStride, PrimitiveType>;
 
   enum class PrimitiveType_e : uint8 {
     Points,
@@ -132,10 +130,18 @@ struct MODMeshXC5 {
 };
 
 struct MODMeshXD2 {
+  using PrimitiveType = BitMemberDecl<6, 6>;
+  using BinormalFlip = BitMemberDecl<7, 1>;
+  using Bridge = BitMemberDecl<8, 1>;
+  using BitField01 =
+      BitFieldType<uint32, MODMeshXC5::Visible, MODMeshXC5::Shape,
+                   MODMeshXC5::Sort, MODMeshXC5::NumWeights,
+                   MODMeshXC5::AlphaType, MODMeshXC5::VertexBufferStride,
+                   PrimitiveType, BinormalFlip, Bridge>;
   uint16 drawMode;
   uint16 numVertices;
   MODMeshXC5::BitField00 data0;
-  MODMeshXC5::BitField01 data1;
+  BitField01 data1;
   uint32 vertexStart;
   uint32 vertexStreamOffset;
   uint32 vertexFormat;

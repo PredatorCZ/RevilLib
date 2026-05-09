@@ -327,7 +327,7 @@ static const auto makeVertices0X170 = [](uint8 useSkin, bool, auto &main) {
       attrs.emplace_back(VertexBoneIndices);
       attrs.emplace_back(D::R8G8B8A8, F::UNORM, U::BoneWeights);
       attrs.emplace_back(D::R16G16B16A16, F::NORM, U::Normal);
-      attrs.emplace_back(TexCoord);
+      attrs.emplace_back(D::R16G16, F::NORM, U::TextureCoordiante);
     }
   } else {
     attrs.emplace_back(VertexPosition);
@@ -342,14 +342,14 @@ static const auto makeVertices1X170 = [](uint8 useSkin, bool) {
   std::vector<Attribute> attrs;
   const bool skin8 = useSkin == 2;
 
-  if (useSkin) {
-    // attrs.emplace_back(D::R16G16B16A16, F::NORM, U::Tangent);
-    attrs.emplace_back(D::R32G32, F::UINT, U::Undefined);
-    attrs.emplace_back(TexCoord);
-  } else if (skin8) {
+  if (skin8) {
     // attrs.emplace_back(VertexTangent);
     attrs.emplace_back(D::R32, F::UINT, U::Undefined);
-    attrs.emplace_back(TexCoord);
+    attrs.emplace_back(D::R16G16, F::NORM, U::TextureCoordiante);
+  } else if (useSkin) {
+    // attrs.emplace_back(D::R16G16B16A16, F::NORM, U::Tangent);
+    attrs.emplace_back(D::R32G32, F::UINT, U::Undefined);
+    attrs.emplace_back(D::R16G16, F::NORM, U::TextureCoordiante);
   } else {
     // attrs.emplace_back(D::R16G16B16A16, F::NORM, U::Tangent);
     attrs.emplace_back(D::R32G32, F::UINT, U::Undefined);
@@ -2214,17 +2214,27 @@ static const auto makeV2 = [](auto &self, revil::MODImpl &main, auto &&fd) {
   retval.flags.Set(F::Lod3, visibleLOD[2]);
   retval.flags.Set(F::Visible, self.data1.template Get<MODMeshXC5::Visible>());
   retval.flags.Set(F::Shape, self.data1.template Get<MODMeshXC5::Shape>());
-  retval.flags.Set(F::Bridge, self.data1.template Get<MODMeshXC5::Bridge>());
+
+  if constexpr (std::is_same_v<std::decay_t<decltype(self)>, MODMeshXC5>) {
+    const MODMeshXC5::PrimitiveType_e primitiveType =
+        MODMeshXC5::PrimitiveType_e(
+            self.data1.template Get<MODMeshXC5::PrimitiveType>());
+    retval.flags.Set(F::TriStrips,
+                     primitiveType == MODMeshXC5::PrimitiveType_e::Strips);
+  } else {
+    retval.flags.Set(F::Bridge, self.data1.template Get<MODMeshXD2::Bridge>());
+    retval.flags.Set(F::BinormalFlip,
+                     self.data1.template Get<MODMeshXD2::BinormalFlip>());
+    const MODMeshXC5::PrimitiveType_e primitiveType =
+        MODMeshXC5::PrimitiveType_e(
+            self.data1.template Get<MODMeshXD2::PrimitiveType>());
+    retval.flags.Set(F::TriStrips,
+                     primitiveType == MODMeshXC5::PrimitiveType_e::Strips);
+  }
+
   retval.flags.Set(F::Sort, self.data1.template Get<MODMeshXC5::Sort>());
-  retval.flags.Set(F::BinormalFlip,
-                   self.data1.template Get<MODMeshXC5::BinormalFlip>());
   retval.materialIndex = self.data0.template Get<MODMeshXC5::MaterialIndex>();
-  retval.layout = self.vertexFormat;
-  const MODMeshXC5::PrimitiveType_e primitiveType = MODMeshXC5::PrimitiveType_e(
-      self.data1.template Get<MODMeshXC5::PrimitiveType>());
   retval.alphaType = self.data1.template Get<MODMeshXC5::AlphaType>();
-  retval.flags.Set(F::TriStrips,
-                   primitiveType == MODMeshXC5::PrimitiveType_e::Strips);
   retval.drawMode = self.drawMode;
   retval.indexIndex = main.indices.size();
   retval.vertexIndex = main.vertices.size();
