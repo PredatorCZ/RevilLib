@@ -10,7 +10,10 @@
 </p>
 
 <p align="center">
-RevilLib is an independent library for various formats, used by RE Engine and MT Framework.
+RevilLib is an independent library for handling various formats mostly for MT Framework.
+</p>
+<p align="center">
+There's also a legacy support for some formats used in RE Engine.
 </p>
 
 <p align="center">
@@ -30,13 +33,11 @@ Library is written for C++20/23 and compilable under GCC 12+ and Clang 13+.
 Toolset releases
 </a>
 
-<h2>Supported titles/formats</h2>
+<h2>Supported formats</h2>
 
 <ul>
-    <li>RE 7: motlist.60, mot.43 (PC only tested)</li>
-    <li>REMake 2: motlist.85, mot.65 (PC only tested)</li>
-    <li>REMake 3/Resistance: motlist.99, mot.78 (PC only tested)</li>
-    <li>MT Framework: LMT, MOD, TEX, XFS, ARC (Cross platform, Multiversion)</li>
+    <li>MT Framework: Archive, Model, Motionlist, Sounds and lots of other formats across multiple platforms and versions.</li>
+    <li>RE Engine: motlist versions: 60, 85, 99, 486 and 528, motion versions: 43, 65, 78 and 458, texture all versions</li>
 </ul>
 
 
@@ -49,8 +50,7 @@ This library uses following libraries:
 </p>
 
 <ul>
-    <li>Spike, Copyright (c) 2016-2023 Lukas Cone (Apache 2)</li>
+    <li>Spike, Copyright (c) 2016-2026 Lukas Cone (Apache 2)</li>
     <li>libmspack, Copyright (c) 2003-2016 Stuart Caie (LGPLv2)</li>
     <li>zlib, Copyright (c) 1995-2022 Jean-loup Gailly and Mark Adler (Zlib)</li>
-    <li>PoverVR Core, Copyright (c) Imagination Technologies Limited (MIT)</li>
 </ul>
